@@ -1,3 +1,8 @@
+//!
+//! The meta module describes the metadata and memory data structures used by the assembler
+//! and its macro language.
+//!
+
 mod cell;
 mod number;
 mod atom;
