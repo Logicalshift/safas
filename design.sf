@@ -37,8 +37,8 @@
 )
 
 ;; lambda is used to create a function
-(def some-func (lambda (x) (d x)))
-(some-func 1)
+(def some_func (lambda (x) (d x)))
+(some_func 1)
 
 ;; We need some way to communicate what we're doing to the user
 (print "Hello")
