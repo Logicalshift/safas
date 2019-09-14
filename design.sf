@@ -1,0 +1,46 @@
+;; This is what a comment looks like
+
+;; This source file is for experimenting and building up the SAFAS syntax
+
+;; Basic construct: a macro that has no effect, the empty list
+()
+
+;; Macros are invoked like LISP functions
+;; This is 'd', one of the fundamental SAFAS macros. It writes out data to the current
+;; position in the results file. Positions are in bits, so we can write out partial instructions.
+(d 0011b)       ;; Writes out 4 bits, 0011 to the start of the current byte
+(d 128)         ;; Writes out the 32-bit word representing 128
+(d 128u8)       ;; Writes out the 8-bit unsigned word representing 128
+(d 3u4)         ;; Writes out 4 bits (a nybble) representing the value 3
+(d $Fu4)        ;; Hexadecimal 'F' (1111)
+(d -1i16)       ;; 16-bit signed number
+
+;; Sometimes it's necessary to align to a value. We use 'a' for that, which takes two parameters:
+;; a bit pattern and an alignment (in bits)
+(a 0000b 32)
+
+;; Moving the instruction pointer to a specific location is also supported
+(m $00FF)
+
+;; def is used to define a value in the current closure
+(def something 1u8)
+(d something)
+
+;; let is used to define a closure (with defined variables that are unavailable outside of the closure)
+(let 
+    (
+        (something 1u8)
+        (something_else 2u4)
+    )
+
+    (d something)
+)
+
+;; lambda is used to create a function
+(def some-func (lambda (x) (d x)))
+(some-func 1)
+
+;; We need some way to communicate what we're doing to the user
+(print "Hello")
+(warn "Oops")
+(error "Doh")
