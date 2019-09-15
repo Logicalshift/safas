@@ -8,7 +8,7 @@ mod number;
 mod atom;
 mod bitcode;
 
-pub use cell::*;
-pub use number::*;
-pub use atom::*;
-pub use bitcode::*;
+pub use self::cell::*;
+pub use self::number::*;
+pub use self::atom::*;
+pub use self::bitcode::*;
