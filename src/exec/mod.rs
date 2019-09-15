@@ -4,5 +4,7 @@
 //!
 
 mod symbol_value;
+mod frame;
 
 pub use symbol_value::*;
+pub use frame::*;
