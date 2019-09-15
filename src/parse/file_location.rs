@@ -1,5 +1,4 @@
 use std::sync::*;
-use std::str::{Chars};
 
 ///
 /// Represents a location in a file
@@ -28,7 +27,7 @@ impl FileLocation {
     ///
     /// Updates a file location from the specified set of characters
     ///
-    pub fn update_from(self, characters: Chars) -> FileLocation {
+    pub fn update_from<Chars: Iterator<Item=char>>(self, characters: Chars) -> FileLocation {
         let mut result      = self;
         let mut last_chr    = ' ';
 
