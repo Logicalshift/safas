@@ -4,6 +4,7 @@
 mod meta;
 mod bind;
 mod exec;
+mod parse;
 
 fn main() {
     println!("Hello, world!");
