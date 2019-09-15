@@ -1,9 +1,7 @@
+use super::bitcode_buffer::*;
 use crate::meta::*;
 
 use smallvec::*;
-
-use std::cell::{RefCell};
-use std::rc::{Rc};
 
 ///
 /// A SAFAS execution frame
@@ -16,5 +14,5 @@ pub struct Frame {
     cells: SmallVec<[SafasCell; 8]>,
 
     /// The bitcode output of the assembler (bitcode is typically passed between frames, so it's stored by reference)
-    bitcode: Rc<RefCell<Vec<BitCode>>>
+    bitcode: BitCodeBuffer
 }
