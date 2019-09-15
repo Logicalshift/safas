@@ -12,5 +12,8 @@ pub enum ParseError {
     InternalError(FileLocation, String),
 
     /// A value is not value as a character
-    InvalidCharacter(FileLocation, String)
+    InvalidCharacter(FileLocation, String),
+
+    /// Invalid character in a bit number
+    NotABitNumber(FileLocation, String)
 }
