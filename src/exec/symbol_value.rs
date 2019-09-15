@@ -1,4 +1,5 @@
-use super::super::meta::*;
+use super::frame_monad::*;
+use crate::meta::*;
 
 ///
 /// The possible bindings of a symbols value
@@ -11,5 +12,8 @@ pub enum SymbolValue {
     FrameReference(u32, u32),
 
     /// An external function
-    ExternalFunction(Box<dyn Fn(SafasCell) -> SafasCell>)
+    ExternalFunction(Box<dyn Fn(SafasCell) -> SafasCell>),
+
+    /// An external frame monad
+    FrameMonad(Box<dyn FrameMonad>)
 }

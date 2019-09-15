@@ -5,6 +5,8 @@
 
 mod symbol_value;
 mod frame;
+mod frame_monad;
 
 pub use symbol_value::*;
 pub use frame::*;
+pub use frame_monad::*;
