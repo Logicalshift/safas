@@ -44,6 +44,23 @@ pub enum Token {
 }
 
 ///
+/// Reads tokens until the first non-comment/whitespace token
+///
+pub fn tokenize_no_comments<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
+    let mut location = location;
+
+    loop {
+        let (token, token_text, next_location) = tokenize(buffer, location);
+        location = next_location;
+
+        match token {
+            Token::Comment | Token::Whitespace  => { },
+            _                                   => return (token, token_text, location)
+        }
+    }
+}
+
+///
 /// Reads a token from a string, starting at the specified location. Returns the token, the text for the token and the updated location.
 ///
 pub fn tokenize<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
@@ -347,6 +364,19 @@ mod test {
         result
     }
 
+    fn tokens_no_comments_for(text: &str) -> Vec<Token> {
+        let mut result  = vec![];
+        let mut buf     = TokenReadBuffer::new(text.chars());
+
+        loop {
+            let (tok, _val, _location) = tokenize_no_comments(&mut buf, FileLocation::new("test"));
+            if tok == Token::EndOfFile { break; }
+            result.push(tok);
+        }
+
+        result
+    }
+
     #[test]
     fn tokenize_comment() {
         assert!(tokens_for("; comment") == vec![Token::Comment]);
@@ -450,5 +480,10 @@ mod test {
     #[test]
     fn tokenize_symbol_3() {
         assert!(tokens_for("#atom") == vec![Token::Symbol('#'), Token::Atom]);
+    }
+
+    #[test]
+    fn tokenize_skipping_comments_and_whitespace() {
+        assert!(tokens_no_comments_for("# atom ; comment") == vec![Token::Symbol('#'), Token::Atom]);
     }
 }
