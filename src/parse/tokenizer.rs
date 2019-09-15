@@ -102,42 +102,232 @@ fn read_comment<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>,
 /// After reading a whitespace character, reads the remainder of the whitespace
 ///
 fn read_whitespace<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
-    unimplemented!()
+    loop {
+        let next_char = buffer.read_next();
+
+        match next_char {
+            Some(' ')       |
+            Some('\t')      |
+            Some('\n')      |
+            Some('\r')      => {},
+            None            => break,
+            _               => {
+                buffer.push_back();
+                break;
+            }
+        }
+    }
+
+    (Token::Whitespace, buffer.read_characters(), buffer.update_location(location))
 }
 
 ///
 /// After reading a ', reads the rest of the character value
 ///
 fn read_character<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
-    unimplemented!()
+    // Characters continue until the next '"' or the next unquoted newline character
+    let mut quoted = false;
+    loop {
+        let next_chr    = buffer.read_next();
+        let was_quoted  = quoted;
+        quoted          = false;
+
+        match (next_chr, was_quoted) {
+            (None, _)           => break,
+            (Some('\''), false) => break,
+            (Some('\\'), false) => { quoted = true; },
+            (Some('\n'), false) |
+            (Some('\r'), false) => {
+                buffer.push_back();
+                break;
+            }
+            (Some(_), _)        => { }
+        }
+    }
+
+    (Token::Character, buffer.read_characters(), buffer.update_location(location))
 }
 
 ///
 /// After reading a ", reads the rest of the string value
 ///
 fn read_string<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
-    unimplemented!()
-}
+    // Strings continue until the next '"' or the next unquoted newline character
+    let mut quoted = false;
+    loop {
+        let next_chr    = buffer.read_next();
+        let was_quoted  = quoted;
+        quoted          = false;
 
-///
-/// After reading a '$', reads the rest of the hex number
-///
-fn read_hex_number<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
-    unimplemented!()
+        match (next_chr, was_quoted) {
+            (None, _)           => break,
+            (Some('"'), false)  => break,
+            (Some('\\'), false) => { quoted = true; },
+            (Some('\n'), false) |
+            (Some('\r'), false) => {
+                buffer.push_back();
+                break;
+            }
+            (Some(_), _)        => { }
+        }
+    }
+
+    (Token::String, buffer.read_characters(), buffer.update_location(location))
 }
 
 ///
 /// After reading an alphabetic character, reads the rest of the atom value
 ///
 fn read_atom<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
-    unimplemented!()
+    loop {
+        let next_char = buffer.read_next();
+
+        match next_char {
+            Some(chr)       => {
+                if !chr.is_alphanumeric() {
+                    buffer.push_back();
+                    break;
+                }
+            }
+            None            => break,
+        }
+    }
+
+    (Token::Atom, buffer.read_characters(), buffer.update_location(location))
+}
+
+///
+/// Reads the 'u5' or 'i4' bit count suffix from a number
+///
+fn read_number_suffix<Chars: Iterator<Item=char>>(int_token: Token, unsigned_token: Token, buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
+    // Numbers are followed by 'u' or 'i' to indicate that they contain a certain number of bits
+    let next_char   = buffer.read_next();
+    let token       = match next_char {
+        Some('u')   => unsigned_token,
+        Some('i')   => int_token,
+        None        => {
+            return (int_token, buffer.read_characters(), buffer.update_location(location))
+        }
+        _           => {
+            buffer.push_back();
+            return (int_token, buffer.read_characters(), buffer.update_location(location))
+        }
+    };
+
+    // Should be followed by a number
+    let mut num_bits = 0;
+    loop {
+        let bit_count   = buffer.read_next();
+        match bit_count {
+            Some(num) => {
+                if num >= '0' && num <= '9' {
+                } else {
+                    buffer.push_back();
+                    break;
+                }
+            }
+            None => { 
+                break;
+            }
+        }
+
+        num_bits += 1;
+    }
+
+    // Should be at least one bit character (up to 2 is sensible, though we use 128-bit numbers everywhere, so 3 is also possible)
+    if num_bits == 0 {
+        buffer.push_back();
+        return (int_token, buffer.read_characters(), buffer.update_location(location))
+    }
+
+    (token, buffer.read_characters(), buffer.update_location(location))
+}
+
+///
+/// After reading a '$', reads the rest of the hex number
+///
+fn read_hex_number<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
+    loop {
+        let next_char = buffer.read_next();
+
+        match next_char {
+            Some(chr)       => {
+                if (chr >= '0' && chr <= '9') || (chr >= 'a' && chr <= 'f') || (chr >= 'A' && chr <= 'F') {
+
+                } else {
+                    buffer.push_back();
+                    break;
+                }
+            }
+            None            => break,
+        }
+    }
+
+    read_number_suffix(Token::HexNumber, Token::HexNumber, buffer, location)
 }
 
 ///
 /// After reading a numeric value, reads the rest of the number
 ///
 fn read_number<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, location: FileLocation) -> (Token, String, FileLocation) {
-    unimplemented!()
+    loop {
+        let next_char = buffer.read_next();
+
+        match next_char {
+            Some(chr)       => {
+                if chr >= '0' && chr <= '9' {
+
+                } else {
+                    buffer.push_back();
+                    break;
+                }
+            }
+            None            => break,
+        }
+    }
+
+    match buffer.read_next() {
+        Some('b') => {
+            // Might be a bitnumber (number followed by 'b<bits>')
+            let mut num_bits = 0;
+            loop {
+                let bit_count   = buffer.read_next();
+                match bit_count {
+                    Some(num) => {
+                        if num >= '0' && num <= '9' {
+                        } else {
+                            buffer.push_back();
+                            break;
+                        }
+                    }
+                    None => { 
+                        break;
+                    }
+                }
+
+                num_bits += 1;
+            }
+
+            // Should be at least one bit character (up to 2 is sensible, though we use 128-bit numbers everywhere, so 3 is also possible)
+            if num_bits == 0 {
+                buffer.push_back();
+                (Token::IntNumber, buffer.read_characters(), buffer.update_location(location))
+            } else {
+                (Token::BitNumber, buffer.read_characters(), buffer.update_location(location))
+            }
+        }
+
+        Some(_) => {
+            // Not a bitnumber
+            buffer.push_back();
+            read_number_suffix(Token::IntNumber, Token::IntNumber, buffer, location)
+        },
+
+        None => {
+            // No suffix
+            (Token::IntNumber, buffer.read_characters(), buffer.update_location(location))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -213,6 +403,11 @@ mod test {
     }
 
     #[test]
+    fn tokenize_hexnumber_4() {
+        assert!(tokens_for("$1234irq") == vec![Token::HexNumber, Token::Atom]);
+    }
+
+    #[test]
     fn tokenize_number_1() {
         assert!(tokens_for("1234") == vec![Token::IntNumber]);
     }
@@ -250,5 +445,10 @@ mod test {
     #[test]
     fn tokenize_symbol_2() {
         assert!(tokens_for("#123") == vec![Token::Symbol('#'), Token::IntNumber]);
+    }
+
+    #[test]
+    fn tokenize_symbol_3() {
+        assert!(tokens_for("#atom") == vec![Token::Symbol('#'), Token::Atom]);
     }
 }
