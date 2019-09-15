@@ -8,3 +8,4 @@ license     = "Apache-2.0"
 [dependencies]
 lazy_static = "1.4"
 smallvec    = "0.6"
+radix_fmt   = "1.0"
