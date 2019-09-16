@@ -32,6 +32,27 @@ pub enum SafasCell {
 }
 
 impl SafasCell {
+    ///
+    /// Turns an iterator of cells into a list
+    ///
+    pub fn list_with_cells<Cells: IntoIterator<Item=Arc<SafasCell>>>(cells: Cells) -> Arc<SafasCell> 
+    where Cells::IntoIter : DoubleEndedIterator {
+        // The first cell requires special treatment
+        let cells       = cells.into_iter().rev();
+
+        // We build the list by adding to the end
+        let mut cell    = Arc::new(SafasCell::Nil);
+        for current_cell in cells {
+            cell = Arc::new(SafasCell::List(current_cell, cell));
+        }
+
+        // Final result
+        cell
+    }
+
+    ///
+    /// Returns true if this cell is nil
+    ///
     pub fn is_nil(&self) -> bool {
         match self {
             SafasCell::Nil  => true,
@@ -46,11 +67,11 @@ impl SafasCell {
         use self::SafasCell::*;
 
         match self {
-            Nil                     => "#nil".to_string(),
+            Nil                     => "()".to_string(),
             Atom(atom_id)           => name_for_atom_with_id(*atom_id),
             Number(number)          => { number.to_string() },
-            String(string_value)    => format!("\"{}\"", string_value),        // TODO: character quoting
-            Char(chr_value)         => format!("'{}'", chr_value),                  // TODO: character quoting,
+            String(string_value)    => format!("\"{}\"", string_value),         // TODO: character quoting
+            Char(chr_value)         => format!("'{}'", chr_value),              // TODO: character quoting,
             List(first, second)     => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;
@@ -68,6 +89,8 @@ impl SafasCell {
                         }
                     }
                 }
+
+                result.push(')');
 
                 result
             }

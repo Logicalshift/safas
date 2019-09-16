@@ -7,13 +7,17 @@ use crate::meta::*;
 
 use smallvec::*;
 use std::result::{Result};
+use std::sync::*;
 
 ///
 /// Parses a file in SAFAS format and returns the resulting cell
 ///
-pub fn parse_safas<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, location: FileLocation) -> Result<SafasCell, ParseError> {
-    let mut location = location;
-    let mut results = vec![];
+pub fn parse_safas<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, location: FileLocation) -> Result<Arc<SafasCell>, ParseError> {
+    // Initial location
+    let mut location    = location;
+
+    // Results, stored as a 
+    let mut results     = vec![];
 
     loop {
         let (next_cell, next_location) = parse_cell(code, location)?;
@@ -29,13 +33,13 @@ pub fn parse_safas<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>
 
     }
 
-    Err(ParseError::Unimplemented)
+    Ok(SafasCell::list_with_cells(results))
 }
 
 ///
 /// Parses the next cell on the token stream (returning None if there is no following cell)
 ///
-fn parse_cell<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, location: FileLocation) -> Result<(Option<SafasCell>, FileLocation), ParseError> {
+fn parse_cell<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, location: FileLocation) -> Result<(Option<Arc<SafasCell>>, FileLocation), ParseError> {
     // Skip whitespace and comments to find the first meaningful token
     let original_location               = location.clone();
     let (token, token_text, location)   = tokenize_no_comments(code, location);
@@ -45,21 +49,21 @@ fn parse_cell<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, loc
         Token::Whitespace | Token::Comment => { Err(ParseError::InternalError(original_location, "Whitespace should not make it through to this point".to_string())) },
         Token::EndOfFile    => { Ok((None, location)) }
 
-        Token::BitNumber    => { (Ok((Some(bit_number(&token_text, &original_location)?), location))) }
+        Token::BitNumber    => { (Ok((Some(Arc::new(bit_number(&token_text, &original_location)?)), location))) }
         Token::HexNumber    => { unimplemented!() }
         Token::IntNumber    => { unimplemented!() }
-        Token::Atom         => { Ok((Some(SafasCell::Atom(get_id_for_atom_with_name(&token_text))), location)) }
-        Token::Symbol(_)    => { Ok((Some(SafasCell::Atom(get_id_for_atom_with_name(&token_text))), location)) }
+        Token::Atom         => { Ok((Some(Arc::new(SafasCell::Atom(get_id_for_atom_with_name(&token_text)))), location)) }
+        Token::Symbol(_)    => { Ok((Some(Arc::new(SafasCell::Atom(get_id_for_atom_with_name(&token_text)))), location)) }
         Token::OpenParen    => { unimplemented!() }
         Token::CloseParen   => { unimplemented!() }
-        Token::String       => { Ok((Some(SafasCell::String(unquote_string(token_text))), location)) }
+        Token::String       => { Ok((Some(Arc::new(SafasCell::String(unquote_string(token_text)))), location)) }
 
         Token::Character    => {
             let chr_string = unquote_string(token_text);
             if chr_string.chars().count() != 1 {
                 Err(ParseError::InvalidCharacter(original_location, chr_string))
             } else {
-                Ok((Some(SafasCell::Char(chr_string.chars().nth(0).unwrap())), location))
+                Ok((Some(Arc::new(SafasCell::Char(chr_string.chars().nth(0).unwrap()))), location))
             }
         }
     }
@@ -150,5 +154,12 @@ mod test {
             SafasCell::Number(SafasNumber::BitNumber(5, 30)) => true,
             _ => false
         })
+    }
+
+    #[test]
+    fn parse_atom() {
+        let mut buf         = TokenReadBuffer::new("atom".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "(atom)".to_string());
     }
 }
