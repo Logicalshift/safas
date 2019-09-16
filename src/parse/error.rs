@@ -21,5 +21,8 @@ pub enum ParseError {
     InvalidBitCount(FileLocation, String),
 
     /// Invalid character in a hex number
-    NotAHexNumber(FileLocation, String)
+    NotAHexNumber(FileLocation, String),
+
+    /// Invalid character in an integer number
+    NotAnIntegerNumber(FileLocation, String)
 }

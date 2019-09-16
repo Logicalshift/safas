@@ -51,7 +51,7 @@ fn parse_cell<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, loc
 
         Token::BitNumber    => { (Ok((Some(Arc::new(bit_number(&token_text, &original_location)?)), location))) }
         Token::HexNumber    => { (Ok((Some(Arc::new(hex_number(&token_text, &original_location)?)), location))) }
-        Token::IntNumber    => { unimplemented!() }
+        Token::IntNumber    => { (Ok((Some(Arc::new(int_number(&token_text, &original_location)?)), location))) }
         Token::Atom         => { Ok((Some(Arc::new(SafasCell::Atom(get_id_for_atom_with_name(&token_text)))), location)) }
         Token::Symbol(_)    => { Ok((Some(Arc::new(SafasCell::Atom(get_id_for_atom_with_name(&token_text)))), location)) }
         Token::OpenParen    => { unimplemented!() }
@@ -196,8 +196,78 @@ fn hex_number(number_string: &str, location: &FileLocation) -> Result<SafasCell,
         }
 
         if chrs[b_pos] == 'i' {
-            let sign_extend = -1i128 << bits;
-            let num         = num | (sign_extend as u128);
+            let num = if num & (1<<(bits-1)) != 0 {
+                let sign_extend = -1i128 << bits;
+                num | (sign_extend as u128)
+            } else {
+                num
+            };
+
+            Ok(SafasCell::Number(SafasNumber::SignedBitNumber(bits, num as i128)))
+        } else {
+            Ok(SafasCell::Number(SafasNumber::BitNumber(bits, num)))
+        }
+    } else {
+        Ok(SafasCell::Number(SafasNumber::Plain(num)))
+    }
+}
+
+///
+/// Parses an int number (1234u8) as a cell
+///
+fn int_number(number_string: &str, location: &FileLocation) -> Result<SafasCell, ParseError> {
+    // Fetch the characters from the string
+    let chrs        = number_string.chars().collect::<SmallVec<[_; 8]>>();
+    let is_negative = chrs[0] == '-';
+    let n_start     = if is_negative { 1 } else { 0 };
+
+    // Format is '1111b8'
+    let mut num = 0u128;
+    let mut bits = 0u8;
+
+    // Location of the 'b' indicating the number of bits in the number
+    let b_pos = chrs.iter()
+        .enumerate()
+        .filter(|(_pos, chr)| **chr == 'u' || **chr == 'i')
+        .map(|(pos, _chr)| pos)
+        .nth(0)
+        .unwrap_or_else(|| chrs.len());
+
+    // Parse the bits themselves
+    for idx in n_start..b_pos {
+        num *= 10;
+
+        let chr = chrs[idx];
+
+        if chr >= '0' && chr <= '9' {
+            num += ((chr as u8) - ('0' as u8)) as u128;
+        } else {
+            return Err(ParseError::NotAnIntegerNumber(location.clone(), number_string.to_string()));
+        }
+    }
+
+    if is_negative {
+        num = (-(num as i128)) as u128;
+    }
+
+    if b_pos < chrs.len() {
+        // Parse the number of bits
+        for idx in (b_pos+1)..chrs.len() {
+            bits *= 10;
+            if chrs[idx] >= '0' && chrs[idx] <= '9' {
+                bits += ((chrs[idx] as u16) - ('0' as u16)) as u8;
+            } else {
+                return Err(ParseError::InvalidBitCount(location.clone(), number_string.to_string()));
+            }
+        }
+
+        if chrs[b_pos] == 'i' {
+            let num = if num & (1<<(bits-1)) != 0 {
+                let sign_extend = -1i128 << bits;
+                num | (sign_extend as u128)
+            } else {
+                num
+            };
 
             Ok(SafasCell::Number(SafasNumber::SignedBitNumber(bits, num as i128)))
         } else {
@@ -231,6 +301,34 @@ mod test {
         let mut buf         = TokenReadBuffer::new("$f234i16".chars());
         let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
         assert!(parse_result == "(-3532i16)")
+    }
+
+    #[test]
+    fn parse_hex_number_3() {
+        let mut buf         = TokenReadBuffer::new("$f0i16".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "(240i16)")
+    }
+
+    #[test]
+    fn parse_int_number_1() {
+        let mut buf         = TokenReadBuffer::new("1234u16".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "($4d2u16)")
+    }
+
+    #[test]
+    fn parse_int_number_2() {
+        let mut buf         = TokenReadBuffer::new("1234i15".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "(1234i15)")
+    }
+
+    #[test]
+    fn parse_int_number_3() {
+        let mut buf         = TokenReadBuffer::new("255i8".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "(-1i8)")
     }
 
     #[test]
