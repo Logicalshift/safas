@@ -26,7 +26,7 @@ impl SafasNumber {
             Plain(val)              => val.to_string(),
             BitNumber(bits, num)    => {
                 if *bits < 8 {
-                    format!("{}b{}", radix(*num as u8, 1), bits)
+                    format!("{}b{}", radix(*num as u8, 2), bits)
                 } else {
                     format!("${}u{}", radix(*num, 16), bits)
                 }

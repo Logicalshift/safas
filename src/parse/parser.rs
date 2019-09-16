@@ -150,10 +150,9 @@ mod test {
 
     #[test]
     fn parse_bit_number() {
-        assert!(match bit_number("11110b5", &FileLocation::new("test")).unwrap() {
-            SafasCell::Number(SafasNumber::BitNumber(5, 30)) => true,
-            _ => false
-        })
+        let mut buf         = TokenReadBuffer::new("11110b5".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "(11110b5)")
     }
 
     #[test]
