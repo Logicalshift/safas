@@ -44,6 +44,13 @@ fn parse_cell<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, loc
     let original_location               = location.clone();
     let (token, token_text, location)   = tokenize_no_comments(code, location);
 
+    parse_cell_from_token(code, original_location, token, token_text, location)
+}
+
+///
+/// Parses the next cell on the token stream, with a token read from the stream (returning None if there is no following cell)
+///
+fn parse_cell_from_token<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, original_location: FileLocation, token: Token, token_text: String, location: FileLocation) -> Result<(Option<Arc<SafasCell>>, FileLocation), ParseError> {
     // Action depends on the token
     match token {
         Token::Whitespace | Token::Comment => { Err(ParseError::InternalError(original_location, "Whitespace should not make it through to this point".to_string())) },
