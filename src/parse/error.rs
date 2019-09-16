@@ -24,5 +24,11 @@ pub enum ParseError {
     NotAHexNumber(FileLocation, String),
 
     /// Invalid character in an integer number
-    NotAnIntegerNumber(FileLocation, String)
+    NotAnIntegerNumber(FileLocation, String),
+
+    /// A close parenthesis was found when one was not expected
+    UnexpectedCloseParen(FileLocation),
+
+    /// An expected close parenthesis could not be found
+    MissingCloseParen(FileLocation)
 }

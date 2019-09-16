@@ -61,8 +61,7 @@ fn parse_cell_from_token<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<
         Token::IntNumber    => { (Ok((Some(Arc::new(int_number(&token_text, &original_location)?)), location))) }
         Token::Atom         => { Ok((Some(Arc::new(SafasCell::Atom(get_id_for_atom_with_name(&token_text)))), location)) }
         Token::Symbol(_)    => { Ok((Some(Arc::new(SafasCell::Atom(get_id_for_atom_with_name(&token_text)))), location)) }
-        Token::OpenParen    => { unimplemented!() }
-        Token::CloseParen   => { unimplemented!() }
+        Token::CloseParen   => { Err(ParseError::UnexpectedCloseParen(original_location)) }
         Token::String       => { Ok((Some(Arc::new(SafasCell::String(unquote_string(token_text)))), location)) }
 
         Token::Character    => {
@@ -72,6 +71,41 @@ fn parse_cell_from_token<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<
             } else {
                 Ok((Some(Arc::new(SafasCell::Char(chr_string.chars().nth(0).unwrap()))), location))
             }
+        }
+
+        Token::OpenParen    => {
+            // List of cells
+            let mut list        = vec![];
+            let mut location    = location;
+
+            loop {
+                // Read the next token
+                let start_location                          = location.clone();
+                let (next_token, next_text, next_location)  = tokenize_no_comments(code, location);
+                location                                    = next_location;
+
+                match next_token {
+                    // Close paren indicates the end of the list
+                    Token::CloseParen   => { break; }
+                    Token::EndOfFile    => return Err(ParseError::MissingCloseParen(original_location)),
+
+                    other_token         => {
+                        // Other symbols indicate a different cell of some kind
+                        let (cell, next_location) = parse_cell_from_token(code, start_location, other_token, next_text, location)?;
+                        location = next_location;
+
+                        if let Some(cell) = cell {
+                            // Add the cell to the list
+                            list.push(cell);
+                        } else {
+                            // Indicates we hit an EOF
+                            return Err(ParseError::MissingCloseParen(original_location));
+                        }
+                    }
+                }
+            }
+
+            Ok((Some(SafasCell::list_with_cells(list)), location))
         }
     }
 }
@@ -343,5 +377,19 @@ mod test {
         let mut buf         = TokenReadBuffer::new("atom".chars());
         let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
         assert!(parse_result == "(atom)".to_string());
+    }
+
+    #[test]
+    fn parse_list_1() {
+        let mut buf         = TokenReadBuffer::new("(1 2 3)".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "((1 2 3))".to_string());
+    }
+
+    #[test]
+    fn parse_list_2() {
+        let mut buf         = TokenReadBuffer::new("(1 (2 3) 4)".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "((1 (2 3) 4))".to_string());
     }
 }
