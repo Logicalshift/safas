@@ -8,10 +8,23 @@ use std::cell::{RefCell};
 /// copying the entire buffer). The list is in reverse, so the bitcode that should be compiled to the output
 /// first is at the end.
 ///
+#[derive(Clone)]
 pub struct BitCodeBuffer {
     /// The code in this buffer
-    code: Rc<RefCell<Vec<BitCode>>>,
+    pub code: Rc<RefCell<Vec<BitCode>>>,
 
     /// Bitcode that precedes this code (or none if this is the first code block)
-    preceding: Option<Rc<BitCodeBuffer>>
+    pub preceding: Option<Rc<BitCodeBuffer>>
+}
+
+impl BitCodeBuffer {
+    ///
+    /// Creates a new bitcode buffer
+    ///
+    pub fn new() -> BitCodeBuffer {
+        BitCodeBuffer {
+            code:       Rc::new(RefCell::new(vec![])),
+            preceding:  None
+        }
+    }
 }
