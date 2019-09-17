@@ -20,9 +20,6 @@ pub struct Lambda<Action: FrameMonad> {
 
     /// The number of cells to fill with arguments for this function (loaded in to cells 1-args)
     arg_count: usize,
-
-    /// The IDs of the cells to read from the parent frame (loaded after the arguments)
-    import_cells: Vec<usize>
 }
 
 impl<Action: FrameMonad> Lambda<Action> {
@@ -33,8 +30,7 @@ impl<Action: FrameMonad> Lambda<Action> {
         Lambda {
             action,
             num_cells,
-            arg_count,
-            import_cells
+            arg_count
         }
     }
 }
@@ -49,9 +45,6 @@ impl<Action: FrameMonad> FrameMonad for Lambda<Action> {
     fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>) {
         // Args in cell 0 from the calling frame
         let mut args        = Arc::clone(&frame.cells[0]);
-
-        // Read the import cells
-        let import_values   = self.import_cells.iter().map(|cell_id| Arc::clone(&frame.cells[*cell_id])).collect::<SmallVec<[_; 8]>>();
 
         // Create the frame for the function call
         let mut frame       = Frame::new(self.num_cells, Some(frame));
@@ -78,11 +71,6 @@ impl<Action: FrameMonad> FrameMonad for Lambda<Action> {
             // Move to the next argument
             args                    = next_arg;
             arg_pos                 += 1;
-        }
-
-        // Import any cells required from the parent frame
-        for value in import_values.clone() {
-            frame.cells[1+arg_pos] = value;
         }
 
         // Resolve the action (actually calling the function)
