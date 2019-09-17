@@ -322,6 +322,7 @@ fn int_number(number_string: &str, location: &FileLocation) -> Result<SafasCell,
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::str;
 
     #[test]
     fn parse_bit_number() {
@@ -391,5 +392,13 @@ mod test {
         let mut buf         = TokenReadBuffer::new("(1 (2 3) 4)".chars());
         let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
         assert!(parse_result == "((1 (2 3) 4))".to_string());
+    }
+
+    #[test]
+    fn parse_design_file() {
+        let design          = include_bytes!("../../design.sf");
+        let design          = str::from_utf8(design).unwrap();
+        let mut buf         = TokenReadBuffer::new(design.chars());
+        let _parse_result   = parse_safas(&mut buf, FileLocation::new("design.sf")).unwrap().to_string();
     }
 }
