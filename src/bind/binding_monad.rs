@@ -1,24 +1,29 @@
 use super::symbol_bindings::*;
-use crate::meta::*;
+use crate::exec::*;
 
 use std::marker::{PhantomData};
+use std::sync::*;
 
 ///
 /// The binding monad describes how to bind a program against its symbols
 ///
 pub trait BindingMonad {
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, SafasCell);
+    type Frame: FrameMonad;
+
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Frame);
 }
 
 ///
 /// Binding monad that returns a constant value
 ///
-struct ReturnValue {
-    value: SafasCell
+struct ReturnValue<Frame: FrameMonad+Clone> {
+    value: Frame
 }
 
-impl BindingMonad for ReturnValue {
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, SafasCell) {
+impl<Frame: FrameMonad+Clone> BindingMonad for ReturnValue<Frame> {
+    type Frame=Frame;
+
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Frame) {
         (bindings, self.value.clone())
     }
 }
@@ -26,7 +31,7 @@ impl BindingMonad for ReturnValue {
 ///
 /// Wraps a value in a binding monad
 ///
-pub fn wrap_binding(value: SafasCell) -> impl BindingMonad {
+pub fn wrap_binding<Frame: FrameMonad+Clone>(value: Frame) -> impl BindingMonad<Frame=Frame> {
     ReturnValue { value }
 }
 
@@ -39,8 +44,10 @@ struct FlatMapValue<InputMonad, OutputMonad, NextFn> {
 impl<InputMonad, OutputMonad, NextFn> BindingMonad for FlatMapValue<InputMonad, OutputMonad, NextFn>
 where   InputMonad:     BindingMonad,
         OutputMonad:    BindingMonad,
-        NextFn:         Fn(SafasCell) -> OutputMonad {
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, SafasCell) {
+        NextFn:         Fn(InputMonad::Frame) -> OutputMonad {
+    type Frame = OutputMonad::Frame;
+
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputMonad::Frame) {
         let (bindings, value)   = self.input.resolve(bindings);
         let next                = (self.next)(value);
         next.resolve(bindings)
@@ -50,7 +57,7 @@ where   InputMonad:     BindingMonad,
 ///
 /// That flat_map function for a binding monad
 ///
-pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(SafasCell) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl BindingMonad {
+pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(InputMonad::Frame) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl BindingMonad {
     FlatMapValue {
         input:  monad,
         next:   action,
