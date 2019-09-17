@@ -7,7 +7,7 @@ use std::marker::{PhantomData};
 ///
 /// Trait implemented by things that represent a 'frame monad'
 ///
-pub trait FrameMonad {
+pub trait FrameMonad : Send+Sync {
     /// Resolves this monad against a frame
     fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>);
 
@@ -44,7 +44,7 @@ struct FlatMapValue<InputMonad, OutputMonad, NextFn> {
 impl<InputMonad, OutputMonad, NextFn> FrameMonad for FlatMapValue<InputMonad, OutputMonad, NextFn>
 where   InputMonad:     FrameMonad,
         OutputMonad:    FrameMonad,
-        NextFn:         Fn(Arc<SafasCell>) -> OutputMonad {
+        NextFn:         Send+Sync+Fn(Arc<SafasCell>) -> OutputMonad {
     fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>) {
         let (frame, value)  = self.input.resolve(frame);
         let next            = (self.next)(value);

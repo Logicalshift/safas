@@ -3,7 +3,6 @@ use super::frame_monad::*;
 
 use crate::meta::*;
 
-use smallvec::*;
 use std::sync::*;
 
 ///
