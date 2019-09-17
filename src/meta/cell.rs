@@ -1,6 +1,8 @@
 use super::number::*;
 use super::atom::*;
 
+use crate::exec::frame_monad::*;
+
 use std::sync::*;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -28,7 +30,10 @@ pub enum SafasCell {
     Char(char),
 
     /// A list with a CAR and a CDR
-    List(Arc<SafasCell>, Arc<SafasCell>)
+    List(Arc<SafasCell>, Arc<SafasCell>),
+
+    /// A monad that transforms the state of the current frame (generally a lambda)
+    Monad(Arc<dyn FrameMonad>)
 }
 
 impl SafasCell {
@@ -69,9 +74,10 @@ impl SafasCell {
         match self {
             Nil                     => "()".to_string(),
             Atom(atom_id)           => name_for_atom_with_id(*atom_id),
-            Number(number)          => { number.to_string() },
+            Number(number)          => number.to_string(),
             String(string_value)    => format!("\"{}\"", string_value),         // TODO: character quoting
             Char(chr_value)         => format!("'{}'", chr_value),              // TODO: character quoting,
+            Monad(monad)            => monad.description(),
             List(first, second)     => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;

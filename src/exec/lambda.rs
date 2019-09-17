@@ -40,6 +40,12 @@ impl<Action: FrameMonad> Lambda<Action> {
 }
 
 impl<Action: FrameMonad> FrameMonad for Lambda<Action> {
+    fn description(&self) -> String {
+        let args = (0..self.arg_count).into_iter().map(|_| "_").collect::<Vec<_>>().join(" ");
+
+        format!("(lambda ({}) {})", args, self.action.description())
+    }
+
     fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>) {
         // Args in cell 0 from the calling frame
         let mut args        = Arc::clone(&frame.cells[0]);

@@ -10,6 +10,9 @@ use std::marker::{PhantomData};
 pub trait FrameMonad {
     /// Resolves this monad against a frame
     fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>);
+
+    /// Retrieves a description of this monad when we need to display it to the user
+    fn description(&self) -> String { format!("<frame_monad#{:p}>", self) }
 }
 
 ///
@@ -47,6 +50,8 @@ where   InputMonad:     FrameMonad,
         let next            = (self.next)(value);
         next.resolve(frame)
     }
+
+    fn description(&self) -> String { format!("{} >>= <fn#{:p}>", self.input.description(), &self.next) }
 }
 
 ///
