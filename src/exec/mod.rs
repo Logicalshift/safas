@@ -7,8 +7,10 @@ mod bitcode_buffer;
 mod frame;
 mod frame_monad;
 mod action;
+mod lambda;
 
 pub use self::bitcode_buffer::*;
 pub use self::frame::*;
 pub use self::frame_monad::*;
 pub use self::action::*;
+pub use self::lambda::*;
