@@ -25,7 +25,7 @@ impl<Action: FrameMonad> Lambda<Action> {
     ///
     /// Creates a new lambda from a frame monad
     ///
-    pub fn new(action: Action, num_cells: usize, arg_count: usize, import_cells: Vec<usize>) -> Lambda<Action> {
+    pub fn new(action: Action, num_cells: usize, arg_count: usize) -> Lambda<Action> {
         Lambda {
             action,
             num_cells,

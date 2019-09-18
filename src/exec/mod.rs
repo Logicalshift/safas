@@ -8,9 +8,11 @@ mod frame;
 pub mod frame_monad;
 mod action;
 mod lambda;
+mod closure;
 
 pub use self::bitcode_buffer::*;
 pub use self::frame::*;
 pub use self::frame_monad::*;
 pub use self::action::*;
 pub use self::lambda::*;
+pub use self::closure::*;
