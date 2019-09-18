@@ -7,22 +7,22 @@ use std::marker::{PhantomData};
 /// The binding monad describes how to bind a program against its symbols
 ///
 pub trait BindingMonad {
-    type Frame: FrameMonad;
+    type Binding;
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Frame);
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
 }
 
 ///
 /// Binding monad that returns a constant value
 ///
-struct ReturnValue<Frame: FrameMonad+Clone> {
-    value: Frame
+struct ReturnValue<Binding: Clone> {
+    value: Binding
 }
 
-impl<Frame: FrameMonad+Clone> BindingMonad for ReturnValue<Frame> {
-    type Frame=Frame;
+impl<Binding: Clone> BindingMonad for ReturnValue<Binding> {
+    type Binding=Binding;
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Frame) {
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
         (bindings, self.value.clone())
     }
 }
@@ -30,7 +30,7 @@ impl<Frame: FrameMonad+Clone> BindingMonad for ReturnValue<Frame> {
 ///
 /// Wraps a value in a binding monad
 ///
-pub fn wrap_binding<Frame: FrameMonad+Clone>(value: Frame) -> impl BindingMonad<Frame=Frame> {
+pub fn wrap_binding<Binding: Clone>(value: Binding) -> impl BindingMonad<Binding=Binding> {
     ReturnValue { value }
 }
 
@@ -43,10 +43,10 @@ struct FlatMapValue<InputMonad, OutputMonad, NextFn> {
 impl<InputMonad, OutputMonad, NextFn> BindingMonad for FlatMapValue<InputMonad, OutputMonad, NextFn>
 where   InputMonad:     BindingMonad,
         OutputMonad:    BindingMonad,
-        NextFn:         Fn(InputMonad::Frame) -> OutputMonad {
-    type Frame = OutputMonad::Frame;
+        NextFn:         Fn(InputMonad::Binding) -> OutputMonad {
+    type Binding = OutputMonad::Binding;
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputMonad::Frame) {
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputMonad::Binding) {
         let (bindings, value)   = self.input.resolve(bindings);
         let next                = (self.next)(value);
         next.resolve(bindings)
@@ -56,7 +56,7 @@ where   InputMonad:     BindingMonad,
 ///
 /// That flat_map function for a binding monad
 ///
-pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(InputMonad::Frame) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl BindingMonad {
+pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(InputMonad::Binding) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl BindingMonad {
     FlatMapValue {
         input:  monad,
         next:   action,
