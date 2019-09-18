@@ -78,10 +78,12 @@ struct ClosureBody<Action: FrameMonad> {
 
 impl<Action: FrameMonad> FrameMonad for ClosureBody<Action> {
     fn description(&self) -> String {
-        format!("(closure_body ({}) {})", self.cells.iter().map(|(index, value)| value.to_string()).collect::<Vec<_>>().join(" "), self.action.description())
+        format!("(closure_body ({}) {})", self.cells.iter().map(|(_index, value)| value.to_string()).collect::<Vec<_>>().join(" "), self.action.description())
     }
 
     fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>) {
+        let mut frame = frame;
+
         // Store the values of the cells
         for (cell_index, cell_value) in self.cells.iter() {
             frame.cells[*cell_index] = Arc::clone(cell_value);

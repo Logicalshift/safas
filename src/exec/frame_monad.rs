@@ -57,7 +57,7 @@ where   InputMonad:     FrameMonad,
 ///
 /// That flat_map function for a frame monad (appends 'action' to the series of actions represented by 'monad')
 ///
-pub fn flat_map_frame<InputMonad: FrameMonad, OutputMonad: FrameMonad, NextFn: Fn(Arc<SafasCell>) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl FrameMonad {
+pub fn flat_map_frame<InputMonad: FrameMonad, OutputMonad: FrameMonad, NextFn: Send+Sync+Fn(Arc<SafasCell>) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl FrameMonad {
     FlatMapValue {
         input:  monad,
         next:   action,
