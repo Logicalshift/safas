@@ -2,7 +2,6 @@ use super::symbol_bindings::*;
 use crate::exec::*;
 
 use std::marker::{PhantomData};
-use std::sync::*;
 
 ///
 /// The binding monad describes how to bind a program against its symbols
