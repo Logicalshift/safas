@@ -32,8 +32,8 @@ pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> Resul
                     Unbound(atom_id)                => Err(BindError::UnboundSymbol),
                     FrameReference(cell_num, frame) => unimplemented!(),
                     FrameMonad(monad)               => Ok((smallvec![Action::Value(Arc::new(SafasCell::Monad(Arc::clone(&monad))))], bindings)),
-                    MacroMonad(monad)               => unimplemented!(),
-                    ActionMonad(monad)              => unimplemented!()
+                    MacroMonad(monad)               => Ok((smallvec![Action::Value(Arc::new(SafasCell::MacroMonad(Arc::clone(&monad))))], bindings)),
+                    ActionMonad(monad)              => Ok((smallvec![Action::Value(Arc::new(SafasCell::ActionMonad(Arc::clone(&monad))))], bindings))
                 }
             } else {
                 // Not a valid symbol
