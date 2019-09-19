@@ -7,5 +7,8 @@ pub enum BindError {
     UnknownSymbol,
 
     /// A symbol has a value but is not bound to anything
-    UnboundSymbol
+    UnboundSymbol,
+
+    /// A constant was used where a function was expected
+    ConstantsCannotBeCalled
 }
