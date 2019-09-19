@@ -19,4 +19,11 @@ impl SymbolBindings {
             symbols: HashMap::new()
         }
     }
+
+    ///
+    /// Looks up the value for a symbol in this binding
+    ///
+    pub fn look_up(&self, symbol: u64) -> Option<SymbolValue> {
+        self.symbols.get(&symbol).cloned()
+    }
 }
