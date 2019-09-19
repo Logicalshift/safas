@@ -44,7 +44,28 @@ impl SymbolBindings {
     /// Looks up the value for a symbol in this binding
     ///
     pub fn look_up(&self, symbol: u64) -> Option<SymbolValue> {
-        self.symbols.get(&symbol).cloned()
+        let mut binding = Some(self);
+        let mut level   = 0;
+
+        while let Some(current_binding) = binding {
+            // Look up in the current binding
+            if let Some(symbol) = current_binding.symbols.get(&symbol) {
+                // Return the value if we find it, adjusting the frame level for cells that need to be imported
+                match symbol {
+                    SymbolValue::FrameReference(cell, bound_level)  => return Some(SymbolValue::FrameReference(*cell, *bound_level + level)),
+                    _other                                          => return Some(symbol.clone())
+                }
+            }
+
+            // Move up a level
+            if !current_binding.is_interior {
+                level += 1;
+            }
+
+            binding = current_binding.parent.as_ref().map(|parent| &**parent);
+        }
+
+        None
     }
 
     ///
