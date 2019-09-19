@@ -1,6 +1,9 @@
+use super::binding_monad::*;
+
 use crate::exec::*;
 use crate::meta::*;
 
+use smallvec::*;
 use std::sync::*;
 
 ///
@@ -21,5 +24,11 @@ pub enum SymbolValue {
     ExternalFunction(Arc<dyn Fn(SafasCell) -> SafasCell>),
 
     /// An external frame monad
-    FrameMonad(Arc<dyn FrameMonad>)
+    FrameMonad(Arc<dyn FrameMonad>),
+
+    /// A macro expands to a statement, which is recursively compiled
+    MacroMonad(Arc<dyn BindingMonad<Binding=Arc<SafasCell>>>),
+
+    /// An action expands directly to a set of interpreter actions
+    ActionMonad(Arc<dyn BindingMonad<Binding=SmallVec<[Action; 8]>>>)
 }
