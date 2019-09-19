@@ -7,7 +7,14 @@ use std::collections::{HashMap};
 ///
 #[derive(Clone)]
 pub struct SymbolBindings {
-    pub symbols: HashMap<u64, SymbolValue>
+    /// The symbols in this binding
+    pub symbols: HashMap<u64, SymbolValue>,
+
+    /// The symbol bindings in the 'parent' of the current frame
+    pub parent: Option<Box<SymbolBindings>>,
+
+    /// The number of cells to allocate in the current frame (there's always one, which we use as the accumulator)
+    pub num_cells: usize
 }
 
 impl SymbolBindings {
@@ -16,7 +23,9 @@ impl SymbolBindings {
     ///
     pub fn new() -> SymbolBindings {
         SymbolBindings {
-            symbols: HashMap::new()
+            symbols:    HashMap::new(),
+            parent:     None,
+            num_cells:  1
         }
     }
 
