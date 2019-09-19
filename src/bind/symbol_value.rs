@@ -1,10 +1,12 @@
 use super::binding_monad::*;
+use super::bind_error::*;
 
 use crate::exec::*;
 use crate::meta::*;
 
 use smallvec::*;
 use std::sync::*;
+use std::result::{Result};
 
 ///
 /// The possible bindings of a symbols value
@@ -20,15 +22,12 @@ pub enum SymbolValue {
     /// A reference to an item in a frame (or a parent frame)
     FrameReference(u32, u32),
 
-    /// An external function
-    ExternalFunction(Arc<dyn Fn(SafasCell) -> SafasCell>),
-
     /// An external frame monad
     FrameMonad(Arc<dyn FrameMonad>),
 
     /// A macro expands to a statement, which is recursively compiled
-    MacroMonad(Arc<dyn BindingMonad<Binding=Arc<SafasCell>>>),
+    MacroMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SafasCell>, BindError>>>),
 
     /// An action expands directly to a set of interpreter actions
-    ActionMonad(Arc<dyn BindingMonad<Binding=SmallVec<[Action; 8]>>>)
+    ActionMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>>>)
 }
