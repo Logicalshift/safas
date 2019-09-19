@@ -1,9 +1,9 @@
 mod symbol_value;
 mod symbol_bindings;
 mod binding_monad;
-mod bind_simple_statement;
+mod bind_error;
 
 pub use self::symbol_value::*;
 pub use self::symbol_bindings::*;
 pub use self::binding_monad::*;
-pub use self::bind_simple_statement::*;
+pub use self::bind_error::*;
