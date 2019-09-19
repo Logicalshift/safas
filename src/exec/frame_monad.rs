@@ -1,7 +1,9 @@
 use super::frame::*;
+use super::runtime_error::*;
 use crate::meta::*;
 
 use std::sync::*;
+use std::result::{Result};
 use std::marker::{PhantomData};
 
 ///
@@ -9,7 +11,7 @@ use std::marker::{PhantomData};
 ///
 pub trait FrameMonad : Send+Sync {
     /// Resolves this monad against a frame
-    fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>);
+    fn resolve(&self, frame: Frame) -> Result<(Frame, Arc<SafasCell>), RuntimeError>;
 
     /// Retrieves a description of this monad when we need to display it to the user
     fn description(&self) -> String { format!("<frame_monad#{:p}>", self) }
@@ -23,8 +25,8 @@ struct ReturnValue {
 }
 
 impl FrameMonad for ReturnValue {
-    fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>) {
-        (frame, self.value.clone())
+    fn resolve(&self, frame: Frame) -> Result<(Frame, Arc<SafasCell>), RuntimeError> {
+        Ok((frame, self.value.clone()))
     }
 }
 
@@ -45,10 +47,10 @@ impl<InputMonad, OutputMonad, NextFn> FrameMonad for FlatMapValue<InputMonad, Ou
 where   InputMonad:     FrameMonad,
         OutputMonad:    FrameMonad,
         NextFn:         Send+Sync+Fn(Arc<SafasCell>) -> OutputMonad {
-    fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>) {
-        let (frame, value)  = self.input.resolve(frame);
+    fn resolve(&self, frame: Frame) -> Result<(Frame, Arc<SafasCell>), RuntimeError> {
+        let (frame, value)  = self.input.resolve(frame)?;
         let next            = (self.next)(value);
-        next.resolve(frame)
+        Ok(next.resolve(frame)?)
     }
 
     fn description(&self) -> String { format!("{} >>= <fn#{:p}>", self.input.description(), &self.next) }

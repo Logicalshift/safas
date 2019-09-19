@@ -1,5 +1,6 @@
 use super::frame::*;
 use super::frame_monad::*;
+use super::runtime_error::*;
 
 use crate::meta::*;
 
@@ -35,7 +36,7 @@ pub enum Action {
 }
 
 impl FrameMonad for Vec<Action> {
-    fn resolve(&self, frame: Frame) -> (Frame, Arc<SafasCell>) {
+    fn resolve(&self, frame: Frame) -> Result<(Frame, Arc<SafasCell>), RuntimeError> {
         // Initial state
         let mut frame   = frame;
         let mut result  = Arc::new(SafasCell::Nil);
@@ -70,7 +71,7 @@ impl FrameMonad for Vec<Action> {
                 Call                        => { 
                     match &*result {
                         SafasCell::Monad(action)    => { 
-                            let (new_frame, new_result) = action.resolve(frame);
+                            let (new_frame, new_result) = action.resolve(frame)?;
                             frame                       = new_frame;
                             result                      = new_result;
                         },
@@ -80,6 +81,6 @@ impl FrameMonad for Vec<Action> {
             }
         }
 
-        (frame, result)
+        Ok((frame, result))
     }
 }
