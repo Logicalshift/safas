@@ -48,7 +48,7 @@ pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> Resul
         }
 
         // Normal values just get loaded into cell 0
-        other           => { Ok((smallvec![Action::Value(Arc::clone(&source))], bindings)) }
+        _other          => { Ok((smallvec![Action::Value(Arc::clone(&source))], bindings)) }
     }
 }
 
@@ -67,7 +67,7 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
 
             match symbol_value {
                 None                                    => return Err(BindError::UnknownSymbol),
-                Some(Constant(value))                   => return Err(BindError::ConstantsCannotBeCalled),
+                Some(Constant(_value))                  => return Err(BindError::ConstantsCannotBeCalled),
                 Some(Unbound(_atom_id))                 => return Err(BindError::UnboundSymbol),
                 Some(FrameReference(_cell_num, _frame)) => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
                 Some(FrameMonad(frame_monad))           => { bind_call(smallvec![Action::Value(Arc::new(SafasCell::Monad(Arc::clone(&frame_monad))))], cdr, bindings) }
