@@ -1,8 +1,10 @@
 use super::number::*;
 use super::atom::*;
 
-use crate::exec::frame_monad::*;
+use crate::bind::*;
+use crate::exec::*;
 
+use smallvec::*;
 use std::sync::*;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -33,7 +35,13 @@ pub enum SafasCell {
     List(Arc<SafasCell>, Arc<SafasCell>),
 
     /// A monad that transforms the state of the current frame (generally a lambda)
-    Monad(Arc<dyn FrameMonad>)
+    Monad(Arc<dyn FrameMonad>),
+
+    /// A macro expands to a statement, which is recursively compiled
+    MacroMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SafasCell>, BindError>>>),
+
+    /// An action expands directly to a set of interpreter actions
+    ActionMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>>>)
 }
 
 impl SafasCell {
@@ -78,6 +86,8 @@ impl SafasCell {
             String(string_value)    => format!("\"{}\"", string_value),         // TODO: character quoting
             Char(chr_value)         => format!("'{}'", chr_value),              // TODO: character quoting,
             Monad(monad)            => monad.description(),
+            MacroMonad(monad)       => format!("macro#{}", monad.description()),
+            ActionMonad(monad)      => format!("compile#{}", monad.description()),
             List(first, second)     => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;

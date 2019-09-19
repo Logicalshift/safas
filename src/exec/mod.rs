@@ -5,7 +5,7 @@
 
 mod bitcode_buffer;
 mod frame;
-pub mod frame_monad;
+mod frame_monad;
 mod action;
 mod lambda;
 mod closure;

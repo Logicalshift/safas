@@ -6,7 +6,7 @@ use std::marker::{PhantomData};
 ///
 /// The binding monad describes how to bind a program against its symbols
 ///
-pub trait BindingMonad {
+pub trait BindingMonad : Send+Sync {
     type Binding;
 
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
@@ -24,7 +24,7 @@ struct ReturnValue<Binding: Clone> {
     value: Binding
 }
 
-impl<Binding: Clone> BindingMonad for ReturnValue<Binding> {
+impl<Binding: Send+Sync+Clone> BindingMonad for ReturnValue<Binding> {
     type Binding=Binding;
 
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
@@ -35,7 +35,7 @@ impl<Binding: Clone> BindingMonad for ReturnValue<Binding> {
 ///
 /// Wraps a value in a binding monad
 ///
-pub fn wrap_binding<Binding: Clone>(value: Binding) -> impl BindingMonad<Binding=Binding> {
+pub fn wrap_binding<Binding: Send+Sync+Clone>(value: Binding) -> impl BindingMonad<Binding=Binding> {
     ReturnValue { value }
 }
 
@@ -48,7 +48,7 @@ struct FlatMapValue<InputMonad, OutputMonad, NextFn> {
 impl<InputMonad, OutputMonad, NextFn> BindingMonad for FlatMapValue<InputMonad, OutputMonad, NextFn>
 where   InputMonad:     BindingMonad,
         OutputMonad:    BindingMonad,
-        NextFn:         Fn(InputMonad::Binding) -> OutputMonad {
+        NextFn:         Fn(InputMonad::Binding) -> OutputMonad+Send+Sync {
     type Binding = OutputMonad::Binding;
 
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputMonad::Binding) {
@@ -61,7 +61,7 @@ where   InputMonad:     BindingMonad,
 ///
 /// That flat_map function for a binding monad
 ///
-pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(InputMonad::Binding) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl BindingMonad {
+pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(InputMonad::Binding) -> OutputMonad+Send+Sync>(action: NextFn, monad: InputMonad) -> impl BindingMonad {
     FlatMapValue {
         input:  monad,
         next:   action,
