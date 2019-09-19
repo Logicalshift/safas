@@ -71,8 +71,22 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
                 Some(Unbound(_atom_id))                 => return Err(BindError::UnboundSymbol),
                 Some(FrameReference(_cell_num, _frame)) => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
                 Some(FrameMonad(frame_monad))           => { bind_call(smallvec![Action::Value(Arc::new(SafasCell::Monad(Arc::clone(&frame_monad))))], cdr, bindings) }
-                Some(ActionMonad(action_monad))         => { unimplemented!() }
-                Some(MacroMonad(macro_monad))           => { unimplemented!() }
+                
+                Some(ActionMonad(action_monad))         => {
+                    let bindings            = bindings.push_interior_frame();
+                    let (bindings, actions) = action_monad.resolve(bindings);
+                    let bindings            = bindings.pop();
+                    let actions             = (*actions?).clone();
+                    Ok((actions, bindings))
+                }
+
+                Some(MacroMonad(macro_monad))           => { 
+                    let bindings                = bindings.push_interior_frame();
+                    let (bindings, expanded)    = macro_monad.resolve(bindings);
+                    let (actions, bindings)     = bind_statement(expanded?, bindings)?;
+                    let bindings                = bindings.pop();
+                    Ok((actions, bindings))
+                }
             }
         },
 

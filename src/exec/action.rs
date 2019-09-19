@@ -9,6 +9,7 @@ use std::sync::*;
 ///
 /// An action that can be run against a frame
 ///
+#[derive(Clone, Debug)]
 pub enum Action {
     /// Returns a value directly
     Value(Arc<SafasCell>),
