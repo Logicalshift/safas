@@ -1,5 +1,8 @@
 use super::symbol_value::*;
 
+use crate::meta::*;
+
+use std::sync::*;
 use std::collections::{HashMap};
 
 ///
@@ -7,6 +10,9 @@ use std::collections::{HashMap};
 ///
 #[derive(Clone)]
 pub struct SymbolBindings {
+    /// When binding on a macro or similar, the arguments that were supplied to the macro
+    pub args: Option<Arc<SafasCell>>,
+
     /// The symbols in this binding
     pub symbols: HashMap<u64, SymbolValue>,
 
@@ -26,6 +32,7 @@ impl SymbolBindings {
     ///
     pub fn new() -> SymbolBindings {
         SymbolBindings {
+            args:           None,
             symbols:        HashMap::new(),
             parent:         None,
             num_cells:      1,
@@ -45,6 +52,7 @@ impl SymbolBindings {
     ///
     pub fn push_new_frame(self) -> SymbolBindings {
         SymbolBindings {
+            args:           None,
             symbols:        HashMap::new(),
             parent:         Some(Box::new(self)),
             num_cells:      1,
@@ -57,6 +65,7 @@ impl SymbolBindings {
     ///
     pub fn push_interior_frame(self) -> SymbolBindings {
         SymbolBindings {
+            args:           None,
             symbols:        HashMap::new(),
             num_cells:      self.num_cells,
             parent:         Some(Box::new(self)),

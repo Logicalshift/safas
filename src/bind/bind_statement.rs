@@ -73,7 +73,8 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
                 Some(FrameMonad(frame_monad))           => { bind_call(smallvec![Action::Value(Arc::new(SafasCell::Monad(Arc::clone(&frame_monad))))], cdr, bindings) }
                 
                 Some(ActionMonad(action_monad))         => {
-                    let bindings            = bindings.push_interior_frame();
+                    let mut bindings        = bindings.push_interior_frame();
+                    bindings.args           = Some(cdr);
                     let (bindings, actions) = action_monad.resolve(bindings);
                     let bindings            = bindings.pop();
                     let actions             = (*actions?).clone();
@@ -81,7 +82,8 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
                 }
 
                 Some(MacroMonad(macro_monad))           => { 
-                    let bindings                = bindings.push_interior_frame();
+                    let mut bindings            = bindings.push_interior_frame();
+                    bindings.args               = Some(cdr);
                     let (bindings, expanded)    = macro_monad.resolve(bindings);
                     let (actions, bindings)     = bind_statement(expanded?, bindings)?;
                     let bindings                = bindings.pop();
