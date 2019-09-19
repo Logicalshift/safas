@@ -27,6 +27,9 @@ pub enum Action {
     /// Pops a number of values from the stack and turns them into a list
     PopList(usize),
 
+    /// Pops a value from the stack to use as the CDR for the end of the list, then pops a number of values to generate the full list
+    PopListWithCdr(usize),
+
     /// Calls the current value
     Call
 }
@@ -42,13 +45,13 @@ impl FrameMonad for Vec<Action> {
             use self::Action::*;
 
             match action {
-                Value(cell)         => { result = Arc::clone(&cell); },
-                CellValue(pos)      => { result = Arc::clone(&frame.cells[*pos]); },
-                StoreCell(cell)     => { frame.cells[*cell] = Arc::clone(&result); },
-                Push                => { frame.stack.push(Arc::clone(&result)); },
-                Pop                 => { result = frame.stack.pop().expect("Stack empty"); }
+                Value(cell)                 => { result = Arc::clone(&cell); },
+                CellValue(pos)              => { result = Arc::clone(&frame.cells[*pos]); },
+                StoreCell(cell)             => { frame.cells[*cell] = Arc::clone(&result); },
+                Push                        => { frame.stack.push(Arc::clone(&result)); },
+                Pop                         => { result = frame.stack.pop().expect("Stack empty"); }
 
-                PopList(num_cells)  => { 
+                PopList(num_cells)          => { 
                     result = Arc::new(SafasCell::Nil);
                     for _ in 0..*num_cells {
                         let val = frame.stack.pop().expect("Stack empty");
@@ -56,7 +59,15 @@ impl FrameMonad for Vec<Action> {
                     }
                 }
 
-                Call                => { 
+                PopListWithCdr(num_cells)   => { 
+                    result = frame.stack.pop().expect("Stack empty");
+                    for _ in 0..*num_cells {
+                        let val = frame.stack.pop().expect("Stack empty");
+                        result = Arc::new(SafasCell::List(val, result));
+                    }
+                }
+
+                Call                        => { 
                     match &*result {
                         SafasCell::Monad(action)    => { 
                             let (new_frame, new_result) = action.resolve(frame);
