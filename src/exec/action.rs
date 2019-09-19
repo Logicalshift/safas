@@ -50,20 +50,20 @@ impl FrameMonad for Vec<Action> {
                 CellValue(pos)              => { result = Arc::clone(&frame.cells[*pos]); },
                 StoreCell(cell)             => { frame.cells[*cell] = Arc::clone(&result); },
                 Push                        => { frame.stack.push(Arc::clone(&result)); },
-                Pop                         => { result = frame.stack.pop().expect("Stack empty"); }
+                Pop                         => { result = frame.stack.pop().ok_or(RuntimeError::StackIsEmpty)?; }
 
                 PopList(num_cells)          => { 
                     result = Arc::new(SafasCell::Nil);
                     for _ in 0..*num_cells {
-                        let val = frame.stack.pop().expect("Stack empty");
+                        let val = frame.stack.pop().ok_or(RuntimeError::StackIsEmpty)?;
                         result = Arc::new(SafasCell::List(val, result));
                     }
                 }
 
                 PopListWithCdr(num_cells)   => { 
-                    result = frame.stack.pop().expect("Stack empty");
+                    result = frame.stack.pop().ok_or(RuntimeError::StackIsEmpty)?;
                     for _ in 0..*num_cells {
-                        let val = frame.stack.pop().expect("Stack empty");
+                        let val = frame.stack.pop().ok_or(RuntimeError::StackIsEmpty)?;
                         result = Arc::new(SafasCell::List(val, result));
                     }
                 }
@@ -75,7 +75,7 @@ impl FrameMonad for Vec<Action> {
                             frame                       = new_frame;
                             result                      = new_result;
                         },
-                        _                           => panic!("Value is not a function")
+                        _                           => return Err(RuntimeError::NotAFunction)
                     }
                 }
             }
