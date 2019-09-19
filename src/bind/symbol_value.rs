@@ -19,8 +19,8 @@ pub enum SymbolValue {
     /// Symbol should be bound once the value of a particular Atom is known
     Unbound(u64),
 
-    /// A reference to an item in a frame (or a parent frame)
-    FrameReference(u32, u32),
+    /// A reference to an item in a frame (or a parent frame). The values here are the cell number and the ID of the frame that this reference is for
+    FrameReference(usize, u32),
 
     /// An external frame monad
     FrameMonad(Arc<dyn FrameMonad>),

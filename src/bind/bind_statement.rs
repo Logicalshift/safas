@@ -30,10 +30,16 @@ pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> Resul
                 match symbol_value {
                     Constant(value)                 => Ok((smallvec![Action::Value(Arc::clone(&value))], bindings)),
                     Unbound(atom_id)                => Err(BindError::UnboundSymbol),
-                    FrameReference(cell_num, frame) => unimplemented!(),
                     FrameMonad(monad)               => Ok((smallvec![Action::Value(Arc::new(SafasCell::Monad(Arc::clone(&monad))))], bindings)),
                     MacroMonad(monad)               => Ok((smallvec![Action::Value(Arc::new(SafasCell::MacroMonad(Arc::clone(&monad))))], bindings)),
-                    ActionMonad(monad)              => Ok((smallvec![Action::Value(Arc::new(SafasCell::ActionMonad(Arc::clone(&monad))))], bindings))
+                    ActionMonad(monad)              => Ok((smallvec![Action::Value(Arc::new(SafasCell::ActionMonad(Arc::clone(&monad))))], bindings)),
+                    FrameReference(cell_num, frame) => {
+                        if frame == 0 {
+                            Ok((smallvec![Action::CellValue(cell_num)], bindings))
+                        } else {
+                            unimplemented!("Closures not implemented yet")
+                        }
+                    },
                 }
             } else {
                 // Not a valid symbol
