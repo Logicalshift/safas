@@ -14,7 +14,10 @@ pub struct SymbolBindings {
     pub parent: Option<Box<SymbolBindings>>,
 
     /// The number of cells to allocate in the current frame (there's always one, which we use as the accumulator)
-    pub num_cells: usize
+    pub num_cells: usize,
+
+    /// True if this is an 'interior' binding (shares its cells with its parent)
+    pub is_interior: bool
 }
 
 impl SymbolBindings {
@@ -23,9 +26,10 @@ impl SymbolBindings {
     ///
     pub fn new() -> SymbolBindings {
         SymbolBindings {
-            symbols:    HashMap::new(),
-            parent:     None,
-            num_cells:  1
+            symbols:        HashMap::new(),
+            parent:         None,
+            num_cells:      1,
+            is_interior:    false
         }
     }
 
@@ -34,5 +38,48 @@ impl SymbolBindings {
     ///
     pub fn look_up(&self, symbol: u64) -> Option<SymbolValue> {
         self.symbols.get(&symbol).cloned()
+    }
+
+    ///
+    /// Pushes a new symbol binding, as if it were a new frame (eg, due to a function call)
+    ///
+    pub fn push_new_frame(self) -> SymbolBindings {
+        SymbolBindings {
+            symbols:        HashMap::new(),
+            parent:         Some(Box::new(self)),
+            num_cells:      1,
+            is_interior:    false
+        }
+    }
+
+    ///
+    /// Pushes a symbol binding that works as an interior frame (eg, when binding in a macro)
+    ///
+    pub fn push_interior_frame(self) -> SymbolBindings {
+        SymbolBindings {
+            symbols:        HashMap::new(),
+            num_cells:      self.num_cells,
+            parent:         Some(Box::new(self)),
+            is_interior:    true
+        }
+    }
+
+    ///
+    /// Pops a set of symbol bindings
+    ///
+    pub fn pop(mut self) -> SymbolBindings {
+        // Take the parent binding
+        let parent = self.parent.take().expect("Parent binding missing");
+
+        // Unbox it
+        let mut parent = *parent;
+
+        // Make sure the number of cells is updated on the parent if it's interior
+        if self.is_interior {
+            parent.num_cells = self.num_cells.max(parent.num_cells);
+        }
+
+        // The parent binding is the result
+        parent
     }
 }
