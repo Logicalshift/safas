@@ -10,6 +10,11 @@ pub trait BindingMonad {
     type Binding;
 
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
+
+    ///
+    /// Returns a string that describes what this monad does
+    ///
+    fn description(&self) -> String { "<syntax>".to_string() }
 }
 
 ///
