@@ -18,6 +18,9 @@ pub struct Frame {
 
     /// The bitcode output of the assembler (bitcode is typically passed between frames, so it's stored by reference)
     pub bitcode: BitCodeBuffer,
+
+    /// The stack for this frame
+    pub stack: SmallVec<[Arc<SafasCell>; 8]>
 }
 
 impl Frame {
@@ -28,7 +31,8 @@ impl Frame {
         Frame {
             previous_frame: previous_frame.map(|frame| Box::new(frame)),
             cells:          smallvec![Arc::new(SafasCell::Nil); size],
-            bitcode:        BitCodeBuffer::new()
+            bitcode:        BitCodeBuffer::new(),
+            stack:          smallvec![]
         }
     }
 

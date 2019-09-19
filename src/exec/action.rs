@@ -13,7 +13,22 @@ pub enum Action {
     Value(Arc<SafasCell>),
 
     /// Reads a value from a cell
-    CellValue(usize)
+    CellValue(usize),
+
+    /// Stores a value in a particular cell
+    StoreCell(usize),
+
+    /// Pushes a value onto the frame's stack
+    Push,
+
+    /// Pops a value from the stack
+    Pop,
+
+    /// Pops a number of values from the stack and turns them into a list
+    PopList(usize),
+
+    /// Calls the current value
+    Call
 }
 
 impl FrameMonad for Vec<Action> {
@@ -27,8 +42,30 @@ impl FrameMonad for Vec<Action> {
             use self::Action::*;
 
             match action {
-                Value(cell)     => { result = Arc::clone(&cell); },
-                CellValue(pos)  => { result = Arc::clone(&frame.cells[*pos]); }
+                Value(cell)         => { result = Arc::clone(&cell); },
+                CellValue(pos)      => { result = Arc::clone(&frame.cells[*pos]); },
+                StoreCell(cell)     => { frame.cells[*cell] = Arc::clone(&result); },
+                Push                => { frame.stack.push(Arc::clone(&result)); },
+                Pop                 => { result = frame.stack.pop().expect("Stack empty"); }
+
+                PopList(num_cells)  => { 
+                    result = Arc::new(SafasCell::Nil);
+                    for _ in 0..*num_cells {
+                        let val = frame.stack.pop().expect("Stack empty");
+                        result = Arc::new(SafasCell::List(val, result));
+                    }
+                }
+
+                Call                => { 
+                    match &*result {
+                        SafasCell::Monad(action)    => { 
+                            let (new_frame, new_result) = action.resolve(frame);
+                            frame                       = new_frame;
+                            result                      = new_result;
+                        },
+                        _                           => panic!("Value is not a function")
+                    }
+                }
             }
         }
 
