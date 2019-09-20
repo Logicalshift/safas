@@ -2,6 +2,7 @@ use crate::meta::*;
 use crate::parse::*;
 use crate::bind::*;
 use crate::exec::*;
+use crate::syntax::*;
 
 use std::io;
 use std::io::{Write};
@@ -15,8 +16,13 @@ pub fn run_interactive() {
     println!("Interactive interpreter");
 
     // Create the execution frame
-    let mut frame       = Frame::new(1, None);
-    let mut bindings    = SymbolBindings::new();
+    let frame                   = Frame::new(1, None);
+    let bindings                = SymbolBindings::new();
+
+    // Apply the standard bindings
+    let syntax                  = standard_syntax();
+    let (mut bindings, actions) = syntax.resolve(bindings);
+    let (mut frame, _)          = (*actions.unwrap()).resolve(frame);
 
     loop {
         // Read a line

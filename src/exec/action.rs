@@ -4,6 +4,7 @@ use super::runtime_error::*;
 
 use crate::meta::*;
 
+use smallvec::*;
 use std::sync::*;
 
 ///
@@ -34,6 +35,16 @@ pub enum Action {
 
     /// Calls the current value
     Call
+}
+
+impl FrameMonad for SmallVec<[Action; 8]> {
+    type Binding = RuntimeResult;
+
+    fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
+        // We just convert to a normal vec and run the actions from there
+        let actions = self.iter().cloned().collect::<Vec<_>>();
+        actions.resolve(frame)
+    }
 }
 
 impl FrameMonad for Vec<Action> {
