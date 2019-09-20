@@ -1,3 +1,5 @@
 mod def;
+mod standard_syntax;
 
-pub use def::*;
+pub use self::def::*;
+pub use self::standard_syntax::*;

@@ -11,6 +11,15 @@ use std::sync::*;
 pub struct DefMonad {
 }
 
+impl DefMonad {
+    ///
+    /// Creates a new monad for the 'def' syntax
+    ///
+    pub fn new() -> DefMonad {
+        DefMonad { }
+    }
+}
+
 impl BindingMonad for DefMonad {
     type Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>;
 
