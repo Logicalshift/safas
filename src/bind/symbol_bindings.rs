@@ -2,6 +2,7 @@ use super::symbol_value::*;
 
 use crate::meta::*;
 
+use smallvec::*;
 use std::sync::*;
 use std::collections::{HashMap};
 
@@ -15,6 +16,9 @@ pub struct SymbolBindings {
 
     /// The symbols in this binding
     pub symbols: HashMap<u64, SymbolValue>,
+
+    /// The symbols to export to the parent context
+    pub export_symbols: SmallVec<[u64; 2]>,
 
     /// The symbol bindings in the 'parent' of the current frame
     pub parent: Option<Box<SymbolBindings>>,
@@ -34,6 +38,7 @@ impl SymbolBindings {
         SymbolBindings {
             args:           None,
             symbols:        HashMap::new(),
+            export_symbols: smallvec![],
             parent:         None,
             num_cells:      1,
             is_interior:    false
@@ -75,6 +80,7 @@ impl SymbolBindings {
         SymbolBindings {
             args:           None,
             symbols:        HashMap::new(),
+            export_symbols: smallvec![],
             parent:         Some(Box::new(self)),
             num_cells:      1,
             is_interior:    false
@@ -88,6 +94,7 @@ impl SymbolBindings {
         SymbolBindings {
             args:           None,
             symbols:        HashMap::new(),
+            export_symbols: smallvec![],
             num_cells:      self.num_cells,
             parent:         Some(Box::new(self)),
             is_interior:    true
@@ -109,7 +116,25 @@ impl SymbolBindings {
             parent.num_cells = self.num_cells.max(parent.num_cells);
         }
 
+        // Move any export symbols into the parent
+        for export_id in self.export_symbols.drain() {
+            if let Some(value) = self.symbols.get(&export_id) {
+                parent.symbols.insert(export_id, value.clone());
+            }
+        }
+
         // The parent binding is the result
         parent
+    }
+
+    ///
+    /// Exports the specified atom to the parent bindings
+    /// 
+    /// This must be an interior binding for this to work. The value of the specified symbol will become visible outside of this binding.
+    ///
+    pub fn export(&mut self, atom_id: u64) {
+        if self.is_interior {
+            self.export_symbols.push(atom_id);
+        }
     }
 }

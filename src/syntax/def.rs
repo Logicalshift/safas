@@ -57,6 +57,7 @@ impl BindingMonad for DefMonad {
 
         // Associate with the atom ID
         bindings.symbols.insert(*atom, SymbolValue::FrameReference(cell_id, 0));
+        bindings.export(*atom);
 
         // Final actions need to store their value in this cell
         let mut actions     = statement;
