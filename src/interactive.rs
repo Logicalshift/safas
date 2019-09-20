@@ -58,8 +58,8 @@ pub fn run_interactive() {
             // Evaluate the monad
             let result      = monad.resolve(frame);
             match result {
-                Ok((new_frame, result)) => { frame = new_frame; println!("{}", result.to_string()); }
-                Err(error)              => { frame = Frame::new(1, None); println!("!! Error: {:?}", error); }    
+                (new_frame, Ok(result)) => { frame = new_frame; println!("{}", result.to_string()); }
+                (new_frame, Err(error)) => { frame = new_frame; println!("!! Error: {:?}", error); }    
             }
 
             // Move on to the next statement

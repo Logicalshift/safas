@@ -37,7 +37,7 @@ pub enum Action {
 }
 
 impl FrameMonad for Vec<Action> {
-    fn resolve(&self, frame: Frame) -> Result<(Frame, Arc<SafasCell>), RuntimeError> {
+    fn resolve(&self, frame: Frame) -> (Frame, Result<Arc<SafasCell>, RuntimeError>) {
         // Initial state
         let mut frame   = frame;
         let mut result  = Arc::new(SafasCell::Nil);
@@ -51,20 +51,39 @@ impl FrameMonad for Vec<Action> {
                 CellValue(pos)              => { result = Arc::clone(&frame.cells[*pos]); },
                 StoreCell(cell)             => { frame.cells[*cell] = Arc::clone(&result); },
                 Push                        => { frame.stack.push(Arc::clone(&result)); },
-                Pop                         => { result = frame.stack.pop().ok_or(RuntimeError::StackIsEmpty)?; }
+                Pop                         => { 
+                    if let Some(value) = frame.stack.pop() {
+                        result = value;
+                    } else {
+                        return (frame, Err(RuntimeError::StackIsEmpty));
+                    }
+                }
 
                 PopList(num_cells)          => { 
                     result = Arc::new(SafasCell::Nil);
                     for _ in 0..*num_cells {
-                        let val = frame.stack.pop().ok_or(RuntimeError::StackIsEmpty)?;
+                        let val = if let Some(val) = frame.stack.pop() {
+                            val
+                        } else {
+                            return (frame, Err(RuntimeError::StackIsEmpty));
+                        };
                         result = Arc::new(SafasCell::List(val, result));
                     }
                 }
 
                 PopListWithCdr(num_cells)   => { 
-                    result = frame.stack.pop().ok_or(RuntimeError::StackIsEmpty)?;
+                    if let Some(value) = frame.stack.pop() {
+                        result = value;
+                    } else {
+                        return (frame, Err(RuntimeError::StackIsEmpty));
+                    };
+
                     for _ in 0..*num_cells {
-                        let val = frame.stack.pop().ok_or(RuntimeError::StackIsEmpty)?;
+                        let val = if let Some(val) = frame.stack.pop() {
+                            val
+                        } else {
+                            return (frame, Err(RuntimeError::StackIsEmpty));
+                        };
                         result = Arc::new(SafasCell::List(val, result));
                     }
                 }
@@ -72,16 +91,20 @@ impl FrameMonad for Vec<Action> {
                 Call                        => { 
                     match &*result {
                         SafasCell::Monad(action)    => { 
-                            let (new_frame, new_result) = action.resolve(frame)?;
-                            frame                       = new_frame;
-                            result                      = new_result;
+                            let (new_frame, new_result) = action.resolve(frame);
+                            if let Ok(new_result) = new_result {
+                                frame                   = new_frame;
+                                result                  = new_result;
+                            } else {
+                                return (new_frame, new_result);
+                            }
                         },
-                        _                           => return Err(RuntimeError::NotAFunction)
+                        _                           => return (frame, Err(RuntimeError::NotAFunction))
                     }
                 }
             }
         }
 
-        Ok((frame, result))
+        (frame, Ok(result))
     }
 }

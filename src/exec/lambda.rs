@@ -42,7 +42,7 @@ impl<Action: FrameMonad> FrameMonad for Lambda<Action> {
         format!("(lambda ({}) {})", args, self.action.description())
     }
 
-    fn resolve(&self, frame: Frame) -> Result<(Frame, Arc<SafasCell>), RuntimeError> {
+    fn resolve(&self, frame: Frame) -> (Frame, Result<Arc<SafasCell>, RuntimeError>) {
         // Args in cell 0 from the calling frame
         let mut args        = Arc::clone(&frame.cells[0]);
 
@@ -74,11 +74,11 @@ impl<Action: FrameMonad> FrameMonad for Lambda<Action> {
         }
 
         // Resolve the action (actually calling the function)
-        let (frame, result) = self.action.resolve(frame)?;
+        let (frame, result) = self.action.resolve(frame);
 
         // Pop the frame we pushed for the action
         let frame = frame.pop().expect("Calling frame");
 
-        Ok((frame, result))
+        (frame, result)
     }
 }

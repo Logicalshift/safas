@@ -11,7 +11,7 @@ use std::marker::{PhantomData};
 ///
 pub trait FrameMonad : Send+Sync {
     /// Resolves this monad against a frame
-    fn resolve(&self, frame: Frame) -> Result<(Frame, Arc<SafasCell>), RuntimeError>;
+    fn resolve(&self, frame: Frame) -> (Frame, Result<Arc<SafasCell>, RuntimeError>);
 
     /// Retrieves a description of this monad when we need to display it to the user
     fn description(&self) -> String { format!("<frame_monad#{:p}>", self) }
@@ -25,8 +25,8 @@ struct ReturnValue {
 }
 
 impl FrameMonad for ReturnValue {
-    fn resolve(&self, frame: Frame) -> Result<(Frame, Arc<SafasCell>), RuntimeError> {
-        Ok((frame, self.value.clone()))
+    fn resolve(&self, frame: Frame) -> (Frame, Result<Arc<SafasCell>, RuntimeError>) {
+        (frame, Ok(self.value.clone()))
     }
 }
 
@@ -46,11 +46,11 @@ struct FlatMapValue<InputMonad, OutputMonad, NextFn> {
 impl<InputMonad, OutputMonad, NextFn> FrameMonad for FlatMapValue<InputMonad, OutputMonad, NextFn>
 where   InputMonad:     FrameMonad,
         OutputMonad:    FrameMonad,
-        NextFn:         Send+Sync+Fn(Arc<SafasCell>) -> OutputMonad {
-    fn resolve(&self, frame: Frame) -> Result<(Frame, Arc<SafasCell>), RuntimeError> {
-        let (frame, value)  = self.input.resolve(frame)?;
+        NextFn:         Send+Sync+Fn(Result<Arc<SafasCell>, RuntimeError>) -> OutputMonad {
+    fn resolve(&self, frame: Frame) -> (Frame, Result<Arc<SafasCell>, RuntimeError>) {
+        let (frame, value)  = self.input.resolve(frame);
         let next            = (self.next)(value);
-        Ok(next.resolve(frame)?)
+        next.resolve(frame)
     }
 
     fn description(&self) -> String { format!("{} >>= <fn#{:p}>", self.input.description(), &self.next) }
@@ -59,7 +59,7 @@ where   InputMonad:     FrameMonad,
 ///
 /// That flat_map function for a frame monad (appends 'action' to the series of actions represented by 'monad')
 ///
-pub fn flat_map_frame<InputMonad: FrameMonad, OutputMonad: FrameMonad, NextFn: Send+Sync+Fn(Arc<SafasCell>) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl FrameMonad {
+pub fn flat_map_frame<InputMonad: FrameMonad, OutputMonad: FrameMonad, NextFn: Send+Sync+Fn(Result<Arc<SafasCell>, RuntimeError>) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl FrameMonad {
     FlatMapValue {
         input:  monad,
         next:   action,
