@@ -23,7 +23,7 @@ pub enum SymbolValue {
     FrameReference(usize, u32),
 
     /// An external frame monad
-    FrameMonad(Arc<dyn FrameMonad>),
+    FrameMonad(Arc<dyn FrameMonad<Binding=RuntimeResult>>),
 
     /// A macro expands to a statement, which is recursively compiled
     MacroMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SafasCell>, BindError>>>),

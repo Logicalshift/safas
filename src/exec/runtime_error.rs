@@ -1,3 +1,8 @@
+use crate::meta::*;
+
+use std::sync::*;
+use std::result::{Result};
+
 ///
 /// Error that can occur during evaluating a frame
 ///
@@ -9,3 +14,6 @@ pub enum RuntimeError {
     /// Value cannot be called as a function
     NotAFunction
 }
+
+/// The result of a runtime operation (most common binding type of a frame monad)
+pub type RuntimeResult = Result<Arc<SafasCell>, RuntimeError>;

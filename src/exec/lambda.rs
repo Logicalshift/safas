@@ -1,6 +1,5 @@
 use super::frame::*;
 use super::frame_monad::*;
-use super::runtime_error::*;
 
 use crate::meta::*;
 
@@ -36,13 +35,15 @@ impl<Action: FrameMonad> Lambda<Action> {
 }
 
 impl<Action: FrameMonad> FrameMonad for Lambda<Action> {
+    type Binding = Action::Binding;
+
     fn description(&self) -> String {
         let args = (0..self.arg_count).into_iter().map(|_| "_").collect::<Vec<_>>().join(" ");
 
         format!("(lambda ({}) {})", args, self.action.description())
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, Result<Arc<SafasCell>, RuntimeError>) {
+    fn resolve(&self, frame: Frame) -> (Frame, Action::Binding) {
         // Args in cell 0 from the calling frame
         let mut args        = Arc::clone(&frame.cells[0]);
 

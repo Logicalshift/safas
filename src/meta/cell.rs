@@ -35,7 +35,7 @@ pub enum SafasCell {
     List(Arc<SafasCell>, Arc<SafasCell>),
 
     /// A monad that transforms the state of the current frame (generally a lambda)
-    Monad(Arc<dyn FrameMonad>),
+    Monad(Arc<dyn FrameMonad<Binding=RuntimeResult>>),
 
     /// A macro expands to a statement, which is recursively compiled
     MacroMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SafasCell>, BindError>>>),

@@ -37,7 +37,9 @@ pub enum Action {
 }
 
 impl FrameMonad for Vec<Action> {
-    fn resolve(&self, frame: Frame) -> (Frame, Result<Arc<SafasCell>, RuntimeError>) {
+    type Binding = RuntimeResult;
+
+    fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // Initial state
         let mut frame   = frame;
         let mut result  = Arc::new(SafasCell::Nil);

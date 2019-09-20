@@ -43,14 +43,16 @@ impl<Action: 'static+FrameMonad> Closure<Action> {
     }
 }
 
-impl<Action: 'static+FrameMonad> FrameMonad for Closure<Action> {
+impl<Action: 'static+FrameMonad<Binding=RuntimeResult>> FrameMonad for Closure<Action> {
+    type Binding = RuntimeResult;
+
     fn description(&self) -> String {
         let args = (0..self.arg_count).into_iter().map(|_| "_").collect::<Vec<_>>().join(" ");
 
         format!("(closure ({}) {})", args, self.action.description())
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, Result<Arc<SafasCell>, RuntimeError>) {
+    fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // Read the cells from the current frame
         let cells   = self.import_cells.iter().map(|(src_idx, tgt_idx)| (*tgt_idx, Arc::clone(&frame.cells[*src_idx]))).collect();
 
@@ -78,11 +80,13 @@ struct ClosureBody<Action: FrameMonad> {
 }
 
 impl<Action: FrameMonad> FrameMonad for ClosureBody<Action> {
+    type Binding = Action::Binding;
+
     fn description(&self) -> String {
         format!("(closure_body ({}) {})", self.cells.iter().map(|(_index, value)| value.to_string()).collect::<Vec<_>>().join(" "), self.action.description())
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, Result<Arc<SafasCell>, RuntimeError>) {
+    fn resolve(&self, frame: Frame) -> (Frame, Action::Binding) {
         let mut frame = frame;
 
         // Store the values of the cells
