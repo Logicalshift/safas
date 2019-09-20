@@ -7,12 +7,11 @@ use crate::exec::*;
 
 use smallvec::*;
 use std::sync::*;
-use std::result::{Result};
 
 ///
 /// Performs binding to generate the actions for a simple statement
 ///
-pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> Result<(SmallVec<[Action; 8]>, SymbolBindings), BindError> {
+pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
     use self::SafasCell::*;
 
     match &*source {
@@ -29,7 +28,7 @@ pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> Resul
 
                 match symbol_value {
                     Constant(value)                 => Ok((smallvec![Action::Value(Arc::clone(&value))], bindings)),
-                    Unbound(_atom_id)               => Err(BindError::UnboundSymbol),
+                    Unbound(_atom_id)               => Err((BindError::UnboundSymbol, bindings)),
                     FrameMonad(monad)               => Ok((smallvec![Action::Value(Arc::new(SafasCell::Monad(Arc::clone(&monad))))], bindings)),
                     MacroMonad(monad)               => Ok((smallvec![Action::Value(Arc::new(SafasCell::MacroMonad(Arc::clone(&monad))))], bindings)),
                     ActionMonad(monad)              => Ok((smallvec![Action::Value(Arc::new(SafasCell::ActionMonad(Arc::clone(&monad))))], bindings)),
@@ -43,7 +42,7 @@ pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> Resul
                 }
             } else {
                 // Not a valid symbol
-                Err(BindError::UnknownSymbol)
+                Err((BindError::UnknownSymbol, bindings))
             }
         }
 
@@ -55,7 +54,7 @@ pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> Resul
 ///
 /// Binds a list statement, like `(cons 1 2)`
 ///
-pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: SymbolBindings) -> Result<(SmallVec<[Action; 8]>, SymbolBindings), BindError> {
+pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
     use self::SafasCell::*;
 
     // Action depends on the type of car
@@ -66,9 +65,9 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
             let symbol_value = bindings.look_up(*atom_id);
 
             match symbol_value {
-                None                                    => return Err(BindError::UnknownSymbol),
-                Some(Constant(_value))                  => return Err(BindError::ConstantsCannotBeCalled),
-                Some(Unbound(_atom_id))                 => return Err(BindError::UnboundSymbol),
+                None                                    => return Err((BindError::UnknownSymbol, bindings)),
+                Some(Constant(_value))                  => return Err((BindError::ConstantsCannotBeCalled, bindings)),
+                Some(Unbound(_atom_id))                 => return Err((BindError::UnboundSymbol, bindings)),
                 Some(FrameReference(_cell_num, _frame)) => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
                 Some(FrameMonad(frame_monad))           => { bind_call(smallvec![Action::Value(Arc::new(SafasCell::Monad(Arc::clone(&frame_monad))))], cdr, bindings) }
                 
@@ -77,17 +76,34 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
                     bindings.args           = Some(cdr);
                     let (bindings, actions) = action_monad.resolve(bindings);
                     let bindings            = bindings.pop();
-                    let actions             = (*actions?).clone();
-                    Ok((actions, bindings))
+
+                    match actions {
+                        Ok(actions)     => {
+                            let actions = (*actions).clone();
+                            Ok((actions, bindings))
+                        }
+                        Err(error)      => {
+                            Err((error, bindings))
+                        }
+                    }
                 }
 
                 Some(MacroMonad(macro_monad))           => { 
                     let mut bindings            = bindings.push_interior_frame();
                     bindings.args               = Some(cdr);
                     let (bindings, expanded)    = macro_monad.resolve(bindings);
-                    let (actions, bindings)     = bind_statement(expanded?, bindings)?;
-                    let bindings                = bindings.pop();
-                    Ok((actions, bindings))
+
+                    // Rust doesn't really help with the error handling here. We want to bind the statement or preserve the error
+                    // then we want to pop the bindings regardless of the error.
+                    let actions                 = match expanded {
+                        Ok(expanded)            => bind_statement(expanded, bindings),
+                        Err(error)              => Err((error, bindings))
+                    };
+
+                    match actions {
+                        Ok((actions, bindings)) => Ok((actions, bindings.pop())),
+                        Err((error, bindings))  => Err((error, bindings.pop()))
+                    }
                 }
             }
         },
@@ -100,7 +116,7 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
 ///
 /// Binds a call function, given the actions needed to load the function value
 ///
-pub fn bind_call(load_fn: SmallVec<[Action; 8]>, args: Arc<SafasCell>, bindings: SymbolBindings) -> Result<(SmallVec<[Action; 8]>, SymbolBindings), BindError> {
+pub fn bind_call(load_fn: SmallVec<[Action; 8]>, args: Arc<SafasCell>, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
     let mut bindings = bindings;
 
     // Start by pushing the function value onto the stack (we'll pop it later on to call the function)

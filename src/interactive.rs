@@ -48,8 +48,8 @@ pub fn run_interactive() {
             let bind_result = bind_statement(Arc::clone(&car), bindings);
             let monad       = match bind_result {
                 Ok((actions, new_bindings))   => { bindings = new_bindings; actions.into_iter().collect::<Vec<_>>() },
-                Err(error)                  => { 
-                    bindings = SymbolBindings::new();
+                Err((error, new_bindings))    => { 
+                    bindings = new_bindings;
                     println!("!! Binding error: {:?}", error);
                     break;
                 }
