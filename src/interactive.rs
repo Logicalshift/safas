@@ -16,12 +16,13 @@ pub fn run_interactive() {
     println!("Interactive interpreter");
 
     // Create the execution frame
-    let frame                   = Frame::new(1, None);
+    let mut frame               = Frame::new(1, None);
     let bindings                = SymbolBindings::new();
 
     // Apply the standard bindings
     let syntax                  = standard_syntax();
     let (mut bindings, actions) = syntax.resolve(bindings);
+    frame.allocate_for_bindings(&bindings);
     let (mut frame, _)          = (*actions.unwrap()).resolve(frame);
 
     loop {
@@ -62,6 +63,7 @@ pub fn run_interactive() {
             };
 
             // Evaluate the monad
+            frame.allocate_for_bindings(&bindings);
             let result      = monad.resolve(frame);
             match result {
                 (new_frame, Ok(result)) => { frame = new_frame; println!("{}", result.to_string()); }

@@ -1,5 +1,6 @@
 use super::bitcode_buffer::*;
 use crate::meta::*;
+use crate::bind::*;
 
 use smallvec::*;
 
@@ -60,5 +61,14 @@ impl Frame {
 
             frame
         })
+    }
+
+    ///
+    /// Allocates enough space for the specified bindings
+    ///
+    pub fn allocate_for_bindings(&mut self, bindings: &SymbolBindings) {
+        while self.cells.len() < bindings.num_cells {
+            self.cells.push(Arc::new(SafasCell::Nil))
+        }
     }
 }
