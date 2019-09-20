@@ -5,7 +5,10 @@ mod meta;
 mod bind;
 mod exec;
 mod parse;
+mod interactive;
+
+use self::interactive::*;
 
 fn main() {
-    println!("Hello, world!");
+    run_interactive();
 }
