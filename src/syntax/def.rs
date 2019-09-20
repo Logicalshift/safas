@@ -56,3 +56,81 @@ impl BindingMonad for DefMonad {
         (bindings, Ok(Arc::new(actions)))
     }
 }
+
+///
+/// Monad that defines an atom to be a particular value
+///
+struct DefineSymbol {
+    atom_id:    u64,
+    value:      Arc<SafasCell>
+}
+
+impl BindingMonad for DefineSymbol {
+    type Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>;
+
+    fn description(&self) -> String { "##define_symbol##".to_string() }
+
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        // Allocate a cell for this binding
+        let mut bindings    = bindings;
+        let cell_id         = bindings.num_cells;
+        bindings.num_cells  += 1;
+        bindings.symbols.insert(self.atom_id, SymbolValue::FrameReference(cell_id, 0));
+
+        // Actions just load the binding into the cell
+        let actions         = smallvec![Action::Value(Arc::clone(&self.value)), Action::StoreCell(cell_id)];
+
+        (bindings, Ok(Arc::new(actions)))
+    }
+}
+
+///
+/// Creates a binding monad that defines a symbol to evaluate a particular cell value
+///
+pub fn define_symbol(atom: &str, value: SafasCell) -> impl BindingMonad<Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>> {
+    // Retrieve the atom ID
+    let atom_id = get_id_for_atom_with_name(atom);
+
+    DefineSymbol {
+        atom_id:    atom_id,
+        value:      Arc::new(value)
+    }
+}
+
+///
+/// Monad that defines an atom to be a particular value
+///
+struct DefineSymbolValue {
+    atom_id:    u64,
+    value:      SymbolValue
+}
+
+impl BindingMonad for DefineSymbolValue {
+    type Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>;
+
+    fn description(&self) -> String { "##define_symbol##".to_string() }
+
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        // Store the value for this symbol
+        let mut bindings    = bindings;
+        bindings.symbols.insert(self.atom_id, self.value.clone());
+
+        // No actions are performed for this: the symbol is just defined
+        let actions         = smallvec![];
+
+        (bindings, Ok(Arc::new(actions)))
+    }
+}
+
+///
+/// Creates a binding monad that defines a symbol to evaluate a particular cell value
+///
+pub fn define_symbol_value(atom: &str, value: SymbolValue) -> impl BindingMonad<Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>> {
+    // Retrieve the atom ID
+    let atom_id = get_id_for_atom_with_name(atom);
+
+    DefineSymbolValue {
+        atom_id:    atom_id,
+        value:      value
+    }
+}
