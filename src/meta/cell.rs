@@ -112,6 +112,29 @@ impl SafasCell {
             }
         }
     }
+
+    ///
+    /// If this cell represents a list, returns a vec of the items in the list
+    /// 
+    /// Returns None if the cell is not a list
+    ///
+    pub fn to_vec(&self) -> Option<Vec<Arc<SafasCell>>> {
+        if let SafasCell::List(car, cdr) = self {
+            let mut result = vec![];
+            result.push(Arc::clone(car));
+
+            let mut pos = cdr;
+            while let SafasCell::List(car, cdr) = &**pos {
+                result.push(Arc::clone(car));
+                pos = cdr;
+            }
+
+            Some(result)
+        } else {
+            // Not a list
+            None
+        }
+    }
 }
 
 impl Debug for SafasCell {

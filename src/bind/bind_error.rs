@@ -14,7 +14,16 @@ pub enum BindError {
     UnboundSymbol,
 
     /// A constant was used where a function was expected
-    ConstantsCannotBeCalled
+    ConstantsCannotBeCalled,
+
+    /// Macro was called without arguments (if arguments were present but one was missing, use the call below)
+    ArgumentsWereNotSupplied,
+
+    /// An expected argument was missing
+    MissingArgument,
+
+    /// Too many arguments were supplied to a macro
+    TooManyArguments
 }
 
 /// Result of a binding operation
