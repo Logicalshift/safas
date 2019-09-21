@@ -6,21 +6,21 @@ use smallvec::*;
 use std::sync::*;
 
 ///
-/// The lambda monad defines the '(lambda (x y) (statement) ...)' syntax
+/// The fun monad defines the '(fun (x y) (statement) ...)' syntax
 ///
-pub struct LambdaKeyword {
+pub struct FunKeyword {
 }
 
-impl LambdaKeyword {
-    pub fn new() -> LambdaKeyword {
-        LambdaKeyword { }
+impl FunKeyword {
+    pub fn new() -> FunKeyword {
+        FunKeyword { }
     }
 }
 
-impl BindingMonad for LambdaKeyword {
+impl BindingMonad for FunKeyword {
     type Binding=Result<SmallVec<[Action; 8]>, BindError>;
 
-    fn description(&self) -> String { "##lambda##".to_string() }
+    fn description(&self) -> String { "##fun##".to_string() }
 
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Arguments are the argument list and the statements
@@ -33,27 +33,27 @@ impl BindingMonad for LambdaKeyword {
 
         // First argument should be a list of atoms, specifying the variables in the lambda
         let mut args            = args;
-        let lambda_args         = args.remove(0);
+        let fun_args            = args.remove(0);
         let statements          = args;
 
-        let lambda_args         = lambda_args.to_vec();
-        let lambda_args         = match lambda_args { Some(lambda_args) => lambda_args, None => return (bindings, Err(BindError::LambdaArgumentsNotSupplied)) };
+        let fun_args            = fun_args.to_vec();
+        let fun_args            = match fun_args { Some(fun_args) => fun_args, None => return (bindings, Err(BindError::LambdaArgumentsNotSupplied)) };
 
         // Map the args to atom IDs
-        let lambda_args         = lambda_args.into_iter()
+        let fun_args            = fun_args.into_iter()
             .map(|arg| arg.to_atom_id())
             .collect::<Option<Vec<_>>>();
-        let lambda_args         = match lambda_args { Some(lambda_args) => lambda_args, None => return (bindings, Err(BindError::VariablesMustBeAtoms)) };
+        let fun_args            = match fun_args { Some(fun_args) => fun_args, None => return (bindings, Err(BindError::VariablesMustBeAtoms)) };
 
         // Define the initial lambda frame binding
-        let num_args            = lambda_args.len();
+        let num_args            = fun_args.len();
         let mut inner_bindings  = bindings.push_new_frame();
 
-        for lambda_arg_atom in lambda_args {
+        for fun_arg_atom in fun_args {
             // Create a cell ID for this atom
             let cell_id = inner_bindings.num_cells;
             inner_bindings.num_cells += 1;
-            inner_bindings.symbols.insert(lambda_arg_atom, SymbolValue::FrameReference(cell_id, 0));
+            inner_bindings.symbols.insert(fun_arg_atom, SymbolValue::FrameReference(cell_id, 0));
         }
 
         // Compile the statements
