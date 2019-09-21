@@ -140,4 +140,16 @@ mod test {
             ).unwrap().to_string();
         assert!(val == "42".to_string());
     }
+
+    #[test]
+    fn define_and_call_function_with_recursive_closure() {
+        let val = eval(
+                "(def a (fun (x) x)) \
+                (def b (fun (x) \
+                    (def c (fun (y) (a y))) \
+                    (c x))) \
+                (b 42)"
+            ).unwrap().to_string();
+        assert!(val == "42".to_string());
+    }
 }
