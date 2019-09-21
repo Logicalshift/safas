@@ -82,7 +82,9 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
                     let mut bindings        = bindings.push_interior_frame();
                     bindings.args           = Some(cdr);
                     let (bindings, actions) = action_monad.resolve(bindings);
-                    let bindings            = bindings.pop();
+                    let (bindings, imports) = bindings.pop();
+
+                    if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
 
                     match actions {
                         Ok(actions)     => Ok((actions, bindings)),
@@ -103,8 +105,8 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
                     };
 
                     match actions {
-                        Ok((actions, bindings)) => Ok((actions, bindings.pop())),
-                        Err((error, bindings))  => Err((error, bindings.pop()))
+                        Ok((actions, bindings)) => Ok((actions, bindings.pop().0)),
+                        Err((error, bindings))  => Err((error, bindings.pop().0))
                     }
                 }
             }

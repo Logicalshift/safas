@@ -61,7 +61,7 @@ impl BindingMonad for FunKeyword {
             // bind the statement
             let (statement_actions, next_binding) = match bind_statement(statement, inner_bindings) {
                 Ok((statement_actions, next_binding))   => (statement_actions, next_binding),
-                Err((error, next_binding))              => return (next_binding.pop(), Err(error))
+                Err((error, next_binding))              => return (next_binding.pop().0, Err(error))
             };
 
             // Add these actions to our own
@@ -71,16 +71,22 @@ impl BindingMonad for FunKeyword {
         }
 
         // Capture the number of cells required for the lambda
-        let num_cells       = inner_bindings.num_cells;
+        let num_cells           = inner_bindings.num_cells;
 
         // Pop the bindings to return to the parent context
-        let bindings        = inner_bindings.pop();
+        let (bindings, imports) = inner_bindings.pop();
 
         // Create a lambda from our actions
-        let lambda          = Lambda::new(actions, num_cells, num_args);
-        let lambda          = Arc::new(lambda);
-        let lambda          = SafasCell::Monad(lambda);
+        let lambda              = Lambda::new(actions, num_cells, num_args);
+        let lambda              = Arc::new(lambda);
+        let lambda              = SafasCell::Monad(lambda);
 
-        (bindings, Ok(smallvec![Action::Value(Arc::new(lambda))]))
+        // If there are any imports, turn into a closure
+        if imports.len() > 0 {
+            unimplemented!("Closures not implemented yet")
+        } else {
+            // No imports, so return a straight lambda
+            (bindings, Ok(smallvec![Action::Value(Arc::new(lambda))]))
+        }
     }
 }

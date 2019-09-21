@@ -108,9 +108,10 @@ impl SymbolBindings {
     }
 
     ///
-    /// Pops a set of symbol bindings
+    /// Pops a set of symbol bindings, returning the symbol bindings and the list of values that need to be
+    /// loaded from the current frame into the new one
     ///
-    pub fn pop(mut self) -> SymbolBindings {
+    pub fn pop(mut self) -> (SymbolBindings, SmallVec<[(SymbolValue, usize); 2]>) {
         // Take the parent binding
         let parent = self.parent.take().expect("Parent binding missing");
 
@@ -133,7 +134,7 @@ impl SymbolBindings {
         }
 
         // The parent binding is the result
-        parent
+        (parent, self.import_symbols)
     }
 
     ///
