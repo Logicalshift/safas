@@ -3,7 +3,6 @@ use super::symbol_bindings::*;
 use crate::exec::*;
 
 use smallvec::*;
-use std::sync::*;
 use std::marker::{PhantomData};
 
 ///

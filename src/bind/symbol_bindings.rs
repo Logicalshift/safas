@@ -20,6 +20,9 @@ pub struct SymbolBindings {
     /// The symbols to export to the parent context
     pub export_symbols: SmallVec<[u64; 2]>,
 
+    /// A list of the symbols to import from the parent, along with the cell they should be stored in
+    pub import_symbols: SmallVec<[(SymbolValue, usize); 2]>,
+
     /// The symbol bindings in the 'parent' of the current frame
     pub parent: Option<Box<SymbolBindings>>,
 
@@ -39,6 +42,7 @@ impl SymbolBindings {
             args:           None,
             symbols:        HashMap::new(),
             export_symbols: smallvec![],
+            import_symbols: smallvec![],
             parent:         None,
             num_cells:      1,
             is_interior:    false
@@ -81,6 +85,7 @@ impl SymbolBindings {
             args:           None,
             symbols:        HashMap::new(),
             export_symbols: smallvec![],
+            import_symbols: smallvec![],
             parent:         Some(Box::new(self)),
             num_cells:      1,
             is_interior:    false
@@ -95,6 +100,7 @@ impl SymbolBindings {
             args:           None,
             symbols:        HashMap::new(),
             export_symbols: smallvec![],
+            import_symbols: smallvec![],
             num_cells:      self.num_cells,
             parent:         Some(Box::new(self)),
             is_interior:    true
@@ -111,9 +117,12 @@ impl SymbolBindings {
         // Unbox it
         let mut parent = *parent;
 
-        // Make sure the number of cells is updated on the parent if it's interior
         if self.is_interior {
+            // Make sure the number of cells is updated on the parent if it's interior
             parent.num_cells = self.num_cells.max(parent.num_cells);
+
+            // For interior frames, imports come straight from the same parent
+            parent.import_symbols.extend(self.import_symbols.drain());
         }
 
         // Move any export symbols into the parent
@@ -135,6 +144,28 @@ impl SymbolBindings {
     pub fn export(&mut self, atom_id: u64) {
         if self.is_interior {
             self.export_symbols.push(atom_id);
+        }
+    }
+
+    ///
+    /// Adds a symbol to be imported from the parent frame of this binding. The symbol should be a frame reference.
+    /// 
+    /// The binding of the symbol should be updated to use the value in the specified cell once this call has been made
+    /// to avoid importing the same symbol multiple times.
+    ///
+    pub fn import(&mut self, symbol: SymbolValue, cell_id: usize) {
+        match symbol {
+            SymbolValue::FrameReference(cell, frame_id) => {
+                if frame_id > 0 {
+                    // Import from the symbol in the parent frame
+                    self.import_symbols.push((SymbolValue::FrameReference(cell, frame_id-1), cell_id));
+                } else {
+                    // Symbol can't be imported
+                    panic!("Cannot import a symbol that is already in the current frame")
+                }
+            }
+
+            _ => panic!("Import symbols must be a reference to a cell in a parent frame")
         }
     }
 }
