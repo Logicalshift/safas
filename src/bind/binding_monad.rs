@@ -24,10 +24,10 @@ pub trait BindingMonad : Send+Sync {
 }
 
 impl BindingMonad for () {
-    type Binding = Result<Arc<SmallVec<[Action; 8]>>, BindError>;
+    type Binding = ();
 
     fn description(&self) -> String { "##nop##".to_string() }
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) { (bindings, Ok(Arc::new(smallvec![])) ) }
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, ()) { (bindings, ()) }
 }
 
 ///
@@ -74,7 +74,7 @@ where   InputMonad:     BindingMonad,
 ///
 /// That flat_map function for a binding monad
 ///
-pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(InputMonad::Binding) -> OutputMonad+Send+Sync>(action: NextFn, monad: InputMonad) -> impl BindingMonad {
+pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(InputMonad::Binding) -> OutputMonad+Send+Sync>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=OutputMonad::Binding> {
     FlatMapValue {
         input:  monad,
         next:   action,

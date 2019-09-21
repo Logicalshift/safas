@@ -15,6 +15,13 @@ pub trait FrameMonad : Send+Sync {
     fn description(&self) -> String { format!("<frame_monad#{:p}>", self) }
 }
 
+impl FrameMonad for () {
+    type Binding = ();
+
+    fn description(&self) -> String { "##nop##".to_string() }
+    fn resolve(&self, frame: Frame) -> (Frame, ()) { (frame, ()) }
+}
+
 ///
 /// Frame monad that returns a constant value
 ///
@@ -33,7 +40,7 @@ impl<Binding: Clone+Send+Sync> FrameMonad for ReturnValue<Binding> {
 ///
 /// Wraps a value in a frame monad
 ///
-pub fn wrap_frame<Binding: Clone+Send+Sync>(value: Binding) -> impl FrameMonad {
+pub fn wrap_frame<Binding: Clone+Send+Sync>(value: Binding) -> impl FrameMonad<Binding=Binding> {
     ReturnValue { value }
 }
 
@@ -61,7 +68,7 @@ where   InputMonad:     FrameMonad,
 ///
 /// That flat_map function for a frame monad (appends 'action' to the series of actions represented by 'monad')
 ///
-pub fn flat_map_frame<InputMonad: FrameMonad, OutputMonad: FrameMonad, NextFn: Send+Sync+Fn(InputMonad::Binding) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl FrameMonad {
+pub fn flat_map_frame<InputMonad: FrameMonad, OutputMonad: FrameMonad, NextFn: Send+Sync+Fn(InputMonad::Binding) -> OutputMonad>(action: NextFn, monad: InputMonad) -> impl FrameMonad<Binding=OutputMonad::Binding> {
     FlatMapValue {
         input:  monad,
         next:   action,
