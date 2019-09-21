@@ -9,6 +9,51 @@ use std::io::{Write};
 use std::sync::*;
 
 ///
+/// Evaluates a single line in an isolated SAFAS instance and returns the result
+///
+pub fn eval(expr: &str) -> Result<Arc<SafasCell>, RuntimeError> {
+    // Create the execution frame
+    let mut frame               = Frame::new(1, None);
+    let bindings                = SymbolBindings::new();
+
+    // Apply the standard bindings
+    let syntax                  = standard_syntax();
+    let (mut bindings, actions) = syntax.resolve(bindings);
+    frame.allocate_for_bindings(&bindings);
+    let (mut frame, _)          = actions.unwrap().resolve(frame);
+
+    // Parse the expression
+    let expr = parse_safas(&mut TokenReadBuffer::new(expr.chars()), FileLocation::new("<expr>"))?;
+
+    // Run the statements in the current frame
+    let mut statement   = Arc::clone(&expr);
+    let mut result      = Arc::new(SafasCell::Nil);
+    while let SafasCell::List(car, cdr) = &*statement {
+        // Bind this statement
+        let bind_result = bind_statement(Arc::clone(&car), bindings);
+        let monad       = match bind_result {
+            Ok((actions, new_bindings))   => { bindings = new_bindings; actions.into_iter().collect::<Vec<_>>() },
+            Err((error, _new_bindings))   => { 
+                return Err(RuntimeError::BindingError(error));
+            }
+        };
+
+        // Evaluate the monad
+        frame.allocate_for_bindings(&bindings);
+        let expr_result = monad.resolve(frame);
+        match expr_result {
+            (new_frame, Ok(expr_result))    => { frame = new_frame; result = expr_result; }
+            (_new_frame, Err(error))        => { return Err(error); }
+        }
+
+        // Move on to the next statement
+        statement = Arc::clone(&cdr);
+    }
+
+    Ok(result)
+}
+
+///
 /// Runs the parser and interpreter in interactive mode, displaying the results to the user
 ///
 pub fn run_interactive() {

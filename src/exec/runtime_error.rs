@@ -1,4 +1,6 @@
 use crate::meta::*;
+use crate::bind::*;
+use crate::parse::*;
 
 use std::sync::*;
 use std::result::{Result};
@@ -8,6 +10,12 @@ use std::result::{Result};
 ///
 #[derive(Clone, Debug)]
 pub enum RuntimeError {
+    /// An error occurred while parsing code
+    ParseError(ParseError),
+
+    /// A bind error occurred while generating code
+    BindingError(BindError),
+
     /// Expected to pop a value from the stack but couldn't
     StackIsEmpty,
 
@@ -17,3 +25,15 @@ pub enum RuntimeError {
 
 /// The result of a runtime operation (most common binding type of a frame monad)
 pub type RuntimeResult = Result<Arc<SafasCell>, RuntimeError>;
+
+impl From<ParseError> for RuntimeError {
+    fn from(error: ParseError) -> RuntimeError { 
+        RuntimeError::ParseError(error)
+    }
+}
+
+impl From<BindError> for RuntimeError {
+    fn from(error: BindError) -> RuntimeError { 
+        RuntimeError::BindingError(error)
+    }
+}
