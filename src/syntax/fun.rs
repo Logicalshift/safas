@@ -119,3 +119,27 @@ impl BindingMonad for FunKeyword {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+
+    #[test]
+    fn define_and_call_function() {
+        let val = eval(
+            "(def a (fun (x) x))\
+            (a 42)"
+            ).unwrap().to_string();
+        assert!(val == "42".to_string());
+    }
+
+    #[test]
+    fn define_and_call_function_with_closure() {
+        let val = eval(
+                "(def a (fun (x) x)) \
+                (def b (fun (x) (a x))) \
+                (b 42)"
+            ).unwrap().to_string();
+        assert!(val == "42".to_string());
+    }
+}

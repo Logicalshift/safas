@@ -143,3 +143,23 @@ pub fn define_symbol_value(atom: &str, value: SymbolValue) -> impl BindingMonad<
         value:      value
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+
+    #[test]
+    fn define_and_read_atom() {
+        let val = eval("(def a 1) a").unwrap().to_string();
+        assert!(val == "1".to_string());
+    }
+
+    #[test]
+    fn define_multiple_atoms() {
+        let val = eval("(def a 1) (def b 2) a").unwrap().to_string();
+        assert!(val == "1".to_string());
+
+        let val = eval("(def a 1) (def b 2) b").unwrap().to_string();
+        assert!(val == "2".to_string());
+    }
+}
