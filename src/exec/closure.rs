@@ -32,6 +32,8 @@ pub struct Closure<Action: FrameMonad> {
 impl<Action: 'static+FrameMonad> Closure<Action> {
     ///
     /// Creates a new closure monad
+    /// 
+    /// The cell IDs are in the form of (source, target)
     ///
     pub fn new<CellIter: IntoIterator<Item=(usize, usize)>>(action: Action, import_cells: CellIter, num_cells: usize, arg_count: usize) -> Closure<Action> {
         Closure {

@@ -78,14 +78,43 @@ impl BindingMonad for FunKeyword {
 
         // Create a lambda from our actions
         let lambda              = Lambda::new(actions, num_cells, num_args);
-        let lambda              = Arc::new(lambda);
-        let lambda              = SafasCell::Monad(lambda);
 
-        // If there are any imports, turn into a closure
         if imports.len() > 0 {
-            unimplemented!("Closures not implemented yet")
+            // If there are any imports, turn into a closure
+            let mut cell_imports    = vec![];
+            let mut bindings        = bindings;
+
+            // Work out the cells to import into the closure
+            for (symbol_value, import_into_cell_id) in imports.into_iter() {
+                match symbol_value {
+                    SymbolValue::FrameReference(our_cell_id, 0) => {
+                        // Cell from this frame
+                        cell_imports.push((our_cell_id, import_into_cell_id));
+                    },
+
+                    SymbolValue::FrameReference(their_cell_id, frame_count) => {
+                        // Import from a parent frame
+                        let our_cell_id = bindings.alloc_cell();
+                        bindings.import(SymbolValue::FrameReference(their_cell_id, frame_count), our_cell_id);
+                        cell_imports.push((our_cell_id, import_into_cell_id));
+                    },
+
+                    _ => panic!("Don't know how to import this type of symbol")
+                }
+            }
+
+            // Return the closure
+            let closure         = Closure::new(lambda, cell_imports, num_cells, num_args);
+            let closure         = Arc::new(closure);
+            let closure         = SafasCell::Monad(closure);
+
+            // Call the closure to bind it here
+            (bindings, Ok(smallvec![Action::Value(Arc::new(closure)), Action::Call]))
         } else {
             // No imports, so return a straight lambda
+            let lambda          = Arc::new(lambda);
+            let lambda          = SafasCell::Monad(lambda);
+
             (bindings, Ok(smallvec![Action::Value(Arc::new(lambda))]))
         }
     }
