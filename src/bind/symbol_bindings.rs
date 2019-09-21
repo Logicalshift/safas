@@ -198,3 +198,124 @@ impl SymbolBindings {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn push_new_frame() {
+        let frame = SymbolBindings::new();
+        assert!(frame.parent.is_none());
+
+        let frame = frame.push_new_frame();
+        assert!(frame.parent.is_some());
+    }
+
+    #[test]
+    fn look_up_missing_symbol() {
+        let frame = SymbolBindings::new();
+
+        let symbol = frame.look_up(0);
+        assert!(symbol.is_none());
+    }
+
+    #[test]
+    fn look_up_symbol_in_current_frame() {
+        let mut frame = SymbolBindings::new();
+        frame.symbols.insert(0, SymbolValue::Unbound(1));
+
+        let symbol = frame.look_up(0);
+        assert!(!symbol.is_none());
+        assert!(if let Some(SymbolValue::Unbound(1)) = symbol { true } else { false });
+    }
+
+    #[test]
+    fn look_up_symbol_in_parent_frame() {
+        let mut frame = SymbolBindings::new();
+        frame.symbols.insert(0, SymbolValue::Unbound(1));
+        let frame = frame.push_new_frame();
+
+        let symbol = frame.look_up(0);
+        assert!(!symbol.is_none());
+        assert!(if let Some(SymbolValue::Unbound(1)) = symbol { true } else { false });
+    }
+
+    #[test]
+    fn look_up_replaced_symbol() {
+        let mut frame = SymbolBindings::new();
+        frame.symbols.insert(0, SymbolValue::Unbound(1));
+        let mut frame = frame.push_new_frame();
+        frame.symbols.insert(0, SymbolValue::Unbound(2));
+
+        let symbol = frame.look_up(0);
+        assert!(!symbol.is_none());
+        assert!(if let Some(SymbolValue::Unbound(2)) = symbol { true } else { false });
+    }
+
+    #[test]
+    fn first_cell_allocated_is_cell_1() {
+        // Cell 0 is always allocated by default
+        let mut frame = SymbolBindings::new();
+        assert!(frame.alloc_cell() == 1);
+    }
+
+    #[test]
+    fn imports_are_popped() {
+        let frame       = SymbolBindings::new();
+        let mut frame   = frame.push_new_frame();
+
+        frame.import(SymbolValue::FrameReference(3, 2), 3);
+
+        let (_frame, imports) = frame.pop();
+
+        // We generate imports in the context of the incoming frame, so the 'frame count' ends up being reduced by 1 here
+        assert!(imports.len() == 1);
+        assert!(if let (SymbolValue::FrameReference(3, 1), 3) = imports[0] { true } else { false });
+    }
+
+    #[test]
+    fn imports_are_not_popped_for_interior_frames() {
+        let frame       = SymbolBindings::new();
+        let mut frame   = frame.push_interior_frame();
+
+        frame.import(SymbolValue::FrameReference(3, 2), 3);
+
+        let (_frame, imports) = frame.pop();
+
+        // We generate imports in the context of the incoming frame, so the 'frame count' ends up being reduced by 1 here
+        assert!(imports.len() == 0);
+    }
+
+    #[test]
+    fn imports_are_inherited_from_interior_frames() {
+        let frame       = SymbolBindings::new();
+        let frame       = frame.push_new_frame();
+        let mut frame   = frame.push_interior_frame();
+
+        frame.import(SymbolValue::FrameReference(3, 2), 3);
+
+        // Pop the interior and the main frame (imports should pop)
+        let (frame, _imports) = frame.pop();
+        let (_frame, imports) = frame.pop();
+
+        // We generate imports in the context of the incoming frame, so the 'frame count' ends up being reduced by 1 here
+        assert!(imports.len() == 1);
+        assert!(if let (SymbolValue::FrameReference(3, 1), 3) = imports[0] { true } else { false });
+    }
+
+    #[test]
+    fn import_updates_frame_references() {
+        let mut frame = SymbolBindings::new();
+
+        // Reference in a parent frame
+        frame.symbols.insert(0, SymbolValue::FrameReference(2, 2));
+
+        // Import into cell 3
+        frame.import(SymbolValue::FrameReference(2, 2), 3);
+
+        // Symbol we added should now point at the current frame
+        let symbol = frame.look_up(0);
+        assert!(if let Some(SymbolValue::FrameReference(3, 0)) = symbol { true } else { false });
+    }
+}
