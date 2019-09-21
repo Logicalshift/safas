@@ -170,15 +170,24 @@ impl SymbolBindings {
     ///
     /// Adds a symbol to be imported from the parent frame of this binding. The symbol should be a frame reference.
     /// 
-    /// The binding of the symbol should be updated to use the value in the specified cell once this call has been made
-    /// to avoid importing the same symbol multiple times.
+    /// Any binding that references this symbol will be updated to point to the cell after this call
     ///
     pub fn import(&mut self, symbol: SymbolValue, cell_id: usize) {
         match symbol {
-            SymbolValue::FrameReference(cell, frame_id) => {
-                if frame_id > 0 {
+            SymbolValue::FrameReference(import_from_cell_id, import_from_frame_id) => {
+                if import_from_frame_id > 0 {
                     // Import from the symbol in the parent frame
-                    self.import_symbols.push((SymbolValue::FrameReference(cell, frame_id-1), cell_id));
+                    self.import_symbols.push((SymbolValue::FrameReference(import_from_cell_id, import_from_frame_id-1), cell_id));
+
+                    // Update any references to this parent cell to point to the imported cell
+                    for (_symbol, value) in self.symbols.iter_mut() {
+                        if let SymbolValue::FrameReference(ref mut reference_cell, ref mut reference_frame) = value {
+                            if *reference_cell == import_from_cell_id && *reference_frame == import_from_frame_id {
+                                *reference_cell     = cell_id;
+                                *reference_frame    = 0;
+                            }
+                        }
+                    }
                 } else {
                     // Symbol can't be imported
                     panic!("Cannot import a symbol that is already in the current frame")

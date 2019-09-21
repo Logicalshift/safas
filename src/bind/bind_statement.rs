@@ -41,7 +41,6 @@ pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> BindR
                             let mut bindings    = bindings;
                             let local_cell_id   = bindings.alloc_cell();
                             bindings.import(SymbolValue::FrameReference(cell_num, frame), local_cell_id);
-                            bindings.symbols.insert(*atom_id, SymbolValue::FrameReference(local_cell_id, 0));
 
                             Ok((smallvec![Action::CellValue(local_cell_id)], bindings))
                         }
