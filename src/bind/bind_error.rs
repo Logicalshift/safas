@@ -23,7 +23,13 @@ pub enum BindError {
     MissingArgument,
 
     /// Too many arguments were supplied to a macro
-    TooManyArguments
+    TooManyArguments,
+
+    /// Arguments were not supplied to a function declaration
+    LambdaArgumentsNotSupplied,
+
+    /// Tried to define a value to a symbol that was not an atom
+    VariablesMustBeAtoms
 }
 
 /// Result of a binding operation

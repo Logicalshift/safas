@@ -74,6 +74,16 @@ impl SafasCell {
     }
 
     ///
+    /// If this is an atom, returns the atom ID (or None if it is not)
+    ///
+    pub fn to_atom_id(&self) -> Option<u64> {
+        match self {
+            SafasCell::Atom(atom_id)    => Some(*atom_id),
+            _                           => None
+        }
+    }
+
+    ///
     /// Converts this cell to a string
     ///
     pub fn to_string(&self) -> String {

@@ -8,19 +8,19 @@ use std::sync::*;
 ///
 /// The monad for the 'def' syntax (def atom value)
 ///
-pub struct DefMonad {
+pub struct DefKeyword {
 }
 
-impl DefMonad {
+impl DefKeyword {
     ///
     /// Creates a new monad for the 'def' syntax
     ///
-    pub fn new() -> DefMonad {
-        DefMonad { }
+    pub fn new() -> DefKeyword {
+        DefKeyword { }
     }
 }
 
-impl BindingMonad for DefMonad {
+impl BindingMonad for DefKeyword {
     type Binding=Result<SmallVec<[Action; 8]>, BindError>;
 
     fn description(&self) -> String { "##def##".to_string() }
@@ -40,7 +40,7 @@ impl BindingMonad for DefMonad {
         // Fetch the atom ID
         let atom = match &**atom {
             SafasCell::Atom(atom_id)    => atom_id,
-            _                           => return (bindings, Err(BindError::MissingArgument))
+            _                           => return (bindings, Err(BindError::VariablesMustBeAtoms))
         };
 
         // Evaluate the value
