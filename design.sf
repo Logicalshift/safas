@@ -36,8 +36,8 @@
     (d something)
 )
 
-;; lambda is used to create a function
-(def some_func (lambda (x) (d x)))
+;; fun is used to create a function
+(def some_func (fun (x) (d x)))
 (some_func 1)
 
 ;; We need some way to communicate what we're doing to the user

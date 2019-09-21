@@ -51,9 +51,7 @@ impl BindingMonad for FunKeyword {
 
         for fun_arg_atom in fun_args {
             // Create a cell ID for this atom
-            let cell_id = inner_bindings.num_cells;
-            inner_bindings.num_cells += 1;
-            inner_bindings.symbols.insert(fun_arg_atom, SymbolValue::FrameReference(cell_id, 0));
+            inner_bindings.bind_atom_to_new_cell(fun_arg_atom);
         }
 
         // Compile the statements

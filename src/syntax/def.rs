@@ -52,8 +52,7 @@ impl BindingMonad for DefKeyword {
 
         // Allocate a spot for this value
         let mut bindings    = bindings;
-        let cell_id         = bindings.num_cells;
-        bindings.num_cells += 1;
+        let cell_id         = bindings.alloc_cell();
 
         // Associate with the atom ID
         bindings.symbols.insert(*atom, SymbolValue::FrameReference(cell_id, 0));

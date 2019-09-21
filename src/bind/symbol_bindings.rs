@@ -137,6 +137,25 @@ impl SymbolBindings {
     }
 
     ///
+    /// Allocates a new storage cell that's currently not being used
+    ///
+    pub fn alloc_cell(&mut self) -> usize {
+        let cell_id     = self.num_cells;
+        self.num_cells += 1;
+
+        cell_id
+    }
+
+    ///
+    /// Binds an atom to an unused cell
+    ///
+    pub fn bind_atom_to_new_cell(&mut self, atom_id: u64) -> usize {
+        let cell_id = self.alloc_cell();
+        self.symbols.insert(atom_id, SymbolValue::FrameReference(cell_id, 0));
+        cell_id
+    }
+
+    ///
     /// Exports the specified atom to the parent bindings
     /// 
     /// This must be an interior binding for this to work. The value of the specified symbol will become visible outside of this binding.
