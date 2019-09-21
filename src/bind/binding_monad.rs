@@ -72,7 +72,7 @@ where   InputMonad:     BindingMonad,
 }
 
 ///
-/// That flat_map function for a binding monad
+/// The flat_map function for a binding monad
 ///
 pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(InputMonad::Binding) -> OutputMonad+Send+Sync>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=OutputMonad::Binding> {
     FlatMapValue {
@@ -80,4 +80,26 @@ pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, Nex
         next:   action,
         output: PhantomData
     }
+}
+
+///
+/// As for flat_map but combines two monads that generate actions by concatenating the actions together
+///
+pub fn flat_map_binding_actions<InputMonad, OutputMonad, NextFn>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=SmallVec<[Action; 8]>>
+where   InputMonad:     BindingMonad<Binding=SmallVec<[Action; 8]>>,
+        OutputMonad:    BindingMonad<Binding=SmallVec<[Action; 8]>>,
+        NextFn:         Fn() -> OutputMonad+Send+Sync {
+    // Perform the input monad
+    flat_map_binding(move |actions| {
+        // Resolve the output
+        let next = action();
+
+        flat_map_binding(move |next_actions| {
+            // Combine the actions from both monads
+            let mut actions = actions.clone();
+            actions.extend(next_actions);
+
+            wrap_binding(actions)
+        }, next)
+    }, monad)
 }
