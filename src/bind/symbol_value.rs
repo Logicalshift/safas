@@ -29,5 +29,5 @@ pub enum SymbolValue {
     MacroMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SafasCell>, BindError>>>),
 
     /// An action expands directly to a set of interpreter actions
-    ActionMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>>>)
+    ActionMonad(Arc<dyn BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>>)
 }

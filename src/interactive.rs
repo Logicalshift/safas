@@ -23,7 +23,7 @@ pub fn run_interactive() {
     let syntax                  = standard_syntax();
     let (mut bindings, actions) = syntax.resolve(bindings);
     frame.allocate_for_bindings(&bindings);
-    let (mut frame, _)          = (*actions.unwrap()).resolve(frame);
+    let (mut frame, _)          = actions.unwrap().resolve(frame);
 
     loop {
         // Read a line

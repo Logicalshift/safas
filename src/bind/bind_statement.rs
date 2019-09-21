@@ -78,13 +78,8 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
                     let bindings            = bindings.pop();
 
                     match actions {
-                        Ok(actions)     => {
-                            let actions = (*actions).clone();
-                            Ok((actions, bindings))
-                        }
-                        Err(error)      => {
-                            Err((error, bindings))
-                        }
+                        Ok(actions)     => Ok((actions, bindings)),
+                        Err(error)      => Err((error, bindings))
                     }
                 }
 

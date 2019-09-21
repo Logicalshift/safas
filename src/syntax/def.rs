@@ -21,7 +21,7 @@ impl DefMonad {
 }
 
 impl BindingMonad for DefMonad {
-    type Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>;
+    type Binding=Result<SmallVec<[Action; 8]>, BindError>;
 
     fn description(&self) -> String { "##def##".to_string() }
 
@@ -63,7 +63,7 @@ impl BindingMonad for DefMonad {
         let mut actions     = statement;
         actions.push(Action::StoreCell(cell_id));
 
-        (bindings, Ok(Arc::new(actions)))
+        (bindings, Ok(actions))
     }
 }
 
@@ -76,7 +76,7 @@ struct DefineSymbol {
 }
 
 impl BindingMonad for DefineSymbol {
-    type Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>;
+    type Binding=Result<SmallVec<[Action; 8]>, BindError>;
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
 
@@ -90,14 +90,14 @@ impl BindingMonad for DefineSymbol {
         // Actions just load the binding into the cell
         let actions         = smallvec![Action::Value(Arc::clone(&self.value)), Action::StoreCell(cell_id)];
 
-        (bindings, Ok(Arc::new(actions)))
+        (bindings, Ok(actions))
     }
 }
 
 ///
 /// Creates a binding monad that defines a symbol to evaluate a particular cell value
 ///
-pub fn define_symbol(atom: &str, value: SafasCell) -> impl BindingMonad<Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>> {
+pub fn define_symbol(atom: &str, value: SafasCell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
     // Retrieve the atom ID
     let atom_id = get_id_for_atom_with_name(atom);
 
@@ -116,7 +116,7 @@ struct DefineSymbolValue {
 }
 
 impl BindingMonad for DefineSymbolValue {
-    type Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>;
+    type Binding=Result<SmallVec<[Action; 8]>, BindError>;
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
 
@@ -128,14 +128,14 @@ impl BindingMonad for DefineSymbolValue {
         // No actions are performed for this: the symbol is just defined
         let actions         = smallvec![];
 
-        (bindings, Ok(Arc::new(actions)))
+        (bindings, Ok(actions))
     }
 }
 
 ///
 /// Creates a binding monad that defines a symbol to evaluate a particular cell value
 ///
-pub fn define_symbol_value(atom: &str, value: SymbolValue) -> impl BindingMonad<Binding=Result<Arc<SmallVec<[Action; 8]>>, BindError>> {
+pub fn define_symbol_value(atom: &str, value: SymbolValue) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
     // Retrieve the atom ID
     let atom_id = get_id_for_atom_with_name(atom);
 
