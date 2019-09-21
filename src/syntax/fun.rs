@@ -76,9 +76,6 @@ impl BindingMonad for FunKeyword {
         // Pop the bindings to return to the parent context
         let (bindings, imports) = inner_bindings.pop();
 
-        // Create a lambda from our actions
-        let lambda              = Lambda::new(actions, num_cells, num_args);
-
         if imports.len() > 0 {
             // If there are any imports, turn into a closure
             let mut cell_imports    = vec![];
@@ -104,7 +101,7 @@ impl BindingMonad for FunKeyword {
             }
 
             // Return the closure
-            let closure         = Closure::new(lambda, cell_imports, num_cells, num_args);
+            let closure         = Closure::new(actions, cell_imports, num_cells, num_args);
             let closure         = Arc::new(closure);
             let closure         = SafasCell::Monad(closure);
 
@@ -112,6 +109,7 @@ impl BindingMonad for FunKeyword {
             (bindings, Ok(smallvec![Action::Value(Arc::new(closure)), Action::Call]))
         } else {
             // No imports, so return a straight lambda
+            let lambda          = Lambda::new(actions, num_cells, num_args);
             let lambda          = Arc::new(lambda);
             let lambda          = SafasCell::Monad(lambda);
 
