@@ -34,9 +34,16 @@ pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> BindR
                     ActionMonad(monad)              => Ok((smallvec![Action::Value(Arc::new(SafasCell::ActionMonad(Arc::clone(&monad))))], bindings)),
                     FrameReference(cell_num, frame) => {
                         if frame == 0 {
+                            // Local symbol
                             Ok((smallvec![Action::CellValue(cell_num)], bindings))
                         } else {
-                            unimplemented!("Closures not implemented yet")
+                            // Import from a parent frame
+                            let mut bindings    = bindings;
+                            let local_cell_id   = bindings.alloc_cell();
+                            bindings.import(SymbolValue::FrameReference(cell_num, frame), local_cell_id);
+                            bindings.symbols.insert(*atom_id, SymbolValue::FrameReference(local_cell_id, 0));
+
+                            Ok((smallvec![Action::CellValue(local_cell_id)], bindings))
                         }
                     },
                 }
