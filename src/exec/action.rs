@@ -40,6 +40,10 @@ pub enum Action {
 impl FrameMonad for SmallVec<[Action; 8]> {
     type Binding = RuntimeResult;
 
+    fn description(&self) -> String {
+        format!("{:?}", self)
+    }
+
     fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // We just convert to a normal vec and run the actions from there
         let actions = self.iter().cloned().collect::<Vec<_>>();
@@ -49,6 +53,10 @@ impl FrameMonad for SmallVec<[Action; 8]> {
 
 impl FrameMonad for Vec<Action> {
     type Binding = RuntimeResult;
+
+    fn description(&self) -> String {
+        format!("{:?}", self)
+    }
 
     fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // Initial state
