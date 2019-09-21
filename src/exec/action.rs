@@ -120,7 +120,7 @@ impl FrameMonad for Vec<Action> {
                                 return (new_frame, new_result);
                             }
                         },
-                        _                           => return (frame, Err(RuntimeError::NotAFunction))
+                        _                           => return (frame, Err(RuntimeError::NotAFunction(Arc::clone(&result))))
                     }
                 }
             }
