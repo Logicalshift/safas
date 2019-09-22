@@ -26,7 +26,7 @@ pub enum BindError {
     TooManyArguments,
 
     /// Arguments were not supplied to a function declaration
-    LambdaArgumentsNotSupplied,
+    FunArgumentsNotSupplied,
 
     /// Tried to define a value to a symbol that was not an atom
     VariablesMustBeAtoms

@@ -37,7 +37,7 @@ impl BindingMonad for FunKeyword {
         let statements          = args;
 
         let fun_args            = fun_args.to_vec();
-        let fun_args            = match fun_args { Some(fun_args) => fun_args, None => return (bindings, Err(BindError::LambdaArgumentsNotSupplied)) };
+        let fun_args            = match fun_args { Some(fun_args) => fun_args, None => return (bindings, Err(BindError::FunArgumentsNotSupplied)) };
 
         // Map the args to atom IDs
         let fun_args            = fun_args.into_iter()

@@ -10,6 +10,15 @@ use std::result::{Result};
 ///
 pub struct SafasList(pub Arc<SafasCell>, pub Arc<SafasCell>);
 
+impl SafasList {
+    ///
+    /// A list containing just the 'nil' value
+    ///
+    pub fn nil() -> SafasList {
+        SafasList(Arc::new(SafasCell::Nil), Arc::new(SafasCell::Nil))
+    }
+}
+
 impl TryFrom<Arc<SafasCell>> for SafasList {
     type Error = RuntimeError;
 
