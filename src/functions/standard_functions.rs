@@ -28,7 +28,7 @@ pub fn standard_functions() -> impl BindingMonad<Binding=Result<SmallVec<[Action
     let functions  = wrap_binding(Ok(smallvec![]));
     let functions  = flat_map_binding_actions(move || define_function("d", d_keyword()), functions);
     let functions  = flat_map_binding_actions(move || define_function("m", m_keyword()), functions);
-    let functions  = flat_map_binding_actions(move || define_function("a", m_keyword()), functions);
+    let functions  = flat_map_binding_actions(move || define_function("a", a_keyword()), functions);
 
     functions
 }
