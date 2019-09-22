@@ -4,12 +4,16 @@ use crate::parse::*;
 
 use std::sync::*;
 use std::result::{Result};
+use std::convert::{Infallible};
 
 ///
 /// Error that can occur during evaluating a frame
 ///
 #[derive(Clone, Debug)]
 pub enum RuntimeError {
+    /// An operation marked as infallible managed to fail
+    NotInfallible,
+
     /// An error occurred while parsing code
     ParseError(ParseError),
 
@@ -44,5 +48,11 @@ impl From<ParseError> for RuntimeError {
 impl From<BindError> for RuntimeError {
     fn from(error: BindError) -> RuntimeError { 
         RuntimeError::BindingError(error)
+    }
+}
+
+impl From<Infallible> for RuntimeError {
+    fn from(error: Infallible) -> RuntimeError { 
+        RuntimeError::NotInfallible
     }
 }

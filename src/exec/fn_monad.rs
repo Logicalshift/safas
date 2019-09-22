@@ -18,7 +18,18 @@ pub trait FnArgs : Sized {
 }
 
 ///
-/// Represents a monad created from a Rust function that operates on cells
+/// FnMonad is the main way to import Rust closures into SAFAS
+/// 
+/// Implement the `FnArgs` trait on a type in order to interpret the raw cell into the arguments accepted
+/// by your function and produce errors if the type is incorrect. Several implemenations are provided already, 
+/// allowing for creating monads out of a wide variety of types. For example:Arc
+/// 
+/// ```
+///     let car = FnMonad::from(|SafasList(car, _cdr)| { Arc::clone(&car) })
+/// ```
+/// 
+/// Takes advantage of the conversion from a cell to a `SafasList`, saving the effort of needing to extract
+/// the car and cdr values.
 ///
 pub struct FnMonad<Fun, Args> {
     action:     Fun,
@@ -85,7 +96,11 @@ impl FnArgs for Arc<SafasCell> {
     }
 }
 
-impl FnArgs for (Arc<SafasCell>, Arc<SafasCell>) {
+impl<'a, A1, A2> FnArgs for (A1, A2)
+where   A1: TryFrom<Arc<SafasCell>>,
+        A2: TryFrom<Arc<SafasCell>>,
+        RuntimeError: From<A1::Error>,
+        RuntimeError: From<A2::Error> {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
         let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
         if args.len() > 2 {
@@ -93,7 +108,35 @@ impl FnArgs for (Arc<SafasCell>, Arc<SafasCell>) {
         } else if args.len() < 2 {
             Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
         } else {
-            Ok((Arc::clone(&args[0]), Arc::clone(&args[1])))
+            let mut args    = args;
+            let a2          = args.pop().unwrap();
+            let a1          = args.pop().unwrap();
+
+            Ok((A1::try_from(a1)?, A2::try_from(a2)?))
+        }
+    }
+}
+
+impl<'a, A1, A2, A3> FnArgs for (A1, A2, A3)
+where   A1: TryFrom<Arc<SafasCell>>,
+        A2: TryFrom<Arc<SafasCell>>,
+        A3: TryFrom<Arc<SafasCell>>,
+        RuntimeError: From<A1::Error>,
+        RuntimeError: From<A2::Error>,
+        RuntimeError: From<A3::Error> {
+    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
+        let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
+        if args.len() > 3 {
+            Err(RuntimeError::TooManyArguments(Arc::clone(&frame.cells[0])))
+        } else if args.len() < 3 {
+            Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
+        } else {
+            let mut args    = args;
+            let a3          = args.pop().unwrap();
+            let a2          = args.pop().unwrap();
+            let a1          = args.pop().unwrap();
+
+            Ok((A1::try_from(a1)?, A2::try_from(a2)?, A3::try_from(a3)?))
         }
     }
 }
