@@ -23,7 +23,7 @@ pub fn cons_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 /// (car a)
 ///
 pub fn car_fn() -> impl FrameMonad<Binding=RuntimeResult> {
-    FnMonad::from(|SafasList(car, _cdr)| {
+    FnMonad::from(|(SafasList(car, _cdr), )| {
         Arc::clone(&car)
     })
 }
@@ -32,7 +32,7 @@ pub fn car_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 /// (cdr a)
 ///
 pub fn cdr_fn() -> impl FrameMonad<Binding=RuntimeResult> {
-    FnMonad::from(|SafasList(_car, cdr)| {
+    FnMonad::from(|(SafasList(_car, cdr), )| {
         Arc::clone(&cdr)
     })
 }

@@ -25,11 +25,12 @@ pub trait FnArgs : Sized {
 /// allowing for creating monads out of a wide variety of types. For example:Arc
 /// 
 /// ```
-///     let car = FnMonad::from(|SafasList(car, _cdr)| { Arc::clone(&car) })
+///     let car = FnMonad::from(|(SafasList(car, _cdr), )| { Arc::clone(&car) })
 /// ```
 /// 
-/// Takes advantage of the conversion from a cell to a `SafasList`, saving the effort of needing to extract
-/// the car and cdr values.
+/// This takes advantage of the conversion from a cell to a `SafasList`, saving the effort of needing to extract
+/// the car and cdr values. Note the use of the rare single-tuple syntax - `(foo,)` here: all the tuple cases convert
+/// using `TryFrom<Arc<SafasCell>>`. Direct implementions of `FnArgs` don't require the tuple.
 ///
 pub struct FnMonad<Fun, Args> {
     action:     Fun,
@@ -83,7 +84,9 @@ impl FnArgs for () {
     }
 }
 
-impl FnArgs for Arc<SafasCell> {
+impl<T> FnArgs for (T,)
+where   T: TryFrom<Arc<SafasCell>>,
+        RuntimeError: From<T::Error> {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
         let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
         if args.len() > 1 {
@@ -91,7 +94,10 @@ impl FnArgs for Arc<SafasCell> {
         } else if args.len() < 1 {
             Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
         } else {
-            Ok(Arc::clone(&args[0]))
+            let mut args    = args;
+            let args        = args.pop().unwrap();
+
+            Ok((T::try_from(args)?, ))
         }
     }
 }
@@ -144,19 +150,6 @@ where   A1: TryFrom<Arc<SafasCell>>,
 impl FnArgs for VarArgs {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
         Ok(VarArgs(Arc::clone(&frame.cells[0])))
-    }
-}
-
-impl FnArgs for SafasList {
-    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
-        let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
-        if args.len() > 1 {
-            Err(RuntimeError::TooManyArguments(Arc::clone(&frame.cells[0])))
-        } else if args.len() < 1 {
-            Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
-        } else {
-            Ok(SafasList::try_from(&args[0])?)
-        }
     }
 }
 
