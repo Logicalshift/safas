@@ -2,6 +2,7 @@ use crate::meta::*;
 use crate::bind::*;
 use crate::parse::*;
 
+use std::num::{TryFromIntError};
 use std::sync::*;
 use std::result::{Result};
 use std::convert::{Infallible};
@@ -33,7 +34,10 @@ pub enum RuntimeError {
     TooManyArguments(Arc<SafasCell>),
 
     /// Too many arguments were passed to a function
-    NotEnoughArguments(Arc<SafasCell>)
+    NotEnoughArguments(Arc<SafasCell>),
+
+    /// The number is too large to fit into the correct format
+    NumberTooLarge
 }
 
 /// The result of a runtime operation (most common binding type of a frame monad)
@@ -52,7 +56,13 @@ impl From<BindError> for RuntimeError {
 }
 
 impl From<Infallible> for RuntimeError {
-    fn from(error: Infallible) -> RuntimeError { 
+    fn from(_error: Infallible) -> RuntimeError { 
         RuntimeError::NotInfallible
+    }
+}
+
+impl From<TryFromIntError> for RuntimeError {
+    fn from(_error: TryFromIntError) -> RuntimeError { 
+        RuntimeError::NumberTooLarge
     }
 }
