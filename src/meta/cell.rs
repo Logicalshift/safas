@@ -170,6 +170,9 @@ impl SafasCell {
             }
 
             Some(result)
+        } else if self.is_nil() {
+            // Nil is the same as the empty list
+            Some(vec![])
         } else {
             // Not a list
             None

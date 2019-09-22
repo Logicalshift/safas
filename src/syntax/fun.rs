@@ -7,6 +7,11 @@ use std::sync::*;
 
 ///
 /// The fun monad defines the '(fun (x y) (statement) ...)' syntax
+/// 
+/// ```(fun (<arg> ...) <statements>)```
+/// 
+/// Defines a function that will bind the atoms specified in the arg list to the arguments passed in.
+/// The result of the function is the value of the last of the list of statements.
 ///
 pub struct FunKeyword {
 }
@@ -127,6 +132,16 @@ mod test {
         let val = eval(
             "(def a (fun (x) x))\
             (a 42)"
+            ).unwrap().0.to_string();
+        assert!(val == "42".to_string());
+    }
+
+
+    #[test]
+    fn define_and_call_function_with_no_args() {
+        let val = eval(
+            "(def a (fun () 42))\
+            (a)"
             ).unwrap().0.to_string();
         assert!(val == "42".to_string());
     }
