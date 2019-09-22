@@ -7,6 +7,11 @@ use std::sync::*;
 
 ///
 /// The monad for the 'def' syntax (def atom value)
+/// 
+/// ```(def <name> <value>)```
+/// 
+/// Assigns `<value>` to the atom called `<name>`. It is possible to redefine an existing atom. The value
+/// will be available to everything in the same frame after this statement.
 ///
 pub struct DefKeyword {
 }
