@@ -40,7 +40,43 @@
 (def some_func (fun (x) (d x)))
 (some_func 1)
 
+;; bits is used to update the number of bits in a value
+(bits 16 $ffff)  ;; == $ffffu16
+
 ;; We need some way to communicate what we're doing to the user
 (print "Hello")
 (warn "Oops")
 (error "Doh")
+
+;; We can define syntax and use it later on.
+;; <val> is a name of an atom. In a syntax rule, it matches anything and stores it in a value bound to the atom 'val'
+;; Other values are literals, so 'X' just matches the atom 'X'
+(def assemble-6502 (syntax (
+        (lda #<val>)        ((a 0 8) (d $A9u8) (d (bits 8 val)))
+        (lda <addr>)        ((a 0 8) (d $ADu8) (d (bits 16 addr)))
+        (lda <addr>, X)     ((a 0 8) (d $BDu8) (d (bits 16 addr)))
+    )
+))
+
+;; After definition the syntax will work like a function
+(assemble-6502 (quote (lda #10)))
+
+;; But we can call 'eval-with-syntax' to evaluate some code with dynamically created syntax
+(eval-with-syntax (assemble-6502)
+    (lda #10)
+    (lda $1000)
+)
+
+;; Can also define the syntax directly
+(def-syntax assemble-6502 (
+        (lda #<val>)        ((a 0 8) (d $A9u8) (d (bits 8 val)))
+        (lda <addr>)        ((a 0 8) (d $ADu8) (d (bits 16 addr)))
+        (lda <addr>, X)     ((a 0 8) (d $BDu8) (d (bits 16 addr)))
+    )
+)
+
+;; Defining syntax this way lets us avoid eval-with_syntax:
+(assemble-6502
+    (lda #10)
+    (lda $1000)
+)
