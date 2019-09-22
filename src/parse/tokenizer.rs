@@ -83,7 +83,27 @@ pub fn tokenize<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>,
             } else if symbol.is_numeric() {
                 read_number(buffer, location)
             } else {
-                (Token::Symbol(symbol), buffer.read_characters(), buffer.update_location(location))
+                // Repeated symbol values create a longer atom
+                let mut symbol_string = symbol.to_string();
+
+                loop {
+                    // Collect as many copies of the symbol as we can
+                    let next = buffer.read_next();
+                    if next.is_none() {
+                        break;
+                    } else if next != Some(symbol) {
+                        buffer.push_back();
+                        break;
+                    }
+
+                    symbol_string.push(symbol);
+                }
+
+                if symbol_string.len() <= 1 {
+                    (Token::Symbol(symbol), buffer.read_characters(), buffer.update_location(location))
+                } else {
+                    (Token::Atom, buffer.read_characters(), buffer.update_location(location))
+                }
             }
         }
     }
@@ -436,6 +456,30 @@ mod test {
     fn tokenize_atom_5() {
         // <atom> is used in syntax definitions
         assert!(tokens_for("<atom>") == vec![Token::Symbol('<'), Token::Atom, Token::Symbol('>')]);
+    }
+
+    #[test]
+    fn tokenize_atom_6() {
+        // Repeated symbols arrive as single atoms
+        assert!(tokens_for("...") == vec![Token::Atom]);
+    }
+
+    #[test]
+    fn tokenize_atom_7() {
+        // Repeated symbols arrive as single atoms
+        assert!(tokens_for("<<") == vec![Token::Atom]);
+    }
+
+    #[test]
+    fn tokenize_atom_8() {
+        // But symbols don't combine into longer atoms when they're repeated
+        assert!(tokens_for("<<atom>>") == vec![Token::Atom, Token::Atom, Token::Atom]);
+    }
+
+    #[test]
+    fn tokenize_atom_9() {
+        // But symbols don't combine into longer atoms when they're repeated
+        assert!(tokens_for("<<a>>") == vec![Token::Atom, Token::Atom, Token::Atom]);
     }
 
     #[test]
