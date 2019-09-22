@@ -35,9 +35,6 @@ pub enum Action {
 
     /// Calls the current value
     Call,
-
-    /// Adds bitcode to the code built up in the current frame
-    PushBitcode(Vec<BitCode>)
 }
 
 impl FrameMonad for SmallVec<[Action; 8]> {
@@ -75,7 +72,6 @@ impl FrameMonad for Vec<Action> {
                 CellValue(pos)              => { result = Arc::clone(&frame.cells[*pos]); },
                 StoreCell(cell)             => { frame.cells[*cell] = Arc::clone(&result); },
                 Push                        => { frame.stack.push(Arc::clone(&result)); },
-                PushBitcode(bitcode)        => { frame.bitcode.extend(bitcode.iter().map(|code| *code)) }
                 Pop                         => { 
                     if let Some(value) = frame.stack.pop() {
                         result = value;
