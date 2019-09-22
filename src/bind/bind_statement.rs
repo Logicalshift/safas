@@ -111,8 +111,11 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
             }
         },
 
-        // Default action is just the literal value of the list
-        _other          => Ok((smallvec![Action::Value(Arc::new(SafasCell::List(car, cdr)))], bindings))
+        // Default action is to evaluate the first item as a statement and call it
+        _other          => {
+            let (actions, bindings) = bind_statement(car, bindings)?;
+            bind_call(actions, cdr, bindings)
+        }
     }
 }
 

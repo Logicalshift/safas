@@ -132,6 +132,14 @@ mod test {
     }
 
     #[test]
+    fn call_function_directly() {
+        let val = eval(
+            "((fun (x) x) 42)"
+            ).unwrap().0.to_string();
+        assert!(val == "42".to_string());
+    }
+
+    #[test]
     fn define_and_call_function_with_closure() {
         let val = eval(
                 "(def a (fun (x) x)) \
