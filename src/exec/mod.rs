@@ -10,6 +10,7 @@ mod action;
 mod lambda;
 mod closure;
 mod runtime_error;
+mod fn_monad;
 
 pub use self::bitcode_buffer::*;
 pub use self::frame::*;
@@ -18,3 +19,4 @@ pub use self::action::*;
 pub use self::lambda::*;
 pub use self::closure::*;
 pub use self::runtime_error::*;
+pub use self::fn_monad::*;

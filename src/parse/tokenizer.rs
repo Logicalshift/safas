@@ -78,7 +78,7 @@ pub fn tokenize<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>,
         Some('$')       => read_hex_number(buffer, location),
 
         Some(symbol)    => {
-            if symbol.is_alphabetic() {
+            if symbol.is_alphabetic() || symbol == '_' {
                 read_atom(buffer, location)
             } else if symbol.is_numeric() {
                 read_number(buffer, location)
@@ -201,7 +201,7 @@ fn read_atom<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>, lo
 
         match next_char {
             Some(chr)       => {
-                if !chr.is_alphanumeric() {
+                if !chr.is_alphanumeric() && chr != '_' {
                     buffer.push_back();
                     break;
                 }
@@ -413,8 +413,23 @@ mod test {
     }
 
     #[test]
-    fn tokenize_atom() {
+    fn tokenize_atom_1() {
         assert!(tokens_for("atom") == vec![Token::Atom]);
+    }
+
+    #[test]
+    fn tokenize_atom_2() {
+        assert!(tokens_for("atom123") == vec![Token::Atom]);
+    }
+
+    #[test]
+    fn tokenize_atom_3() {
+        assert!(tokens_for("atom_123") == vec![Token::Atom]);
+    }
+
+    #[test]
+    fn tokenize_atom_4() {
+        assert!(tokens_for("_123") == vec![Token::Atom]);
     }
 
     #[test]

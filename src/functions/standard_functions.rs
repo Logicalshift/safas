@@ -1,4 +1,5 @@
 use super::bitcode::*;
+use super::list::*;
 
 use crate::meta::*;
 use crate::exec::*;
@@ -26,9 +27,15 @@ where Monad: 'static+FrameMonad<Binding=RuntimeResult> {
 pub fn standard_functions() -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
     // Define the standard functions
     let functions  = wrap_binding(Ok(smallvec![]));
+
+    // Bitcode functions
     let functions  = flat_map_binding_actions(move || define_function("d", d_keyword()), functions);
     let functions  = flat_map_binding_actions(move || define_function("m", m_keyword()), functions);
     let functions  = flat_map_binding_actions(move || define_function("a", a_keyword()), functions);
+
+    // List functions
+    let functions  = flat_map_binding_actions(move || define_function("list", list_fn()), functions);
+    let functions  = flat_map_binding_actions(move || define_function("cons", cons_fn()), functions);
 
     functions
 }

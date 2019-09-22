@@ -23,7 +23,13 @@ pub enum RuntimeError {
     TypeMismatch(Arc<SafasCell>),
 
     /// Value cannot be called as a function
-    NotAFunction(Arc<SafasCell>)
+    NotAFunction(Arc<SafasCell>),
+
+    /// Not enough arguments were passed to a function
+    TooManyArguments(Arc<SafasCell>),
+
+    /// Too many arguments were passed to a function
+    NotEnoughArguments(Arc<SafasCell>)
 }
 
 /// The result of a runtime operation (most common binding type of a frame monad)
