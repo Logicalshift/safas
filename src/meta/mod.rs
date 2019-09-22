@@ -8,9 +8,11 @@ mod number;
 mod atom;
 mod bitcode;
 mod list;
+mod varargs;
 
 pub use self::cell::*;
 pub use self::number::*;
 pub use self::atom::*;
 pub use self::bitcode::*;
 pub use self::list::*;
+pub use self::varargs::*;

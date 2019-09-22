@@ -85,19 +85,6 @@ impl FnArgs for Arc<SafasCell> {
     }
 }
 
-impl FnArgs for SafasList {
-    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
-        let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
-        if args.len() > 1 {
-            Err(RuntimeError::TooManyArguments(Arc::clone(&frame.cells[0])))
-        } else if args.len() < 1 {
-            Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
-        } else {
-            Ok(SafasList::try_from(&args[0])?)
-        }
-    }
-}
-
 impl FnArgs for (Arc<SafasCell>, Arc<SafasCell>) {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
         let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
@@ -107,6 +94,25 @@ impl FnArgs for (Arc<SafasCell>, Arc<SafasCell>) {
             Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
         } else {
             Ok((Arc::clone(&args[0]), Arc::clone(&args[1])))
+        }
+    }
+}
+
+impl FnArgs for VarArgs {
+    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
+        Ok(VarArgs(Arc::clone(&frame.cells[0])))
+    }
+}
+
+impl FnArgs for SafasList {
+    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
+        let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
+        if args.len() > 1 {
+            Err(RuntimeError::TooManyArguments(Arc::clone(&frame.cells[0])))
+        } else if args.len() < 1 {
+            Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
+        } else {
+            Ok(SafasList::try_from(&args[0])?)
         }
     }
 }

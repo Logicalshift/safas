@@ -7,7 +7,7 @@ use std::sync::*;
 /// (list x y z) -> (x y z)
 ///
 pub fn list_fn() -> impl FrameMonad<Binding=RuntimeResult> {
-    FnMonad::from(|items: Arc<SafasCell>| items)
+    FnMonad::from(|VarArgs(items)| items)
 }
 
 ///
