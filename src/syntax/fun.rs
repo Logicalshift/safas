@@ -127,7 +127,7 @@ mod test {
         let val = eval(
             "(def a (fun (x) x))\
             (a 42)"
-            ).unwrap().to_string();
+            ).unwrap().0.to_string();
         assert!(val == "42".to_string());
     }
 
@@ -137,7 +137,7 @@ mod test {
                 "(def a (fun (x) x)) \
                 (def b (fun (x) (a x))) \
                 (b 42)"
-            ).unwrap().to_string();
+            ).unwrap().0.to_string();
         assert!(val == "42".to_string());
     }
 
@@ -149,7 +149,7 @@ mod test {
                     (def c (fun (y) (a y))) \
                     (c x))) \
                 (b 42)"
-            ).unwrap().to_string();
+            ).unwrap().0.to_string();
         assert!(val == "42".to_string());
     }
 }

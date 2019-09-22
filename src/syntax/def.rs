@@ -150,16 +150,16 @@ mod test {
 
     #[test]
     fn define_and_read_atom() {
-        let val = eval("(def a 1) a").unwrap().to_string();
+        let val = eval("(def a 1) a").unwrap().0.to_string();
         assert!(val == "1".to_string());
     }
 
     #[test]
     fn define_multiple_atoms() {
-        let val = eval("(def a 1) (def b 2) a").unwrap().to_string();
+        let val = eval("(def a 1) (def b 2) a").unwrap().0.to_string();
         assert!(val == "1".to_string());
 
-        let val = eval("(def a 1) (def b 2) b").unwrap().to_string();
+        let val = eval("(def a 1) (def b 2) b").unwrap().0.to_string();
         assert!(val == "2".to_string());
     }
 }
