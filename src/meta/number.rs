@@ -3,7 +3,7 @@ use radix_fmt::*;
 ///
 /// How SAFAS represents a number
 ///
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SafasNumber {
     /// A number that was specified with no precision
     Plain(u128),

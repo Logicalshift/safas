@@ -38,7 +38,13 @@ pub enum BindError {
     SyntaxExpectingAtom,
 
     /// A '>' or a '}' was missing when generating a syntax pattern
-    SyntaxMissingBracket(char)
+    SyntaxMissingBracket(char),
+
+    /// All symbols in the syntax were matched, but there was still extra input
+    SyntaxMatchedPrefix,
+
+    /// A symbol that could not be matched was encountered in a syntax pattern
+    SyntaxMatchFailed
 }
 
 /// Result of a binding operation

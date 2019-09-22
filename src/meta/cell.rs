@@ -84,6 +84,36 @@ impl SafasCell {
     }
 
     ///
+    /// If this is a string, the value of the string
+    ///
+    pub fn string_value(&self) -> Option<String> {
+        match self {
+            SafasCell::String(string)   => Some(string.clone()),
+            _                           => None
+        }
+    }
+
+    ///
+    /// If this is a character, the value of the character
+    ///
+    pub fn char_value(&self) -> Option<char> {
+        match self {
+            SafasCell::Char(chr)    => Some(*chr),
+            _                       => None
+        }
+    }
+
+    ///
+    /// If this is a number, the value of the number
+    ///
+    pub fn number_value(&self) -> Option<SafasNumber> {
+        match self {
+            SafasCell::Number(number)   => Some(*number),
+            _                           => None
+        }
+    }
+
+    ///
     /// Converts this cell to a string
     ///
     pub fn to_string(&self) -> String {
