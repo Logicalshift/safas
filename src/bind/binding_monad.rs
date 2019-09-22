@@ -19,7 +19,7 @@ pub trait BindingMonad : Send+Sync {
     ///
     /// Returns a string that describes what this monad does
     ///
-    fn description(&self) -> String { "<syntax>".to_string() }
+    fn description(&self) -> String { "##syntax##".to_string() }
 }
 
 impl BindingMonad for () {

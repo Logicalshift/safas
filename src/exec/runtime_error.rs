@@ -19,6 +19,9 @@ pub enum RuntimeError {
     /// Expected to pop a value from the stack but couldn't
     StackIsEmpty,
 
+    /// Expected a particular type of cell, but a different type was encountered
+    TypeMismatch(Arc<SafasCell>),
+
     /// Value cannot be called as a function
     NotAFunction(Arc<SafasCell>)
 }

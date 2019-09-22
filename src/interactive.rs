@@ -3,6 +3,7 @@ use crate::parse::*;
 use crate::bind::*;
 use crate::exec::*;
 use crate::syntax::*;
+use crate::functions::*;
 
 use std::io;
 use std::io::{Write};
@@ -18,9 +19,15 @@ pub fn eval(expr: &str) -> Result<Arc<SafasCell>, RuntimeError> {
 
     // Apply the standard bindings
     let syntax                  = standard_syntax();
-    let (mut bindings, actions) = syntax.resolve(bindings);
+    let functions               = standard_functions();
+    let (bindings, actions)     = syntax.resolve(bindings);
+    let (bindings, fn_actions)  = functions.resolve(bindings);
     frame.allocate_for_bindings(&bindings);
-    let (mut frame, _)          = actions.unwrap().resolve(frame);
+    let (frame, _)              = actions.unwrap().resolve(frame);
+    let (frame, _)              = fn_actions.unwrap().resolve(frame);
+
+    let mut frame               = frame;
+    let mut bindings            = bindings;
 
     // Parse the expression
     let expr = parse_safas(&mut TokenReadBuffer::new(expr.chars()), FileLocation::new("<expr>"))?;
@@ -66,9 +73,15 @@ pub fn run_interactive() {
 
     // Apply the standard bindings
     let syntax                  = standard_syntax();
-    let (mut bindings, actions) = syntax.resolve(bindings);
+    let functions               = standard_functions();
+    let (bindings, actions)     = syntax.resolve(bindings);
+    let (bindings, fn_actions)  = functions.resolve(bindings);
     frame.allocate_for_bindings(&bindings);
-    let (mut frame, _)          = actions.unwrap().resolve(frame);
+    let (frame, _)              = actions.unwrap().resolve(frame);
+    let (frame, _)              = fn_actions.unwrap().resolve(frame);
+
+    let mut frame               = frame;
+    let mut bindings            = bindings;
 
     loop {
         // Read a line

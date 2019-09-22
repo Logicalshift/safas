@@ -10,5 +10,5 @@ pub enum BitCode {
     Align(u8, u128, u32),
 
     /// Sets the file offset (in bits) for future instructions
-    Move(u32)
+    Move(u64)
 }

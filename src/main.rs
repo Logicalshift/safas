@@ -5,6 +5,7 @@ mod bind;
 mod exec;
 mod parse;
 mod syntax;
+mod functions;
 mod interactive;
 
 use self::interactive::*;
