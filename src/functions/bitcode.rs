@@ -114,3 +114,44 @@ pub fn a_keyword() -> impl FrameMonad<Binding=RuntimeResult> {
         vec![instruction]
     })
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::interactive::*;
+
+    #[test]
+    fn write_data_byte() {
+        let (_, bitcode) = eval("(d $9fu8)").unwrap();
+
+        assert!(&*bitcode.code.borrow() == &vec![BitCode::Bits(8, 0x9f)])
+    }
+
+    #[test]
+    fn write_three_bytes() {
+        let (_, bitcode) = eval("(d $9fu8) (d $1c42u16)").unwrap();
+
+        assert!(&*bitcode.code.borrow() == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
+    }
+
+    #[test]
+    fn write_three_bytes_in_one_operation() {
+        let (_, bitcode) = eval("(d $9fu8 $1c42u16)").unwrap();
+
+        assert!(&*bitcode.code.borrow() == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
+    }
+
+    #[test]
+    fn write_move() {
+        let (_, bitcode) = eval("(m $c001)").unwrap();
+
+        assert!(&*bitcode.code.borrow() == &vec![BitCode::Move(0xc001)])
+    }
+
+    #[test]
+    fn write_align() {
+        let (_, bitcode) = eval("(a $beeff00du32 64)").unwrap();
+
+        assert!(&*bitcode.code.borrow() == &vec![BitCode::Align(32, 0xbeeff00d, 64)])
+    }
+}
