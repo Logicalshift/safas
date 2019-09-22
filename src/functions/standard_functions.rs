@@ -34,8 +34,10 @@ pub fn standard_functions() -> impl BindingMonad<Binding=Result<SmallVec<[Action
     let functions  = flat_map_binding_actions(move || define_function("a", a_keyword()), functions);
 
     // List functions
-    let functions  = flat_map_binding_actions(move || define_function("list", list_fn()), functions);
-    let functions  = flat_map_binding_actions(move || define_function("cons", cons_fn()), functions);
+    let functions  = flat_map_binding_actions(move || define_function("list",   list_fn()), functions);
+    let functions  = flat_map_binding_actions(move || define_function("cons",   cons_fn()), functions);
+    let functions  = flat_map_binding_actions(move || define_function("car",    car_fn()), functions);
+    let functions  = flat_map_binding_actions(move || define_function("cdr",    cdr_fn()), functions);
 
     functions
 }

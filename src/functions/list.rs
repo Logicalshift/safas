@@ -19,6 +19,24 @@ pub fn cons_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     })
 }
 
+///
+/// (car a)
+///
+pub fn car_fn() -> impl FrameMonad<Binding=RuntimeResult> {
+    FnMonad::from(|SafasList(car, _cdr)| {
+        Arc::clone(&car)
+    })
+}
+
+///
+/// (cdr a)
+///
+pub fn cdr_fn() -> impl FrameMonad<Binding=RuntimeResult> {
+    FnMonad::from(|SafasList(_car, cdr)| {
+        Arc::clone(&cdr)
+    })
+}
+
 #[cfg(test)]
 mod test {
     use crate::interactive::*;
@@ -40,10 +58,26 @@ mod test {
     }
 
     #[test]
-    fn cons_list() {
+    fn cons() {
         let val = eval(
                 "(cons 1 (list 2 3))"
             ).unwrap().0.to_string();
         assert!(val == "(1 2 3)".to_string());
+    }
+
+    #[test]
+    fn car() {
+        let val = eval(
+                "(car (list 1 2 3))"
+            ).unwrap().0.to_string();
+        assert!(val == "1".to_string());
+    }
+
+    #[test]
+    fn cdr() {
+        let val = eval(
+                "(cdr (list 1 2 3))"
+            ).unwrap().0.to_string();
+        assert!(val == "(2 3)".to_string());
     }
 }

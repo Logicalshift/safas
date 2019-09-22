@@ -7,6 +7,7 @@ use crate::meta::*;
 use std::sync::*;
 use std::result::{Result};
 use std::marker::{PhantomData};
+use std::convert::*;
 
 ///
 /// Trait implemented by things that can be used as arguments to a function monad
@@ -80,6 +81,19 @@ impl FnArgs for Arc<SafasCell> {
             Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
         } else {
             Ok(Arc::clone(&args[0]))
+        }
+    }
+}
+
+impl FnArgs for SafasList {
+    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
+        let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
+        if args.len() > 1 {
+            Err(RuntimeError::TooManyArguments(Arc::clone(&frame.cells[0])))
+        } else if args.len() < 1 {
+            Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
+        } else {
+            Ok(SafasList::try_from(&args[0])?)
         }
     }
 }
