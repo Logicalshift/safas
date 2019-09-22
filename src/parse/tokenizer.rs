@@ -433,6 +433,12 @@ mod test {
     }
 
     #[test]
+    fn tokenize_atom_5() {
+        // <atom> is used in syntax definitions
+        assert!(tokens_for("<atom>") == vec![Token::Symbol('<'), Token::Atom, Token::Symbol('>')]);
+    }
+
+    #[test]
     fn tokenize_hexnumber_1() {
         assert!(tokens_for("$1234") == vec![Token::HexNumber]);
     }

@@ -51,6 +51,9 @@
 ;; We can define syntax and use it later on.
 ;; <val> is a name of an atom. In a syntax rule, it matches anything and stores it in a value bound to the atom 'val'
 ;; Other values are literals, so 'X' just matches the atom 'X'
+;;
+;; Note that (quote (<val>)) produces the list (< val >). This makes it somewhat hard to use the literal '<' in a
+;; syntax expression. To get around this, the value '<<' is the same as the literal '<'.
 (def assemble-6502 (syntax (
         (lda #<val>)        ((a 0 8) (d $A9u8) (d (bits 8 val)))
         (lda <addr>)        ((a 0 8) (d $ADu8) (d (bits 16 addr)))
