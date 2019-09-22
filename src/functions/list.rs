@@ -66,6 +66,14 @@ mod test {
     }
 
     #[test]
+    fn cons_dotted() {
+        let val = eval(
+                "(cons 1 2)"
+            ).unwrap().0.to_string();
+        assert!(val == "(1 . 2)".to_string());
+    }
+
+    #[test]
     fn car() {
         let val = eval(
                 "(car (list 1 2 3))"

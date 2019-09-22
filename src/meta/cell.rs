@@ -110,8 +110,8 @@ impl SafasCell {
                             next = second;
                         },
                         other               => {
-                            result.push_str(&format!(". {}", other.to_string()));
-                            next = second;
+                            result.push_str(&format!(" . {}", other.to_string()));
+                            break;
                         }
                     }
                 }
