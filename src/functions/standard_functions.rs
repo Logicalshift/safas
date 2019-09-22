@@ -17,7 +17,7 @@ where Monad: 'static+FrameMonad<Binding=RuntimeResult> {
     let monad = Arc::new(monad);
     let monad = SafasCell::Monad(monad);
 
-    define_symbol(atom, monad)
+    define_symbol_value(atom, SymbolValue::Constant(Arc::new(monad)))
 }
 
 ///
