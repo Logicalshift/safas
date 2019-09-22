@@ -7,8 +7,13 @@ use std::sync::*;
 /// (bits 3 8) -> 8u3
 ///
 pub fn bits_fn() -> impl FrameMonad<Binding=RuntimeResult> {
-    FnMonad::from(|(CellValue(bits), CellValue(number)): (_, CellValue<u128>)| {
+    FnMonad::from(|(CellValue(bits), number): (_, SafasNumber)| {
         let mask    = (1u128<<bits)-1;
+        let number  = match number {
+            SafasNumber::Plain(val)                     => val as u128,
+            SafasNumber::BitNumber(_bits, val)          => val,
+            SafasNumber::SignedBitNumber(_bits, val)    => val as u128
+        };
         let number  = number & mask;
 
         Arc::new(SafasCell::Number(SafasNumber::BitNumber(bits, number)))
