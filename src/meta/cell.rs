@@ -8,7 +8,6 @@ use smallvec::*;
 use std::sync::*;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
-use std::convert::*;
 
 ///
 /// A SAFAS cell represents a single value: for example 'D' or '24'

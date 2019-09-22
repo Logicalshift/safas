@@ -44,6 +44,16 @@ impl<Binding: Send+Sync+Clone> BindingMonad for ReturnValue<Binding> {
     }
 }
 
+impl<Binding> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
+    type Binding=Binding;
+
+    fn description(&self) -> String { (**self).description() }
+
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
+        (**self).resolve(bindings)
+    }
+}
+
 ///
 /// Wraps a value in a binding monad
 ///
