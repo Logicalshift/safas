@@ -53,12 +53,6 @@ where   Fun:    Send+Sync+Fn(Args) -> Arc<SafasCell>,
     }
 }
 
-impl FnArgs for Arc<SafasCell> {
-    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
-        Ok(Arc::clone(&frame.cells[0]))
-    }
-}
-
 impl FnArgs for Vec<Arc<SafasCell>> {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
         let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
@@ -73,6 +67,19 @@ impl FnArgs for () {
             Err(RuntimeError::TooManyArguments(Arc::clone(&frame.cells[0])))
         } else {
             Ok(())
+        }
+    }
+}
+
+impl FnArgs for Arc<SafasCell> {
+    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
+        let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
+        if args.len() > 1 {
+            Err(RuntimeError::TooManyArguments(Arc::clone(&frame.cells[0])))
+        } else if args.len() < 1 {
+            Err(RuntimeError::NotEnoughArguments(Arc::clone(&frame.cells[0])))
+        } else {
+            Ok(Arc::clone(&args[0]))
         }
     }
 }
