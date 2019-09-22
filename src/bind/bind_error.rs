@@ -29,7 +29,16 @@ pub enum BindError {
     FunArgumentsNotSupplied,
 
     /// Tried to define a value to a symbol that was not an atom
-    VariablesMustBeAtoms
+    VariablesMustBeAtoms,
+
+    /// Tried to bind to a syntax item that can't be matched against (eg a cell containing a function)
+    NotValidInSyntax,
+
+    /// Was expecting an atom to bind to when generating a syntax pattern
+    SyntaxExpectingAtom,
+
+    /// A '>' or a '}' was missing when generating a syntax pattern
+    SyntaxMissingBracket(char)
 }
 
 /// Result of a binding operation

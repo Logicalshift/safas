@@ -54,24 +54,30 @@
 ;;
 ;; Note that (quote (<val>)) produces the list (< val >). This makes it somewhat hard to use the literal '<' in a
 ;; syntax expression. To get around this, the value '<<' is the same as the literal '<'.
-(def assemble-6502 (syntax (
+(def assemble_6502 (syntax (
         (lda #<val>)        ((a 0 8) (d $A9u8) (d (bits 8 val)))
         (lda <addr>)        ((a 0 8) (d $ADu8) (d (bits 16 addr)))
         (lda <addr>, X)     ((a 0 8) (d $BDu8) (d (bits 16 addr)))
     )
 ))
 
+;; We can also use {} similarly to <> if we want to get the actual value passed in instead of evaluating it
+(def some_syntax (syntax (
+        (my_quote {val}) (val)
+    )
+))
+
 ;; After definition the syntax will work like a function
-(assemble-6502 (quote (lda #10)))
+(assemble_6502 (quote (lda #10)))
 
 ;; But we can call 'eval-with-syntax' to evaluate some code with dynamically created syntax
-(eval-with-syntax (assemble-6502)
+(eval_with_syntax (assemble_6502)
     (lda #10)
     (lda $1000)
 )
 
 ;; Can also define the syntax directly
-(def-syntax assemble-6502 (
+(def_syntax assemble_6502 (
         (lda #<val>)        ((a 0 8) (d $A9u8) (d (bits 8 val)))
         (lda <addr>)        ((a 0 8) (d $ADu8) (d (bits 16 addr)))
         (lda <addr>, X)     ((a 0 8) (d $BDu8) (d (bits 16 addr)))
@@ -79,7 +85,7 @@
 )
 
 ;; Defining syntax this way lets us avoid eval-with_syntax:
-(assemble-6502
+(assemble_6502
     (lda #10)
     (lda $1000)
 )
