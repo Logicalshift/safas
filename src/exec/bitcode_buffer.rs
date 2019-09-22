@@ -27,4 +27,11 @@ impl BitCodeBuffer {
             preceding:  None
         }
     }
+
+    ///
+    /// Writes code to this buffer
+    ///
+    pub fn extend<Code: Iterator<Item=BitCode>>(&mut self, code: Code) {
+        self.code.borrow_mut().extend(code)
+    }
 }
