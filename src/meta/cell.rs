@@ -114,6 +114,16 @@ impl SafasCell {
     }
 
     ///
+    /// If this is a list, returns the car and cdr cells
+    ///
+    pub fn list_value(&self) -> Option<(Arc<SafasCell>, Arc<SafasCell>)> {
+        match self {
+            SafasCell::List(car, cdr)   => Some((Arc::clone(car), Arc::clone(cdr))),
+            _                           => None
+        }
+    }
+
+    ///
     /// Converts this cell to a string
     ///
     pub fn to_string(&self) -> String {

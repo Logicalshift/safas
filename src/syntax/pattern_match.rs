@@ -48,6 +48,18 @@ pub enum MatchBinding {
     Symbol(u64, Arc<SafasCell>)
 }
 
+impl MatchBinding {
+    ///
+    /// Retrieves the cell that this value is bound to
+    ///
+    pub fn bound_cell(&self) -> Arc<SafasCell> {
+        match self {
+            MatchBinding::Statement(_, cell)    => Arc::clone(cell),
+            MatchBinding::Symbol(_, cell)       => Arc::clone(cell)
+        }
+    }
+}
+
 ///
 /// Describes a pattern that can be matched against a cell
 ///

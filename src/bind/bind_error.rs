@@ -34,8 +34,11 @@ pub enum BindError {
     /// Tried to bind to a syntax item that can't be matched against (eg a cell containing a function)
     NotValidInSyntax,
 
-    /// Was expecting an atom to bind to when generating a syntax pattern
+    /// Was expecting an atom in this position
     SyntaxExpectingAtom,
+
+    /// Was expecting a list
+    SyntaxExpectingList,
 
     /// A '>' or a '}' was missing when generating a syntax pattern
     SyntaxMissingBracket(char),
