@@ -71,7 +71,7 @@ impl PatternMatch {
     ///
     pub fn from_pattern_as_cells(list: Arc<SafasCell>) -> Result<PatternMatch, BindError> {
         // Set up to iterate through the list and generate the list of symbols
-        let mut list_pos    = &list;
+        let mut list_pos    = &*list;
         let mut symbols     = vec![];
 
         // Need some specific atoms for some parts of the parsing
@@ -81,7 +81,7 @@ impl PatternMatch {
         let curly_close     = get_id_for_atom_with_name("}");
 
         // Iterate through the list
-        while let SafasCell::List(car, cdr) = &**list_pos {
+        while let SafasCell::List(car, cdr) = list_pos {
             // Action depends on car
             match &**car {
                 SafasCell::Atom(atom_id) => {
@@ -91,10 +91,10 @@ impl PatternMatch {
                         // <foo> = bind statement to 'foo' - this is a bit annoying to parse
                         list_pos = cdr;
 
-                        if let SafasCell::List(bind_atom, cdr) = &**list_pos {
+                        if let SafasCell::List(bind_atom, cdr) = list_pos {
                             if let SafasCell::Atom(bind_atom) = &**bind_atom {
                                 symbols.push(MatchSymbol::StatementBinding(*bind_atom));
-                                list_pos = cdr;
+                                list_pos = &*cdr;
                             } else {
                                 return Err(BindError::SyntaxExpectingAtom)
                             }
@@ -103,14 +103,14 @@ impl PatternMatch {
                         }
 
                         // Should be '>' (tedious to parse this out :-/)
-                        if let SafasCell::List(close_bracket, cdr) = &**list_pos {
+                        if let SafasCell::List(close_bracket, cdr) = list_pos {
                             if let SafasCell::Atom(atom) = &**close_bracket {
                                 if *atom != angle_close {
                                     return Err(BindError::SyntaxMissingBracket('>'));
                                 }
 
                                 // Continue after the '>'
-                                list_pos = cdr;
+                                list_pos = &*cdr;
                                 continue;
                             } else {
                                 return Err(BindError::SyntaxMissingBracket('>'));
@@ -122,9 +122,9 @@ impl PatternMatch {
                     } else if atom_id == curly_open {
 
                         // {foo} = bind whatever appears to 'foo' - same parsing mechanism as for <foo> except different brackets
-                        list_pos = cdr;
+                        list_pos = &*cdr;
 
-                        if let SafasCell::List(bind_atom, cdr) = &**list_pos {
+                        if let SafasCell::List(bind_atom, cdr) = list_pos {
                             if let SafasCell::Atom(bind_atom) = &**bind_atom {
                                 symbols.push(MatchSymbol::SymbolBinding(*bind_atom));
                                 list_pos = cdr;
@@ -136,14 +136,14 @@ impl PatternMatch {
                         }
 
                         // Should be '}'
-                        if let SafasCell::List(close_bracket, cdr) = &**list_pos {
+                        if let SafasCell::List(close_bracket, cdr) = list_pos {
                             if let SafasCell::Atom(atom) = &**close_bracket {
                                 if *atom != curly_close {
                                     return Err(BindError::SyntaxMissingBracket('}'));
                                 }
 
                                 // Continue after the '}'
-                                list_pos = cdr;
+                                list_pos = &*cdr;
                                 continue;
                             } else {
                                 return Err(BindError::SyntaxMissingBracket('}'));
