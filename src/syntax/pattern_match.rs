@@ -30,7 +30,10 @@ pub enum MatchSymbol {
     StatementBinding(u64),
 
     /// Matches a symbol without evaluating it and binds it to an atom
-    SymbolBinding(u64)
+    SymbolBinding(u64),
+
+    /// Matches the end of input symbol
+    EndOfInput
 }
 
 ///
@@ -197,6 +200,42 @@ impl PatternMatch {
     }
 
     ///
+    /// Matches a single symbol, returning the bindings and the next item in the list if the match was successful
+    ///
+    pub fn match_symbol<'a>(symbol: &MatchSymbol, list_item: &'a SafasCell) -> Result<(Vec<MatchBinding>, &'a SafasCell), BindError> {
+        if let (MatchSymbol::Nil, SafasCell::Nil) = (symbol, list_item) {
+            // EndOfInput matches if the list is nil
+            Ok((vec![], list_item))
+        } else if let SafasCell::List(car, cdr) = list_item {
+            // Match car against the symbol
+            let mut bindings = vec![];
+
+            use self::MatchSymbol::*;
+            match symbol {
+                Atom(atom_id)               => { if car.to_atom_id() != Some(*atom_id)              { return Err(BindError::SyntaxMatchFailed); } },
+                Nil                         => { if !car.is_nil()                                   { return Err(BindError::SyntaxMatchFailed); } },
+                String(string)              => { if car.string_value().as_ref() != Some(string)     { return Err(BindError::SyntaxMatchFailed); } },
+                Char(chr)                   => { if car.char_value() != Some(*chr)                  { return Err(BindError::SyntaxMatchFailed); } },
+                Number(number)              => { if car.number_value() != Some(*number)             { return Err(BindError::SyntaxMatchFailed); } },
+                EndOfInput                  => { /* Matched implicitly */ },
+
+                StatementBinding(atom_id)   => { bindings.push(MatchBinding::Statement(*atom_id, Arc::clone(car))); }
+                SymbolBinding(atom_id)      => { bindings.push(MatchBinding::Symbol(*atom_id, Arc::clone(car))); }
+
+                List(list_pattern)  => {
+                    let list_bindings = Self::match_with_symbols(list_pattern, Arc::clone(car))?;
+                    bindings.extend(list_bindings);
+                }
+            }
+
+            Ok((bindings, &**cdr))
+        } else {
+            // List item is not a list
+            Err(BindError::SyntaxMatchFailed)
+        }
+    }
+
+    ///
     /// Performs matching directly against a symbol list
     ///
     fn match_with_symbols(symbols: &Vec<MatchSymbol>, input: Arc<SafasCell>) -> Result<Vec<MatchBinding>, BindError> {
@@ -216,7 +255,8 @@ impl PatternMatch {
                 Nil                         => { if !car.is_nil()                                   { return Err(BindError::SyntaxMatchFailed); } },
                 String(string)              => { if car.string_value().as_ref() != Some(string)     { return Err(BindError::SyntaxMatchFailed); } },
                 Char(chr)                   => { if car.char_value() != Some(*chr)                  { return Err(BindError::SyntaxMatchFailed); } },
-                Number(number)              => { if car.number_value() != Some(*number)             { return Err(BindError::SyntaxMatchFailed); } }
+                Number(number)              => { if car.number_value() != Some(*number)             { return Err(BindError::SyntaxMatchFailed); } },
+                EndOfInput                  => { /* Matched implicitly */ },
 
                 StatementBinding(atom_id)   => { bindings.push(MatchBinding::Statement(*atom_id, Arc::clone(car))); }
                 SymbolBinding(atom_id)      => { bindings.push(MatchBinding::Symbol(*atom_id, Arc::clone(car))); }
