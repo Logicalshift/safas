@@ -1,6 +1,7 @@
 use crate::meta::*;
 use crate::bind::*;
 
+use smallvec::*;
 use std::sync::*;
 use std::result::{Result};
 
@@ -202,13 +203,13 @@ impl PatternMatch {
     ///
     /// Matches a single symbol, returning the bindings and the next item in the list if the match was successful
     ///
-    pub fn match_symbol<'a>(symbol: &MatchSymbol, list_item: &'a SafasCell) -> Result<(Vec<MatchBinding>, &'a SafasCell), BindError> {
+    pub fn match_symbol<'a>(symbol: &MatchSymbol, list_item: &'a SafasCell) -> Result<(SmallVec<[MatchBinding; 1]>, &'a SafasCell), BindError> {
         if let (MatchSymbol::Nil, SafasCell::Nil) = (symbol, list_item) {
             // EndOfInput matches if the list is nil
-            Ok((vec![], list_item))
+            Ok((smallvec![], list_item))
         } else if let SafasCell::List(car, cdr) = list_item {
             // Match car against the symbol
-            let mut bindings = vec![];
+            let mut bindings = smallvec![];
 
             use self::MatchSymbol::*;
             match symbol {
@@ -240,38 +241,22 @@ impl PatternMatch {
     ///
     fn match_with_symbols(symbols: &Vec<MatchSymbol>, input: Arc<SafasCell>) -> Result<Vec<MatchBinding>, BindError> {
         // Current position in the input
-        let mut input_pos   = &input;
+        let mut input_pos   = &*input;
         let mut bindings    = vec![];
 
         // Match the input position against the expected symbol
         for symbol in symbols.iter() {
-            // Input should be a list item at this position
-            let (car, cdr) = if let SafasCell::List(car, cdr) = &**input_pos { (car, cdr) } else { return Err(BindError::SyntaxMatchFailed); };
+            // Match the next symbol
+            let (new_bindings, new_pos) = Self::match_symbol(symbol, input_pos)?;
 
-            // Match car against the symbol
-            use self::MatchSymbol::*;
-            match symbol {
-                Atom(atom_id)               => { if car.to_atom_id() != Some(*atom_id)              { return Err(BindError::SyntaxMatchFailed); } },
-                Nil                         => { if !car.is_nil()                                   { return Err(BindError::SyntaxMatchFailed); } },
-                String(string)              => { if car.string_value().as_ref() != Some(string)     { return Err(BindError::SyntaxMatchFailed); } },
-                Char(chr)                   => { if car.char_value() != Some(*chr)                  { return Err(BindError::SyntaxMatchFailed); } },
-                Number(number)              => { if car.number_value() != Some(*number)             { return Err(BindError::SyntaxMatchFailed); } },
-                EndOfInput                  => { /* Matched implicitly */ },
+            // Store the bindings
+            bindings.extend(new_bindings);
 
-                StatementBinding(atom_id)   => { bindings.push(MatchBinding::Statement(*atom_id, Arc::clone(car))); }
-                SymbolBinding(atom_id)      => { bindings.push(MatchBinding::Symbol(*atom_id, Arc::clone(car))); }
-
-                List(list_pattern)  => {
-                    let list_bindings = Self::match_with_symbols(list_pattern, Arc::clone(car))?;
-                    bindings.extend(list_bindings);
-                }
-            }
-
-            // Move to the next symbol
-            input_pos = cdr;
+            // Advance the input position
+            input_pos = new_pos;
         }
 
-        if let SafasCell::Nil = &**input_pos {
+        if let SafasCell::Nil = input_pos {
             // Reached the end of the input: match succeded
             Ok(bindings)
         } else {
