@@ -111,7 +111,7 @@ impl BindingMonad for DefSyntaxKeyword {
                 }
 
                 // Generate the syntax item
-                let syntax          = Syntax { syntax };
+                let syntax          = Syntax::new(syntax);
 
                 // Pop the frame we added for the syntax. import_values indicates what we need to bind to our syntax
                 let (bindings, import_values) = bindings.pop();
@@ -137,6 +137,15 @@ struct Syntax {
     syntax: HashMap<u64, SyntaxSymbol> 
 }
 
+impl Syntax {
+    ///
+    /// Creates a new syntax keyword
+    ///
+    pub fn new(syntax: HashMap<u64, SyntaxSymbol>) -> Syntax {
+        Syntax { syntax }
+    }
+}
+
 ///
 /// The syntax symbol struct evaluates a single syntax symbol
 ///
@@ -146,6 +155,9 @@ struct SyntaxSymbol {
 }
 
 impl SyntaxSymbol {
+    ///
+    /// Creates a new syntax symbol that will match one of the specified patterns
+    ///
     pub fn new(bindings: SymbolBindings, patterns: Vec<(PatternMatch, Arc<SafasCell>)>) -> (SymbolBindings, SyntaxSymbol) {
         (bindings, SyntaxSymbol { patterns: patterns })
     }
