@@ -14,7 +14,6 @@ use std::fmt::{Debug, Formatter};
 /// 
 /// The most complicated of these structures is the list, which just joins two cells
 ///
-#[derive(Clone)]
 pub enum SafasCell {
     /// The 'nil' value
     Nil,
