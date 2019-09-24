@@ -63,7 +63,7 @@ impl<Action: 'static+FrameMonad<Binding=RuntimeResult>> FrameMonad for Closure<A
 
         // Resulting value is a lambda
         let lambda  = Lambda::new(body, self.num_cells, self.arg_count);
-        let lambda  = SafasCell::Monad(Arc::new(lambda));
+        let lambda  = SafasCell::Monad(Box::new(lambda));
         let lambda  = Arc::new(lambda);
 
         (frame, Ok(lambda))

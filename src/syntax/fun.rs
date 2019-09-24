@@ -107,7 +107,7 @@ impl BindingMonad for FunKeyword {
 
             // Return the closure
             let closure         = Closure::new(actions, cell_imports, num_cells, num_args);
-            let closure         = Arc::new(closure);
+            let closure         = Box::new(closure);
             let closure         = SafasCell::Monad(closure);
 
             // Call the closure to bind it here
@@ -115,7 +115,7 @@ impl BindingMonad for FunKeyword {
         } else {
             // No imports, so return a straight lambda
             let lambda          = Lambda::new(actions, num_cells, num_args);
-            let lambda          = Arc::new(lambda);
+            let lambda          = Box::new(lambda);
             let lambda          = SafasCell::Monad(lambda);
 
             (bindings, Ok(smallvec![Action::Value(Arc::new(lambda))]))

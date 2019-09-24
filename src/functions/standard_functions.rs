@@ -8,7 +8,6 @@ use crate::bind::*;
 use crate::syntax::*;
 
 use smallvec::*;
-use std::sync::*;
 use std::result::{Result};
 
 ///
@@ -16,7 +15,7 @@ use std::result::{Result};
 ///
 pub fn define_function<Monad>(atom: &str, monad: Monad) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>
 where Monad: 'static+FrameMonad<Binding=RuntimeResult> {
-    let monad = Arc::new(monad);
+    let monad = Box::new(monad);
     let monad = SafasCell::Monad(monad);
 
     define_symbol_value(atom, monad)

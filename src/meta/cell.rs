@@ -37,13 +37,13 @@ pub enum SafasCell {
     FrameReference(usize, u32),
 
     /// A monad that transforms the state of the current frame (generally a lambda)
-    Monad(Arc<dyn FrameMonad<Binding=RuntimeResult>>),
+    Monad(Box<dyn FrameMonad<Binding=RuntimeResult>>),
 
     /// A macro expands to a statement, which is recursively compiled
-    MacroMonad(Arc<dyn BindingMonad<Binding=Result<CellRef, BindError>>>),
+    MacroMonad(Box<dyn BindingMonad<Binding=Result<CellRef, BindError>>>),
 
     /// An action expands directly to a set of interpreter actions
-    ActionMonad(Arc<dyn BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>>)
+    ActionMonad(Box<dyn BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>>)
 }
 
 pub type CellRef = Arc<SafasCell>;
