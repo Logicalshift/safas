@@ -25,6 +25,14 @@ impl DefKeyword {
     }
 }
 
+pub fn def_keyword() -> SyntaxCompiler {
+    let bind = flat_map_binding(|args: Result<ListTuple<(AtomId, CellRef)>, BindError>| {
+        unimplemented!()
+    }, BindArgsMonad::new());
+
+    unimplemented!()
+}
+
 impl BindingMonad for DefKeyword {
     type Binding=Result<SmallVec<[Action; 8]>, BindError>;
 
