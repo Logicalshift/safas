@@ -92,6 +92,23 @@ pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, Nex
 }
 
 ///
+/// A variant of flat_map that strips out errors from the result of the input monad
+///
+pub fn flat_map_binding_error<InputMonad, OutputMonad, Val, Out, NextFn: Fn(Val) -> OutputMonad+Send+Sync>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=Result<Out, BindError>> 
+where  InputMonad:  BindingMonad<Binding=Result<Val, BindError>>,
+       OutputMonad: 'static+BindingMonad<Binding=Result<Out, BindError>>,
+       Out:         'static+Clone+Send+Sync {
+    flat_map_binding(move |maybe_error| {
+        let result: Box<dyn BindingMonad<Binding=Result<Out, BindError>>> = match maybe_error {
+            Ok(val)     => Box::new(action(val)),
+            Err(err)    => Box::new(wrap_binding(Err(err)))
+        };
+
+        result
+    }, monad)
+}
+
+///
 /// As for flat_map but combines two monads that generate actions by concatenating the actions together
 ///
 pub fn flat_map_binding_actions<InputMonad, OutputMonad, NextFn>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>
