@@ -61,7 +61,7 @@ impl FrameMonad for Vec<Action> {
     fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // Initial state
         let mut frame   = frame;
-        let mut result  = Arc::new(SafasCell::Nil);
+        let mut result  = SafasCell::Nil.into();
 
         // Perform each action in turn
         for action in self.iter() {
@@ -81,14 +81,14 @@ impl FrameMonad for Vec<Action> {
                 }
 
                 PopList(num_cells)          => { 
-                    result = Arc::new(SafasCell::Nil);
+                    result = SafasCell::Nil.into();
                     for _ in 0..*num_cells {
                         let val = if let Some(val) = frame.stack.pop() {
                             val
                         } else {
                             return (frame, Err(RuntimeError::StackIsEmpty));
                         };
-                        result = Arc::new(SafasCell::List(val, result));
+                        result = SafasCell::List(val, result).into();
                     }
                 }
 
@@ -105,7 +105,7 @@ impl FrameMonad for Vec<Action> {
                         } else {
                             return (frame, Err(RuntimeError::StackIsEmpty));
                         };
-                        result = Arc::new(SafasCell::List(val, result));
+                        result = SafasCell::List(val, result).into();
                     }
                 }
 

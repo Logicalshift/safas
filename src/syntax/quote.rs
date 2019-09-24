@@ -3,7 +3,6 @@ use crate::exec::*;
 use crate::meta::*;
 
 use smallvec::*;
-use std::sync::*;
 use std::convert::*;
 
 ///
@@ -26,7 +25,7 @@ impl BindingMonad for QuoteKeyword {
     fn description(&self) -> String { "##quote##".to_string() }
 
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
-        let args                    = bindings.args.clone().unwrap_or_else(|| Arc::new(SafasCell::Nil));
+        let args                    = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
         let SafasList(car, _cdr)    = SafasList::try_from(args).unwrap_or(SafasList::nil());
 
         (bindings, Ok(smallvec![Action::Value(car)]))

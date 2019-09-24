@@ -1,8 +1,6 @@
 use crate::exec::*;
 use crate::meta::*;
 
-use std::sync::*;
-
 ///
 /// (list x y z) -> (x y z)
 ///
@@ -15,7 +13,7 @@ pub fn list_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 ///
 pub fn cons_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(car, cdr): (CellRef, CellRef)| {
-        Arc::new(SafasCell::List(car, cdr))
+        SafasCell::List(car, cdr).into()
     })
 }
 
@@ -24,7 +22,7 @@ pub fn cons_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 ///
 pub fn car_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(SafasList(car, _cdr), )| {
-        Arc::clone(&car)
+        car.clone()
     })
 }
 
@@ -33,7 +31,7 @@ pub fn car_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 ///
 pub fn cdr_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(SafasList(_car, cdr), )| {
-        Arc::clone(&cdr)
+        cdr.clone()
     })
 }
 

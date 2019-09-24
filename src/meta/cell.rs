@@ -59,9 +59,9 @@ impl SafasCell {
         let cells       = cells.into_iter().rev();
 
         // We build the list by adding to the end
-        let mut cell    = Arc::new(SafasCell::Nil);
+        let mut cell    = SafasCell::Nil.into();
         for current_cell in cells {
-            cell = Arc::new(SafasCell::List(current_cell, cell));
+            cell = SafasCell::List(current_cell, cell).into();
         }
 
         // Final result

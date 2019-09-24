@@ -15,7 +15,7 @@ impl SafasList {
     /// A list containing just the 'nil' value
     ///
     pub fn nil() -> SafasList {
-        SafasList(Arc::new(SafasCell::Nil), Arc::new(SafasCell::Nil))
+        SafasList(SafasCell::Nil.into(), SafasCell::Nil.into())
     }
 }
 

@@ -39,7 +39,7 @@ impl BindingMonad for DefSyntaxKeyword {
 
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Fetch the arguments
-        let args = bindings.args.clone().unwrap_or_else(|| Arc::new(SafasCell::Nil));
+        let args = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
 
         // Parse the patterns
         let patterns: Result<_, BindError> = (|| {
@@ -75,10 +75,10 @@ impl BindingMonad for DefSyntaxKeyword {
             }
 
             // After this we get the environment set up statements
-            let setup = if let SafasCell::List(car, cdr) = args {
-                Arc::new(SafasCell::List(Arc::clone(car), Arc::clone(cdr)))
+            let setup: CellRef = if let SafasCell::List(car, cdr) = args {
+                SafasCell::List(Arc::clone(car), Arc::clone(cdr)).into()
             } else {
-                Arc::new(SafasCell::Nil)
+                SafasCell::Nil.into()
             };
 
             Ok((name, patterns, setup))

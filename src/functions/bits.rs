@@ -1,8 +1,6 @@
 use crate::exec::*;
 use crate::meta::*;
 
-use std::sync::*;
-
 ///
 /// (bits 3 8) -> 8u3
 ///
@@ -16,7 +14,7 @@ pub fn bits_fn() -> impl FrameMonad<Binding=RuntimeResult> {
         };
         let number  = number & mask;
 
-        Arc::new(SafasCell::Number(SafasNumber::BitNumber(bits, number)))
+        SafasCell::Number(SafasNumber::BitNumber(bits, number)).into()
     })
 }
 
@@ -37,7 +35,7 @@ pub fn sbits_fn() -> impl FrameMonad<Binding=RuntimeResult> {
             number as i128
         };
 
-        Arc::new(SafasCell::Number(SafasNumber::SignedBitNumber(bits, number as i128)))
+        SafasCell::Number(SafasNumber::SignedBitNumber(bits, number as i128)).into()
     })
 }
 

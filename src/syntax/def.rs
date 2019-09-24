@@ -101,13 +101,13 @@ impl BindingMonad for DefineSymbol {
 ///
 /// Creates a binding monad that defines a symbol to evaluate a particular cell value
 ///
-pub fn define_symbol(atom: &str, value: SafasCell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
+pub fn define_symbol<Cell: Into<CellRef>>(atom: &str, value: Cell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
     // Retrieve the atom ID
     let atom_id = get_id_for_atom_with_name(atom);
 
     DefineSymbol {
         atom_id:    atom_id,
-        value:      Arc::new(value)
+        value:      value.into()
     }
 }
 

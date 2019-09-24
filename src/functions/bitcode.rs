@@ -1,8 +1,6 @@
 use crate::meta::*;
 use crate::exec::*;
 
-use std::sync::*;
-
 ///
 /// Binding monad that implements a bitcode keyword
 ///
@@ -55,7 +53,7 @@ where BitCodeFn: Send+Sync+Fn(Vec<SafasNumber>) -> Vec<BitCode> {
         frame.bitcode.extend(bitcode);
 
         // Finish up
-        (frame, Ok(Arc::new(SafasCell::Nil)))
+        (frame, Ok(SafasCell::Nil.into()))
     }
 }
 

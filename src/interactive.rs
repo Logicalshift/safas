@@ -34,7 +34,7 @@ pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
 
     // Run the statements in the current frame
     let mut statement   = Arc::clone(&expr);
-    let mut result      = Arc::new(SafasCell::Nil);
+    let mut result      = SafasCell::Nil.into();
     while let SafasCell::List(car, cdr) = &*statement {
         // Bind this statement
         let bind_result = bind_statement(Arc::clone(&car), bindings);

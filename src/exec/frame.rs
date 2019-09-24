@@ -5,7 +5,6 @@ use crate::bind::*;
 use smallvec::*;
 
 use std::rc::*;
-use std::sync::*;
 
 ///
 /// A SAFAS execution frame
@@ -31,7 +30,7 @@ impl Frame {
     pub fn new(size: usize, previous_frame: Option<Frame>) -> Frame {
         Frame {
             previous_frame: previous_frame.map(|frame| Box::new(frame)),
-            cells:          smallvec![Arc::new(SafasCell::Nil); size],
+            cells:          smallvec![SafasCell::Nil.into(); size],
             bitcode:        BitCodeBuffer::new(),
             stack:          smallvec![]
         }
@@ -68,7 +67,7 @@ impl Frame {
     ///
     pub fn allocate_for_bindings(&mut self, bindings: &SymbolBindings) {
         while self.cells.len() < bindings.num_cells {
-            self.cells.push(Arc::new(SafasCell::Nil))
+            self.cells.push(SafasCell::Nil.into())
         }
     }
 }

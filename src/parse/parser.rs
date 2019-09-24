@@ -7,7 +7,6 @@ use crate::meta::*;
 
 use smallvec::*;
 use std::result::{Result};
-use std::sync::*;
 
 ///
 /// Parses a file in SAFAS format and returns the resulting cell
@@ -56,20 +55,20 @@ fn parse_cell_from_token<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<
         Token::Whitespace | Token::Comment => { Err(ParseError::InternalError(original_location, "Whitespace should not make it through to this point".to_string())) },
         Token::EndOfFile    => { Ok((None, location)) }
 
-        Token::BitNumber    => { (Ok((Some(Arc::new(bit_number(&token_text, &original_location)?)), location))) }
-        Token::HexNumber    => { (Ok((Some(Arc::new(hex_number(&token_text, &original_location)?)), location))) }
-        Token::IntNumber    => { (Ok((Some(Arc::new(int_number(&token_text, &original_location)?)), location))) }
-        Token::Atom         => { Ok((Some(Arc::new(SafasCell::Atom(get_id_for_atom_with_name(&token_text)))), location)) }
-        Token::Symbol(_)    => { Ok((Some(Arc::new(SafasCell::Atom(get_id_for_atom_with_name(&token_text)))), location)) }
+        Token::BitNumber    => { (Ok((Some(bit_number(&token_text, &original_location)?.into()), location))) }
+        Token::HexNumber    => { (Ok((Some(hex_number(&token_text, &original_location)?.into()), location))) }
+        Token::IntNumber    => { (Ok((Some(int_number(&token_text, &original_location)?.into()), location))) }
+        Token::Atom         => { Ok((Some(SafasCell::Atom(get_id_for_atom_with_name(&token_text)).into()), location)) }
+        Token::Symbol(_)    => { Ok((Some(SafasCell::Atom(get_id_for_atom_with_name(&token_text)).into()), location)) }
         Token::CloseParen   => { Err(ParseError::UnexpectedCloseParen(original_location)) }
-        Token::String       => { Ok((Some(Arc::new(SafasCell::String(unquote_string(token_text)))), location)) }
+        Token::String       => { Ok((Some(SafasCell::String(unquote_string(token_text)).into()), location)) }
 
         Token::Character    => {
             let chr_string = unquote_string(token_text);
             if chr_string.chars().count() != 1 {
                 Err(ParseError::InvalidCharacter(original_location, chr_string))
             } else {
-                Ok((Some(Arc::new(SafasCell::Char(chr_string.chars().nth(0).unwrap()))), location))
+                Ok((Some(SafasCell::Char(chr_string.chars().nth(0).unwrap()).into()), location))
             }
         }
 
