@@ -14,8 +14,11 @@ pub struct QuoteKeyword {
 }
 
 impl QuoteKeyword {
-    pub fn new() -> QuoteKeyword {
-        QuoteKeyword { }
+    ///
+    /// Creates the `(quote thing)` syntax
+    ///
+    pub fn new() -> SyntaxCompiler {
+        unimplemented!()
     }
 }
 

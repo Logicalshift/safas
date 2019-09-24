@@ -17,8 +17,11 @@ pub struct FunKeyword {
 }
 
 impl FunKeyword {
-    pub fn new() -> FunKeyword {
-        FunKeyword { }
+    ///
+    /// Creates the `fun` syntax
+    ///
+    pub fn new() -> SyntaxCompiler {
+        unimplemented!()
     }
 }
 

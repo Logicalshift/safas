@@ -27,8 +27,8 @@ impl DefSyntaxKeyword {
     ///
     /// Creates the def_syntax keyword
     ///
-    pub fn new() -> DefSyntaxKeyword {
-        DefSyntaxKeyword { }
+    pub fn new() -> SyntaxCompiler {
+        unimplemented!()
     }
 }
 

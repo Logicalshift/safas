@@ -16,10 +16,10 @@ use std::result::{Result};
 pub fn standard_syntax() -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
     // Define the standard syntax
     let syntax  = wrap_binding(Ok(smallvec![]));
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("def",           SafasCell::ActionMonad(Box::new(DefKeyword::new()))), syntax);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::ActionMonad(Box::new(DefSyntaxKeyword::new()))), syntax);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("fun",           SafasCell::ActionMonad(Box::new(FunKeyword::new()))), syntax);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("quote",         SafasCell::ActionMonad(Box::new(QuoteKeyword::new()))), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("def",           SafasCell::ActionMonad(DefKeyword::new())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::ActionMonad(DefSyntaxKeyword::new())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("fun",           SafasCell::ActionMonad(FunKeyword::new())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("quote",         SafasCell::ActionMonad(QuoteKeyword::new())), syntax);
 
     syntax
 }

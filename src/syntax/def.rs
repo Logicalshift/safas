@@ -18,10 +18,10 @@ pub struct DefKeyword {
 
 impl DefKeyword {
     ///
-    /// Creates a new monad for the 'def' syntax
+    /// Creates a new syntax compiler for the 'def' syntax
     ///
-    pub fn new() -> DefKeyword {
-        DefKeyword { }
+    pub fn new() -> SyntaxCompiler {
+        unimplemented!()
     }
 }
 

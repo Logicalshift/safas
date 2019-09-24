@@ -4,7 +4,6 @@ use super::atom::*;
 use crate::bind::*;
 use crate::exec::*;
 
-use smallvec::*;
 use std::sync::*;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -43,7 +42,7 @@ pub enum SafasCell {
     MacroMonad(Box<dyn BindingMonad<Binding=Result<CellRef, BindError>>>),
 
     /// An action expands directly to a set of interpreter actions
-    ActionMonad(Box<dyn BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>>)
+    ActionMonad(SyntaxCompiler)
 }
 
 pub type CellRef = Arc<SafasCell>;
@@ -152,7 +151,7 @@ impl SafasCell {
             FrameReference(cell, frame) => format!("cell#({},{})", cell, frame),
             Monad(monad)                => monad.description(),
             MacroMonad(monad)           => format!("macro#{}", monad.description()),
-            ActionMonad(monad)          => format!("compile#{}", monad.description()),
+            ActionMonad(syntax)         => format!("compile#{}", syntax.binding_monad.description()),
             List(first, second)         => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;
