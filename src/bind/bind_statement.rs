@@ -89,10 +89,19 @@ pub fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                     FrameReference(_cell_num, _frame)   => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
                     
                     // Action and macro monads resolve their respective syntaxes
-                    ActionMonad(action_monad)           => {
+                    ActionMonad(syntax_compiler)        => {
                         let mut bindings        = bindings.push_interior_frame();
                         bindings.args           = Some(cdr);
-                        let (bindings, actions) = action_monad.resolve(bindings);
+                        let (bindings, bound)   = syntax_compiler.binding_monad.resolve(bindings);
+                        let (bindings, actions) = match bound {
+                            Ok(bound) => {
+                                let action_monad = (syntax_compiler.generate_actions)(bound);
+                                action_monad.resolve(bindings)
+                            },
+                            Err(err) => {
+                                (bindings, Err(err))
+                            }
+                        };
                         let (bindings, imports) = bindings.pop();
 
                         if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
