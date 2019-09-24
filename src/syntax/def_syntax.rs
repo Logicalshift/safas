@@ -4,8 +4,10 @@ use crate::bind::*;
 use crate::exec::*;
 use crate::meta::*;
 
+use itertools::*;
 use smallvec::*;
 use std::sync::*;
+use std::collections::{HashMap};
 
 ///
 /// The (def_syntax) keyword, expressed as a binding monad
@@ -90,7 +92,32 @@ impl BindingMonad for DefSyntaxKeyword {
                     .collect::<Result<Vec<_>, _>>();
                 let matchers = match matchers { Ok(matchers) => matchers, Err(err) => return (bindings, Err(err)) };
 
-                // TODO
+                // Group by symbol
+                let matchers = matchers.into_iter()
+                    .group_by(|(symbol, _matcher, _macro_def)| *symbol);
+
+                // Generate the evaluators for each symbol
+                let mut bindings    = bindings.push_new_frame();
+                let mut syntax      = HashMap::new();
+
+                for (symbol, syntax_symbol) in matchers.into_iter() {
+                    // Create a syntax symbol for this item
+                    let patterns                        = syntax_symbol.map(|(_symbol, matcher, macro_def)| (matcher, macro_def));
+                    let (new_bindings, syntax_symbol)   = SyntaxSymbol::new(bindings, patterns.collect());
+                    bindings = new_bindings;
+
+                    // Add to the symbols
+                    syntax.insert(symbol, syntax_symbol);
+                }
+
+                // Generate the syntax item
+                let syntax          = Syntax { syntax };
+
+                // Pop the frame we added for the syntax. import_values indicates what we need to bind to our syntax
+                let (bindings, import_values) = bindings.pop();
+
+                // TODO: syntax and syntaxsymbol need to be bindings
+                // TODO: we need to bind atom values when creating syntax symbols
                 (bindings, Ok(smallvec![]))
             },
 
@@ -99,5 +126,27 @@ impl BindingMonad for DefSyntaxKeyword {
                 (bindings, Err(err))
             }
         }
+    }
+}
+
+///
+/// The syntax struct creates the keyword that evaluates a particular syntax
+///
+struct Syntax {
+    /// The extra keywords added by this syntax
+    syntax: HashMap<u64, SyntaxSymbol> 
+}
+
+///
+/// The syntax symbol struct evaluates a single syntax symbol
+///
+struct SyntaxSymbol {
+    /// The patterns that can be matched against this symbol (and their macro binding)
+    patterns: Vec<(PatternMatch, Arc<SafasCell>)>
+}
+
+impl SyntaxSymbol {
+    pub fn new(bindings: SymbolBindings, patterns: Vec<(PatternMatch, Arc<SafasCell>)>) -> (SymbolBindings, SyntaxSymbol) {
+        (bindings, SyntaxSymbol { patterns: patterns })
     }
 }
