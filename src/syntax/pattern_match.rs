@@ -195,7 +195,7 @@ impl PatternMatch {
                 SafasCell::String(string)   => { symbols.push(MatchSymbol::String(string.clone())); }
                 SafasCell::Char(chr)        => { symbols.push(MatchSymbol::Char(*chr)); }
 
-                SafasCell::Monad(_) | SafasCell::MacroMonad(_) | SafasCell::ActionMonad(_) => { return Err(BindError::NotValidInSyntax) }
+                SafasCell::Monad(_) | SafasCell::MacroMonad(_) | SafasCell::ActionMonad(_) | SafasCell::FrameReference(_, _) => { return Err(BindError::NotValidInSyntax) }
             }
 
             // Move to the next cell

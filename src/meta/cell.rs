@@ -34,6 +34,9 @@ pub enum SafasCell {
     /// A list with a CAR and a CDR
     List(Arc<SafasCell>, Arc<SafasCell>),
 
+    /// A reference to a value on the frame
+    FrameReference(usize, u32),
+
     /// A monad that transforms the state of the current frame (generally a lambda)
     Monad(Arc<dyn FrameMonad<Binding=RuntimeResult>>),
 
@@ -130,15 +133,16 @@ impl SafasCell {
         use self::SafasCell::*;
 
         match self {
-            Nil                     => "()".to_string(),
-            Atom(atom_id)           => name_for_atom_with_id(*atom_id),
-            Number(number)          => number.to_string(),
-            String(string_value)    => format!("\"{}\"", string_value),         // TODO: character quoting
-            Char(chr_value)         => format!("'{}'", chr_value),              // TODO: character quoting,
-            Monad(monad)            => monad.description(),
-            MacroMonad(monad)       => format!("macro#{}", monad.description()),
-            ActionMonad(monad)      => format!("compile#{}", monad.description()),
-            List(first, second)     => {
+            Nil                         => "()".to_string(),
+            Atom(atom_id)               => name_for_atom_with_id(*atom_id),
+            Number(number)              => number.to_string(),
+            String(string_value)        => format!("\"{}\"", string_value),         // TODO: character quoting
+            Char(chr_value)             => format!("'{}'", chr_value),              // TODO: character quoting,
+            FrameReference(cell, frame) => format!("cell#({},{})", cell, frame),
+            Monad(monad)                => monad.description(),
+            MacroMonad(monad)           => format!("macro#{}", monad.description()),
+            ActionMonad(monad)          => format!("compile#{}", monad.description()),
+            List(first, second)         => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;
 
