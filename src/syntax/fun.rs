@@ -88,16 +88,16 @@ impl BindingMonad for FunKeyword {
 
             // Work out the cells to import into the closure
             for (symbol_value, import_into_cell_id) in imports.into_iter() {
-                match symbol_value {
-                    SymbolValue::FrameReference(our_cell_id, 0) => {
+                match &*symbol_value {
+                    SafasCell::FrameReference(our_cell_id, 0) => {
                         // Cell from this frame
-                        cell_imports.push((our_cell_id, import_into_cell_id));
+                        cell_imports.push((*our_cell_id, import_into_cell_id));
                     },
 
-                    SymbolValue::FrameReference(their_cell_id, frame_count) => {
+                    SafasCell::FrameReference(their_cell_id, frame_count) => {
                         // Import from a parent frame
                         let our_cell_id = bindings.alloc_cell();
-                        bindings.import(SymbolValue::FrameReference(their_cell_id, frame_count), our_cell_id);
+                        bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count).into(), our_cell_id);
                         cell_imports.push((our_cell_id, import_into_cell_id));
                     },
 

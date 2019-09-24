@@ -129,6 +129,16 @@ impl SafasCell {
     }
 
     ///
+    /// If this is a frame reference, returns the cell ID and the frame number
+    ///
+    pub fn frame_reference(&self) -> Option<(usize, u32)> {
+        match self {
+            SafasCell::FrameReference(cell, frame)  => Some((*cell, *frame)),
+            _                                       => None
+        }
+    }
+
+    ///
     /// Converts this cell to a string
     ///
     pub fn to_string(&self) -> String {

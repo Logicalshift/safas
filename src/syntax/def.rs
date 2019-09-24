@@ -60,7 +60,7 @@ impl BindingMonad for DefKeyword {
         let cell_id         = bindings.alloc_cell();
 
         // Associate with the atom ID
-        bindings.symbols.insert(*atom, SymbolValue::FrameReference(cell_id, 0));
+        bindings.symbols.insert(*atom, SafasCell::FrameReference(cell_id, 0).into());
         bindings.export(*atom);
 
         // Final actions need to store their value in this cell
@@ -89,7 +89,7 @@ impl BindingMonad for DefineSymbol {
         let mut bindings    = bindings;
         let cell_id         = bindings.num_cells;
         bindings.num_cells  += 1;
-        bindings.symbols.insert(self.atom_id, SymbolValue::FrameReference(cell_id, 0));
+        bindings.symbols.insert(self.atom_id, SafasCell::FrameReference(cell_id, 0).into());
 
         // Actions just load the binding into the cell
         let actions         = smallvec![Action::Value(Arc::clone(&self.value)), Action::StoreCell(cell_id)];
@@ -116,7 +116,7 @@ pub fn define_symbol(atom: &str, value: SafasCell) -> impl BindingMonad<Binding=
 ///
 struct DefineSymbolValue {
     atom_id:    u64,
-    value:      SymbolValue
+    value:      CellRef
 }
 
 impl BindingMonad for DefineSymbolValue {
@@ -139,13 +139,13 @@ impl BindingMonad for DefineSymbolValue {
 ///
 /// Creates a binding monad that defines a symbol to evaluate a particular cell value
 ///
-pub fn define_symbol_value(atom: &str, value: SymbolValue) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
+pub fn define_symbol_value<Cell: Into<CellRef>>(atom: &str, value: Cell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
     // Retrieve the atom ID
     let atom_id = get_id_for_atom_with_name(atom);
 
     DefineSymbolValue {
         atom_id:    atom_id,
-        value:      value
+        value:      value.into()
     }
 }
 

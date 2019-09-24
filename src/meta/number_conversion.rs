@@ -144,3 +144,7 @@ impl TryFrom<SafasNumber> for i128 {
         }
     }
 }
+
+impl Into<SafasNumber> for i32 {
+    fn into(self) -> SafasNumber { SafasNumber::Plain(self as u128) }
+}

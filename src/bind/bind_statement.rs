@@ -1,5 +1,4 @@
 use super::symbol_bindings::*;
-use super::symbol_value::*;
 use super::bind_error::*;
 
 use crate::meta::*;
@@ -24,15 +23,20 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<S
             let symbol_value = bindings.look_up(*atom_id);
 
             if let Some(symbol_value) = symbol_value {
-                use self::SymbolValue::*;
+                use self::SafasCell::*;
 
-                match symbol_value {
-                    Constant(value)                 => Ok((smallvec![Action::Value(Arc::clone(&value))], bindings)),
-                    Unbound(_atom_id)               => Err((BindError::UnboundSymbol, bindings)),
-                    FrameMonad(monad)               => Ok((smallvec![Action::Value(Arc::new(SafasCell::Monad(Arc::clone(&monad))))], bindings)),
-                    MacroMonad(monad)               => Ok((smallvec![Action::Value(Arc::new(SafasCell::MacroMonad(Arc::clone(&monad))))], bindings)),
-                    ActionMonad(monad)              => Ok((smallvec![Action::Value(Arc::new(SafasCell::ActionMonad(Arc::clone(&monad))))], bindings)),
+                match &*symbol_value {
+                    Nil                             |
+                    Number(_)                       |
+                    Atom(_)                         |
+                    String(_)                       |
+                    Char(_)                         |
+                    List(_, _)                      |
+                    Monad(_)                        |
+                    MacroMonad(_)                   |
+                    ActionMonad(_)                  => Ok((smallvec![Action::Value(symbol_value)], bindings)),
                     FrameReference(cell_num, frame) => {
+                        let (cell_num, frame) = (*cell_num, *frame);
                         if frame == 0 {
                             // Local symbol
                             Ok((smallvec![Action::CellValue(cell_num)], bindings))
@@ -40,7 +44,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<S
                             // Import from a parent frame
                             let mut bindings    = bindings;
                             let local_cell_id   = bindings.alloc_cell();
-                            bindings.import(SymbolValue::FrameReference(cell_num, frame), local_cell_id);
+                            bindings.import(SafasCell::FrameReference(cell_num, frame).into(), local_cell_id);
 
                             Ok((smallvec![Action::CellValue(local_cell_id)], bindings))
                         }
@@ -67,47 +71,58 @@ pub fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
     match &*car {
         // Atoms can call a function or act as syntax in this context
         Atom(atom_id)   => {
-            use self::SymbolValue::*;
+            use self::SafasCell::*;
             let symbol_value = bindings.look_up(*atom_id);
 
-            match symbol_value {
-                None                                    => return Err((BindError::UnknownSymbol, bindings)),
-                Some(Unbound(_atom_id))                 => return Err((BindError::UnboundSymbol, bindings)),
-                Some(FrameReference(_cell_num, _frame)) => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
-                Some(Constant(value))                   => { bind_call(smallvec![Action::Value(Arc::clone(&value))], cdr, bindings) },
-                Some(FrameMonad(frame_monad))           => { bind_call(smallvec![Action::Value(Arc::new(SafasCell::Monad(Arc::clone(&frame_monad))))], cdr, bindings) }
-                
-                Some(ActionMonad(action_monad))         => {
-                    let mut bindings        = bindings.push_interior_frame();
-                    bindings.args           = Some(cdr);
-                    let (bindings, actions) = action_monad.resolve(bindings);
-                    let (bindings, imports) = bindings.pop();
+            if let Some(symbol_value) = symbol_value {
+                match &*symbol_value {
+                    // Constant values just load that value and call it
+                    Nil                                 |
+                    Number(_)                           |
+                    Atom(_)                             |
+                    String(_)                           |
+                    Char(_)                             |
+                    List(_, _)                          |
+                    Monad(_)                            => { bind_call(smallvec![Action::Value(symbol_value)], cdr, bindings) },
 
-                    if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
+                    // Frame references load the value from the frame and call that
+                    FrameReference(_cell_num, _frame)   => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
+                    
+                    // Action and macro monads resolve their respective syntaxes
+                    ActionMonad(action_monad)           => {
+                        let mut bindings        = bindings.push_interior_frame();
+                        bindings.args           = Some(cdr);
+                        let (bindings, actions) = action_monad.resolve(bindings);
+                        let (bindings, imports) = bindings.pop();
 
-                    match actions {
-                        Ok(actions)     => Ok((actions, bindings)),
-                        Err(error)      => Err((error, bindings))
+                        if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
+
+                        match actions {
+                            Ok(actions)     => Ok((actions, bindings)),
+                            Err(error)      => Err((error, bindings))
+                        }
                     }
-                }
 
-                Some(MacroMonad(macro_monad))           => { 
-                    let mut bindings            = bindings.push_interior_frame();
-                    bindings.args               = Some(cdr);
-                    let (bindings, expanded)    = macro_monad.resolve(bindings);
+                    MacroMonad(macro_monad)             => { 
+                        let mut bindings            = bindings.push_interior_frame();
+                        bindings.args               = Some(cdr);
+                        let (bindings, expanded)    = macro_monad.resolve(bindings);
 
-                    // Rust doesn't really help with the error handling here. We want to bind the statement or preserve the error
-                    // then we want to pop the bindings regardless of the error.
-                    let actions                 = match expanded {
-                        Ok(expanded)            => bind_statement(expanded, bindings),
-                        Err(error)              => Err((error, bindings))
-                    };
+                        // Rust doesn't really help with the error handling here. We want to bind the statement or preserve the error
+                        // then we want to pop the bindings regardless of the error.
+                        let actions                 = match expanded {
+                            Ok(expanded)            => bind_statement(expanded, bindings),
+                            Err(error)              => Err((error, bindings))
+                        };
 
-                    match actions {
-                        Ok((actions, bindings)) => Ok((actions, bindings.pop().0)),
-                        Err((error, bindings))  => Err((error, bindings.pop().0))
+                        match actions {
+                            Ok((actions, bindings)) => Ok((actions, bindings.pop().0)),
+                            Err((error, bindings))  => Err((error, bindings.pop().0))
+                        }
                     }
-                }
+                } 
+            } else {
+                return Err((BindError::UnknownSymbol, bindings));
             }
         },
 
