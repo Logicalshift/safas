@@ -26,8 +26,11 @@ impl DefKeyword {
 }
 
 pub fn def_keyword() -> SyntaxCompiler {
-    let bind = flat_map_binding(|args: Result<ListTuple<(AtomId, CellRef)>, BindError>| {
-        unimplemented!()
+    let bind = flat_map_binding_error(|args: ListTuple<(AtomId, CellRef)>| {
+        // The arguments are just the name and the value
+        let ListTuple((name, value)) = args;
+
+        wrap_binding::<Result<CellRef, BindError>>(Err(BindError::RuntimeError))
     }, BindArgsMonad::new());
 
     unimplemented!()
