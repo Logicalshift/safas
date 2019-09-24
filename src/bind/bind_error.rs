@@ -1,5 +1,8 @@
 use super::symbol_bindings::*;
 
+use crate::exec::*;
+
+use std::convert::{Infallible};
 use std::result::{Result};
 
 ///
@@ -7,6 +10,9 @@ use std::result::{Result};
 ///
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum BindError {
+    /// Something that was meant to be infallible failed
+    NotInfallible,
+
     /// A symbol has no known value
     UnknownSymbol,
 
@@ -47,8 +53,37 @@ pub enum BindError {
     SyntaxMatchedPrefix,
 
     /// A symbol that could not be matched was encountered in a syntax pattern
-    SyntaxMatchFailed
+    SyntaxMatchFailed,
+
+    /// We tried to evaluate some SAFAS code but it failed
+    RuntimeError,
+
+    /// A number couldn't be converted for this syntax
+    NumberTooLarge
 }
 
 /// Result of a binding operation
 pub type BindResult<T> = Result<(T, SymbolBindings), (BindError, SymbolBindings)>;
+
+impl From<Infallible> for BindError {
+    fn from(_: Infallible) -> BindError {
+        BindError::NotInfallible
+    }
+}
+
+impl From<RuntimeError> for BindError {
+    fn from(err: RuntimeError) -> BindError {
+        use self::RuntimeError::*;
+        match err {
+            NotInfallible               => BindError::NotInfallible,
+            NumberTooLarge              => BindError::NumberTooLarge,
+            BindingError(err)           => err,
+            ParseError(_)               |
+            StackIsEmpty                |
+            TypeMismatch(_)             |
+            NotAFunction(_)             |
+            TooManyArguments(_)         |
+            NotEnoughArguments(_)       => BindError::RuntimeError
+        }
+    }
+}
