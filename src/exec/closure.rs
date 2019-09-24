@@ -78,7 +78,7 @@ struct ClosureBody<Action: FrameMonad> {
     action: Arc<Action>,
 
     /// The values to load into cells for this closure
-    cells: Vec<(usize, Arc<SafasCell>)>
+    cells: Vec<(usize, CellRef)>
 }
 
 impl<Action: FrameMonad> FrameMonad for ClosureBody<Action> {

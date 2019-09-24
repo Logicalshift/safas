@@ -30,7 +30,7 @@ pub trait FnArgs : Sized {
 /// 
 /// This takes advantage of the conversion from a cell to a `SafasList`, saving the effort of needing to extract
 /// the car and cdr values. Note the use of the rare single-tuple syntax - `(foo,)` here: all the tuple cases convert
-/// using `TryFrom<Arc<SafasCell>>`. Direct implementions of `FnArgs` don't require the tuple.
+/// using `TryFrom<CellRef>`. Direct implementions of `FnArgs` don't require the tuple.
 ///
 pub struct FnMonad<Fun, Args> {
     action:     Fun,
@@ -38,7 +38,7 @@ pub struct FnMonad<Fun, Args> {
 }
 
 impl<Fun, Args> From<Fun> for FnMonad<Fun, Args>
-where   Fun:    Send+Sync+Fn(Args) -> Arc<SafasCell>,
+where   Fun:    Send+Sync+Fn(Args) -> CellRef,
         Args:   Send+Sync+FnArgs {
     fn from(fun: Fun) -> FnMonad<Fun, Args> {
         FnMonad {
@@ -49,7 +49,7 @@ where   Fun:    Send+Sync+Fn(Args) -> Arc<SafasCell>,
 }
 
 impl<Fun, Args> FrameMonad for FnMonad<Fun, Args>
-where   Fun:    Send+Sync+Fn(Args) -> Arc<SafasCell>,
+where   Fun:    Send+Sync+Fn(Args) -> CellRef,
         Args:   Send+Sync+FnArgs {
     type Binding = RuntimeResult;
 
@@ -66,7 +66,7 @@ where   Fun:    Send+Sync+Fn(Args) -> Arc<SafasCell>,
     }
 }
 
-impl FnArgs for Vec<Arc<SafasCell>> {
+impl FnArgs for Vec<CellRef> {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
         let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
         Ok(args)
@@ -85,7 +85,7 @@ impl FnArgs for () {
 }
 
 impl<T> FnArgs for (T,)
-where   T: TryFrom<Arc<SafasCell>>,
+where   T: TryFrom<CellRef>,
         RuntimeError: From<T::Error> {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
         let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
@@ -103,8 +103,8 @@ where   T: TryFrom<Arc<SafasCell>>,
 }
 
 impl<'a, A1, A2> FnArgs for (A1, A2)
-where   A1: TryFrom<Arc<SafasCell>>,
-        A2: TryFrom<Arc<SafasCell>>,
+where   A1: TryFrom<CellRef>,
+        A2: TryFrom<CellRef>,
         RuntimeError: From<A1::Error>,
         RuntimeError: From<A2::Error> {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
@@ -124,9 +124,9 @@ where   A1: TryFrom<Arc<SafasCell>>,
 }
 
 impl<'a, A1, A2, A3> FnArgs for (A1, A2, A3)
-where   A1: TryFrom<Arc<SafasCell>>,
-        A2: TryFrom<Arc<SafasCell>>,
-        A3: TryFrom<Arc<SafasCell>>,
+where   A1: TryFrom<CellRef>,
+        A2: TryFrom<CellRef>,
+        A3: TryFrom<CellRef>,
         RuntimeError: From<A1::Error>,
         RuntimeError: From<A2::Error>,
         RuntimeError: From<A3::Error> {

@@ -76,7 +76,7 @@ impl BindingMonad for DefKeyword {
 ///
 struct DefineSymbol {
     atom_id:    u64,
-    value:      Arc<SafasCell>
+    value:      CellRef
 }
 
 impl BindingMonad for DefineSymbol {

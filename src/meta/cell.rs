@@ -32,7 +32,7 @@ pub enum SafasCell {
     Char(char),
 
     /// A list with a CAR and a CDR
-    List(Arc<SafasCell>, Arc<SafasCell>),
+    List(CellRef, CellRef),
 
     /// A reference to a value on the frame
     FrameReference(usize, u32),
@@ -41,17 +41,19 @@ pub enum SafasCell {
     Monad(Arc<dyn FrameMonad<Binding=RuntimeResult>>),
 
     /// A macro expands to a statement, which is recursively compiled
-    MacroMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SafasCell>, BindError>>>),
+    MacroMonad(Arc<dyn BindingMonad<Binding=Result<CellRef, BindError>>>),
 
     /// An action expands directly to a set of interpreter actions
     ActionMonad(Arc<dyn BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>>)
 }
 
+pub type CellRef = Arc<SafasCell>;
+
 impl SafasCell {
     ///
     /// Turns an iterator of cells into a list
     ///
-    pub fn list_with_cells<Cells: IntoIterator<Item=Arc<SafasCell>>>(cells: Cells) -> Arc<SafasCell> 
+    pub fn list_with_cells<Cells: IntoIterator<Item=CellRef>>(cells: Cells) -> CellRef 
     where Cells::IntoIter : DoubleEndedIterator {
         // The first cell requires special treatment
         let cells       = cells.into_iter().rev();
@@ -119,7 +121,7 @@ impl SafasCell {
     ///
     /// If this is a list, returns the car and cdr cells
     ///
-    pub fn list_value(&self) -> Option<(Arc<SafasCell>, Arc<SafasCell>)> {
+    pub fn list_value(&self) -> Option<(CellRef, CellRef)> {
         match self {
             SafasCell::List(car, cdr)   => Some((Arc::clone(car), Arc::clone(cdr))),
             _                           => None
@@ -172,7 +174,7 @@ impl SafasCell {
     /// 
     /// Returns None if the cell is not a list
     ///
-    pub fn to_vec(&self) -> Option<Vec<Arc<SafasCell>>> {
+    pub fn to_vec(&self) -> Option<Vec<CellRef>> {
         if let SafasCell::List(car, cdr) = self {
             let mut result = vec![];
             result.push(Arc::clone(car));

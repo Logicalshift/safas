@@ -3,7 +3,6 @@ use crate::bind::*;
 use crate::parse::*;
 
 use std::num::{TryFromIntError};
-use std::sync::*;
 use std::result::{Result};
 use std::convert::{Infallible};
 
@@ -25,23 +24,23 @@ pub enum RuntimeError {
     StackIsEmpty,
 
     /// Expected a particular type of cell, but a different type was encountered
-    TypeMismatch(Arc<SafasCell>),
+    TypeMismatch(CellRef),
 
     /// Value cannot be called as a function
-    NotAFunction(Arc<SafasCell>),
+    NotAFunction(CellRef),
 
     /// Not enough arguments were passed to a function
-    TooManyArguments(Arc<SafasCell>),
+    TooManyArguments(CellRef),
 
     /// Too many arguments were passed to a function
-    NotEnoughArguments(Arc<SafasCell>),
+    NotEnoughArguments(CellRef),
 
     /// The number is too large to fit into the correct format
     NumberTooLarge
 }
 
 /// The result of a runtime operation (most common binding type of a frame monad)
-pub type RuntimeResult = Result<Arc<SafasCell>, RuntimeError>;
+pub type RuntimeResult = Result<CellRef, RuntimeError>;
 
 impl From<ParseError> for RuntimeError {
     fn from(error: ParseError) -> RuntimeError { 

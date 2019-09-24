@@ -3,7 +3,6 @@ use super::symbol_value::*;
 use crate::meta::*;
 
 use smallvec::*;
-use std::sync::*;
 use std::collections::{HashMap};
 
 ///
@@ -12,7 +11,7 @@ use std::collections::{HashMap};
 #[derive(Clone)]
 pub struct SymbolBindings {
     /// When binding on a macro or similar, the arguments that were supplied to the macro
-    pub args: Option<Arc<SafasCell>>,
+    pub args: Option<CellRef>,
 
     /// The symbols in this binding
     pub symbols: HashMap<u64, SymbolValue>,

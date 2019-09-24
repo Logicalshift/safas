@@ -12,7 +12,7 @@ use std::sync::*;
 ///
 /// Evaluates a single line in an isolated SAFAS instance and returns the result
 ///
-pub fn eval(expr: &str) -> Result<(Arc<SafasCell>, BitCodeBuffer), RuntimeError> {
+pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
     // Create the execution frame
     let mut frame               = Frame::new(1, None);
     let bindings                = SymbolBindings::new();

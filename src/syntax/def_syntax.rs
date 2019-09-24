@@ -151,14 +151,14 @@ impl Syntax {
 ///
 struct SyntaxSymbol {
     /// The patterns that can be matched against this symbol (and their macro binding)
-    patterns: Vec<(PatternMatch, Arc<SafasCell>)>
+    patterns: Vec<(PatternMatch, CellRef)>
 }
 
 impl SyntaxSymbol {
     ///
     /// Creates a new syntax symbol that will match one of the specified patterns
     ///
-    pub fn new(bindings: SymbolBindings, patterns: Vec<(PatternMatch, Arc<SafasCell>)>) -> (SymbolBindings, SyntaxSymbol) {
+    pub fn new(bindings: SymbolBindings, patterns: Vec<(PatternMatch, CellRef)>) -> (SymbolBindings, SyntaxSymbol) {
         (bindings, SyntaxSymbol { patterns: patterns })
     }
 }

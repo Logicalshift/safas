@@ -11,7 +11,7 @@ use std::sync::*;
 ///
 /// Performs binding to generate the actions for a simple statement
 ///
-pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
+pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
     use self::SafasCell::*;
 
     match &*source {
@@ -60,7 +60,7 @@ pub fn bind_statement(source: Arc<SafasCell>, bindings: SymbolBindings) -> BindR
 ///
 /// Binds a list statement, like `(cons 1 2)`
 ///
-pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
+pub fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
     use self::SafasCell::*;
 
     // Action depends on the type of car
@@ -122,7 +122,7 @@ pub fn bind_list_statement(car: Arc<SafasCell>, cdr: Arc<SafasCell>, bindings: S
 ///
 /// Binds a call function, given the actions needed to load the function value
 ///
-pub fn bind_call(load_fn: SmallVec<[Action; 8]>, args: Arc<SafasCell>, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
+pub fn bind_call(load_fn: SmallVec<[Action; 8]>, args: CellRef, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
     let mut bindings = bindings;
 
     // Start by pushing the function value onto the stack (we'll pop it later on to call the function)

@@ -14,7 +14,7 @@ use std::result::{Result};
 #[derive(Clone)]
 pub enum SymbolValue {
     /// Symbol has a constant value defined by a safas cell
-    Constant(Arc<SafasCell>),
+    Constant(CellRef),
 
     /// Symbol should be bound once the value of a particular Atom is known
     Unbound(u64),
@@ -26,7 +26,7 @@ pub enum SymbolValue {
     FrameMonad(Arc<dyn FrameMonad<Binding=RuntimeResult>>),
 
     /// A macro expands to a statement, which is recursively compiled
-    MacroMonad(Arc<dyn BindingMonad<Binding=Result<Arc<SafasCell>, BindError>>>),
+    MacroMonad(Arc<dyn BindingMonad<Binding=Result<CellRef, BindError>>>),
 
     /// An action expands directly to a set of interpreter actions
     ActionMonad(Arc<dyn BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>>)

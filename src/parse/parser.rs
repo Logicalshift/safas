@@ -12,7 +12,7 @@ use std::sync::*;
 ///
 /// Parses a file in SAFAS format and returns the resulting cell
 ///
-pub fn parse_safas<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, location: FileLocation) -> Result<Arc<SafasCell>, ParseError> {
+pub fn parse_safas<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, location: FileLocation) -> Result<CellRef, ParseError> {
     // Initial location
     let mut location    = location;
 
@@ -39,7 +39,7 @@ pub fn parse_safas<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>
 ///
 /// Parses the next cell on the token stream (returning None if there is no following cell)
 ///
-fn parse_cell<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, location: FileLocation) -> Result<(Option<Arc<SafasCell>>, FileLocation), ParseError> {
+fn parse_cell<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, location: FileLocation) -> Result<(Option<CellRef>, FileLocation), ParseError> {
     // Skip whitespace and comments to find the first meaningful token
     let original_location               = location.clone();
     let (token, token_text, location)   = tokenize_no_comments(code, location);
@@ -50,7 +50,7 @@ fn parse_cell<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, loc
 ///
 /// Parses the next cell on the token stream, with a token read from the stream (returning None if there is no following cell)
 ///
-fn parse_cell_from_token<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, original_location: FileLocation, token: Token, token_text: String, location: FileLocation) -> Result<(Option<Arc<SafasCell>>, FileLocation), ParseError> {
+fn parse_cell_from_token<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<Chars>, original_location: FileLocation, token: Token, token_text: String, location: FileLocation) -> Result<(Option<CellRef>, FileLocation), ParseError> {
     // Action depends on the token
     match token {
         Token::Whitespace | Token::Comment => { Err(ParseError::InternalError(original_location, "Whitespace should not make it through to this point".to_string())) },

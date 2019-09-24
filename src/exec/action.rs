@@ -13,7 +13,7 @@ use std::sync::*;
 #[derive(Clone, Debug)]
 pub enum Action {
     /// Returns a value directly
-    Value(Arc<SafasCell>),
+    Value(CellRef),
 
     /// Reads a value from a cell
     CellValue(usize),

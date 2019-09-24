@@ -8,7 +8,7 @@ use std::result::{Result};
 ///
 /// Data structure representing a list item (with the Car and Cdr)
 ///
-pub struct SafasList(pub Arc<SafasCell>, pub Arc<SafasCell>);
+pub struct SafasList(pub CellRef, pub CellRef);
 
 impl SafasList {
     ///
@@ -19,10 +19,10 @@ impl SafasList {
     }
 }
 
-impl TryFrom<Arc<SafasCell>> for SafasList {
+impl TryFrom<CellRef> for SafasList {
     type Error = RuntimeError;
 
-    fn try_from(cell: Arc<SafasCell>) -> Result<SafasList, RuntimeError> {
+    fn try_from(cell: CellRef) -> Result<SafasList, RuntimeError> {
         match &*cell {
             SafasCell::List(car, cdr)   => Ok(SafasList(Arc::clone(car), Arc::clone(cdr))),
             _                           => Err(RuntimeError::TypeMismatch(cell))
@@ -30,10 +30,10 @@ impl TryFrom<Arc<SafasCell>> for SafasList {
     }
 }
 
-impl TryFrom<&Arc<SafasCell>> for SafasList {
+impl TryFrom<&CellRef> for SafasList {
     type Error = RuntimeError;
 
-    fn try_from(cell: &Arc<SafasCell>) -> Result<SafasList, RuntimeError> {
+    fn try_from(cell: &CellRef) -> Result<SafasList, RuntimeError> {
         match &**cell {
             SafasCell::List(car, cdr)   => Ok(SafasList(Arc::clone(car), Arc::clone(cdr))),
             _                           => Err(RuntimeError::TypeMismatch(Arc::clone(cell)))

@@ -14,7 +14,7 @@ pub fn list_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 /// (cons a b) -> (a . b)
 ///
 pub fn cons_fn() -> impl FrameMonad<Binding=RuntimeResult> {
-    FnMonad::from(|(car, cdr): (Arc<SafasCell>, Arc<SafasCell>)| {
+    FnMonad::from(|(car, cdr): (CellRef, CellRef)| {
         Arc::new(SafasCell::List(car, cdr))
     })
 }

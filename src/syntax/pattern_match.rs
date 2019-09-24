@@ -42,17 +42,17 @@ pub enum MatchSymbol {
 ///
 pub enum MatchBinding {
     /// Specified atom should be bound to the result of the specified statement
-    Statement(u64, Arc<SafasCell>),
+    Statement(u64, CellRef),
 
     /// Specified atom should be bound to the specified absolute symbol value
-    Symbol(u64, Arc<SafasCell>)
+    Symbol(u64, CellRef)
 }
 
 impl MatchBinding {
     ///
     /// Retrieves the cell that this value is bound to
     ///
-    pub fn bound_cell(&self) -> Arc<SafasCell> {
+    pub fn bound_cell(&self) -> CellRef {
         match self {
             MatchBinding::Statement(_, cell)    => Arc::clone(cell),
             MatchBinding::Symbol(_, cell)       => Arc::clone(cell)
@@ -81,7 +81,7 @@ impl PatternMatch {
     ///
     /// Creates a pattern matcher from a list of SafasCells
     ///
-    pub fn from_pattern_as_cells(list: Arc<SafasCell>) -> Result<PatternMatch, BindError> {
+    pub fn from_pattern_as_cells(list: CellRef) -> Result<PatternMatch, BindError> {
         // Set up to iterate through the list and generate the list of symbols
         let mut list_pos    = &*list;
         let mut symbols     = vec![];
@@ -208,7 +208,7 @@ impl PatternMatch {
     ///
     /// Attempts to match this pattern against some input, returning the bindings if it matches
     ///
-    pub fn match_against(&self, input: Arc<SafasCell>) -> Result<Vec<MatchBinding>, BindError> {
+    pub fn match_against(&self, input: CellRef) -> Result<Vec<MatchBinding>, BindError> {
         Self::match_with_symbols(&self.symbols, input)
     }
 
@@ -251,7 +251,7 @@ impl PatternMatch {
     ///
     /// Performs matching directly against a symbol list
     ///
-    fn match_with_symbols(symbols: &Vec<MatchSymbol>, input: Arc<SafasCell>) -> Result<Vec<MatchBinding>, BindError> {
+    fn match_with_symbols(symbols: &Vec<MatchSymbol>, input: CellRef) -> Result<Vec<MatchBinding>, BindError> {
         // Current position in the input
         let mut input_pos   = &*input;
         let mut bindings    = vec![];

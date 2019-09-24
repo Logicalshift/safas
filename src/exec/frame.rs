@@ -15,13 +15,13 @@ pub struct Frame {
     pub previous_frame: Option<Box<Frame>>,
 
     /// Cells allocated to this frame
-    pub cells: SmallVec<[Arc<SafasCell>; 8]>,
+    pub cells: SmallVec<[CellRef; 8]>,
 
     /// The bitcode output of the assembler (bitcode is typically passed between frames, so it's stored by reference)
     pub bitcode: BitCodeBuffer,
 
     /// The stack for this frame
-    pub stack: SmallVec<[Arc<SafasCell>; 8]>
+    pub stack: SmallVec<[CellRef; 8]>
 }
 
 impl Frame {
