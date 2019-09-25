@@ -3,7 +3,12 @@ use crate::meta::*;
 use crate::exec::*;
 
 use smallvec::*;
-use std::sync::*;
+use std::convert::*;
+
+lazy_static! {
+    static ref CLOSURE_ATOM: u64 = get_id_for_atom_with_name("CLOSURE");
+    static ref LAMBDA_ATOM: u64  = get_id_for_atom_with_name("LAMBDA");
+}
 
 ///
 /// The fun monad defines the '(fun (x y) (statement) ...)' syntax
@@ -13,20 +18,38 @@ use std::sync::*;
 /// Defines a function that will bind the atoms specified in the arg list to the arguments passed in.
 /// The result of the function is the value of the last of the list of statements.
 ///
-pub struct FunKeyword {
-}
+pub fn fun_keyword() -> SyntaxCompiler {
+    // Function binding is a bit complicated so we use our own monad implementation
+    let bind    = FunBinder;
 
-impl FunKeyword {
-    ///
-    /// Creates the `fun` syntax
-    ///
-    pub fn new() -> SyntaxCompiler {
-        unimplemented!()
+    // Compiling needs to call closures and just store lambdas
+    let compile = |bound_value: CellRef| -> Result<_, BindError> {
+        // Our monad generates something like (CLOSURE <some_closure>)
+        let bound_value: ListTuple<(AtomId, CellRef)>   = bound_value.try_into()?;
+        let ListTuple((fun_type, fun))                  = bound_value;
+
+        if fun_type == AtomId(*CLOSURE_ATOM) {
+            // The closure needs to be called to bind its values
+            Ok(smallvec![Action::Value(fun), Action::Call])
+        } else if fun_type == AtomId(*LAMBDA_ATOM) {
+            // Lambdas can just 
+            Ok(smallvec![Action::Value(fun)])
+        } else {
+            // Unknown type of function (binder error/input from the wrong place)
+            Err(BindError::UnknownSymbol)
+        }
+    };
+
+    SyntaxCompiler {
+        binding_monad:      Box::new(bind),
+        generate_actions:   Box::new(compile)
     }
 }
 
-impl BindingMonad for FunKeyword {
-    type Binding=Result<SmallVec<[Action; 8]>, BindError>;
+struct FunBinder;
+
+impl BindingMonad for FunBinder {
+    type Binding=Result<CellRef, BindError>;
 
     fn description(&self) -> String { "##fun##".to_string() }
 
@@ -121,15 +144,16 @@ impl BindingMonad for FunKeyword {
             let closure         = Box::new(closure);
             let closure         = SafasCell::Monad(closure);
 
-            // Call the closure to bind it here
-            (bindings, Ok(smallvec![Action::Value(Arc::new(closure)), Action::Call]))
+            // Closure needs to be called to create the actual function
+            (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*CLOSURE_ATOM).into(), closure.into()])))
         } else {
             // No imports, so return a straight lambda
             let lambda          = Lambda::new(actions, num_cells, num_args);
             let lambda          = Box::new(lambda);
             let lambda          = SafasCell::Monad(lambda);
 
-            (bindings, Ok(smallvec![Action::Value(Arc::new(lambda))]))
+            // Lambda can just be executed directly
+            (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*LAMBDA_ATOM).into(), lambda.into()])))
         }
     }
 }
