@@ -76,6 +76,7 @@ impl TryFrom<CellRef> for CellValue<i128> {
 ///
 /// Represents an atom ID, used for convertsions
 ///
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct AtomId(pub u64);
 
 impl TryFrom<CellRef> for AtomId {
@@ -86,6 +87,12 @@ impl TryFrom<CellRef> for AtomId {
             SafasCell::Atom(val)    => Ok(AtomId(*val)),
             _                       => Err(RuntimeError::BindingError(BindError::SyntaxExpectingAtom))
         }
+    }
+}
+
+impl Into<CellRef> for AtomId {
+    fn into(self) -> CellRef {
+        SafasCell::Atom(self.0).into()
     }
 }
 

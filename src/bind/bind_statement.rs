@@ -1,9 +1,11 @@
 use super::symbol_bindings::*;
 use super::bind_error::*;
+use super::binding_monad::*;
 
 use crate::meta::*;
 
 use std::sync::*;
+use std::result::{Result};
 
 ///
 /// Performs binding to generate the actions for a simple statement
@@ -183,4 +185,29 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
     } else {
         Ok((SafasCell::list_with_cells(actions).into(), bindings))
     }
+}
+
+///
+/// Monad that performs binding on a statement
+///
+struct BindMonad {
+    source: CellRef
+}
+
+impl BindingMonad for BindMonad {
+    type Binding=Result<CellRef, BindError>;
+
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        match bind_statement(self.source.clone(), bindings) {
+            Ok((result, bindings))  => (bindings, Ok(result)),
+            Err((err, bindings))    => (bindings, Err(err))
+        }
+    }
+}
+
+///
+/// Creates a binding monad that will bind the specified source
+///
+pub fn bind(source: CellRef) -> impl BindingMonad<Binding=Result<CellRef, BindError>> {
+    BindMonad { source }
 }

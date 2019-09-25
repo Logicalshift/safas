@@ -31,7 +31,11 @@ pub fn def_keyword() -> SyntaxCompiler {
             // The arguments are just the name and the value
             let ListTuple((name, value)) = args;
 
-            wrap_binding::<Result<CellRef, BindError>>(Err(BindError::RuntimeError))
+            // Bind value, leave 'name' unbound
+            bind(value)
+                .and_then_ok(move |value| {
+                    wrap_binding(Ok(SafasCell::list_with_cells(vec![name.into(), value])))
+                })
         });
 
     unimplemented!()
