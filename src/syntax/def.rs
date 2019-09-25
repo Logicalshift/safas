@@ -4,87 +4,61 @@ use crate::meta::*;
 
 use smallvec::*;
 use std::sync::*;
+use std::convert::*;
 
 ///
-/// The monad for the 'def' syntax (def atom value)
+/// Creates the syntax definition for the 'def' keyword
 /// 
 /// ```(def <name> <value>)```
 /// 
 /// Assigns `<value>` to the atom called `<name>`. It is possible to redefine an existing atom. The value
 /// will be available to everything in the same frame after this statement.
 ///
-pub struct DefKeyword {
-}
-
-impl DefKeyword {
-    ///
-    /// Creates a new syntax compiler for the 'def' syntax
-    ///
-    pub fn new() -> SyntaxCompiler {
-        unimplemented!()
-    }
-}
-
 pub fn def_keyword() -> SyntaxCompiler {
+    // Create the binding expression
+    // 
+    //   This retrieves the arguments, binds the value, allocates a cell and associates the name with 
+    //   the cell and generates a list containing (cell_binding, value_binding) to pass to the compiler
+    //   
     let bind = get_expression_arguments()
         .and_then_ok(|args: ListTuple<(AtomId, CellRef)>| {
             // The arguments are just the name and the value
             let ListTuple((name, value)) = args;
 
-            // Bind value, leave 'name' unbound
-            bind(value)
-                .and_then_ok(move |value| {
-                    wrap_binding(Ok(SafasCell::list_with_cells(vec![name.into(), value])))
+            // Bind the value
+            bind(value).and_then_ok(move |value| {
+                // Allocate the cell to store the value in
+                allocate_cell().and_then(move |cell_id| {
+                    // Define the symbol to map to this cell
+                    let value           = value.clone();
+                    let cell: CellRef   = SafasCell::FrameReference(cell_id, 0).into();
+
+                    define_symbol(name, cell.clone()).and_then_ok(move |_| {
+                        // Binding contains the frame reference cell and the bound value
+                        wrap_binding(Ok(SafasCell::list_with_cells(vec![cell.clone(), value.clone()])))
+                    })
                 })
+            })
         });
 
-    unimplemented!()
-}
+    // Create the action compiler (load the value and store in the cell)
+    let compiler = |value: CellRef| -> Result<_, BindError> {
+        // Fetch the frame reference and the bound value from the value
+        let bound_values: ListTuple<(FrameReference, CellRef)>  = value.try_into()?;
+        let ListTuple((FrameReference(cell, _), value))         = bound_values;
 
-impl BindingMonad for DefKeyword {
-    type Binding=Result<SmallVec<[Action; 8]>, BindError>;
+        // Compile the actions to generate the value
+        let mut actions                                         = compile_statement(value)?;
 
-    fn description(&self) -> String { "##def##".to_string() }
+        // Store in the cell
+        actions.push(Action::StoreCell(cell));
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
-        // Arguments should be a list containing an atom and a value
-        let args = bindings.args.clone();
-        let args = args.and_then(|args| args.to_vec());
-        let args = match args { Some(args) => args, None => return (bindings, Err(BindError::ArgumentsWereNotSupplied)) };
+        Ok(actions)
+    };
 
-        if args.len() < 2 { return (bindings, Err(BindError::MissingArgument)); }
-        if args.len() > 2 { return (bindings, Err(BindError::TooManyArguments)); }
-
-        let atom    = &args[0];
-        let value   = &args[1];
-
-        // Fetch the atom ID
-        let atom = match &**atom {
-            SafasCell::Atom(atom_id)    => atom_id,
-            _                           => return (bindings, Err(BindError::VariablesMustBeAtoms))
-        };
-
-        // Evaluate the value
-        let statement               = bind_statement(Arc::clone(value), bindings);
-        let (statement, bindings)   = match statement {
-            Ok((statement, bindings))   => (compile_statement(statement), bindings),
-            Err((err, bindings))        => return (bindings, Err(err))
-        };
-        let statement               = match statement { Ok(statement) => statement, Err(err) => return (bindings, Err(err)) };
-
-        // Allocate a spot for this value
-        let mut bindings    = bindings;
-        let cell_id         = bindings.alloc_cell();
-
-        // Associate with the atom ID
-        bindings.symbols.insert(*atom, SafasCell::FrameReference(cell_id, 0).into());
-        bindings.export(*atom);
-
-        // Final actions need to store their value in this cell
-        let mut actions     = statement;
-        actions.push(Action::StoreCell(cell_id));
-
-        (bindings, Ok(actions))
+    SyntaxCompiler {
+        binding_monad:      Box::new(bind),
+        generate_actions:   Box::new(compiler)
     }
 }
 
@@ -118,9 +92,10 @@ impl BindingMonad for DefineSymbol {
 ///
 /// Creates a binding monad that defines a symbol to evaluate a particular cell value
 ///
-pub fn define_symbol<Cell: Into<CellRef>>(atom: &str, value: Cell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
+pub fn define_symbol<Atom: Into<AtomId>, Cell: Into<CellRef>>(atom: Atom, value: Cell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
     // Retrieve the atom ID
-    let atom_id = get_id_for_atom_with_name(atom);
+    let atom_id         = atom.into();
+    let AtomId(atom_id) = atom_id;
 
     DefineSymbol {
         atom_id:    atom_id,
@@ -156,9 +131,10 @@ impl BindingMonad for DefineSymbolValue {
 ///
 /// Creates a binding monad that defines a symbol to evaluate a particular cell value
 ///
-pub fn define_symbol_value<Cell: Into<CellRef>>(atom: &str, value: Cell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
+pub fn define_symbol_value<Atom: Into<AtomId>, Cell: Into<CellRef>>(atom: Atom, value: Cell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
     // Retrieve the atom ID
-    let atom_id = get_id_for_atom_with_name(atom);
+    let atom_id         = atom.into();
+    let AtomId(atom_id) = atom_id;
 
     DefineSymbolValue {
         atom_id:    atom_id,

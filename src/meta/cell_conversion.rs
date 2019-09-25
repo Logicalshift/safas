@@ -75,7 +75,7 @@ impl TryFrom<CellRef> for CellValue<i128> {
 }
 
 ///
-/// Represents an atom ID, used for convertsions
+/// Represents an atom ID, used for conversions
 ///
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct AtomId(pub u64);
@@ -106,6 +106,22 @@ impl<'a> From<&'a str> for AtomId {
 impl From<u64> for AtomId {
     fn from(id: u64) -> AtomId {
         AtomId(id)
+    }
+}
+
+///
+/// Represents a frame reference, used for conversions
+///
+pub struct FrameReference(pub usize, pub u32);
+
+impl TryFrom<CellRef> for FrameReference {
+    type Error=RuntimeError;
+
+    fn try_from(cell: CellRef) -> Result<FrameReference, RuntimeError> {
+        match &*cell {
+            SafasCell::FrameReference(cell, frame)  => Ok(FrameReference(*cell, *frame)),
+            _                                       => Err(RuntimeError::BindingError(BindError::SyntaxExpectingAtom))
+        }
     }
 }
 

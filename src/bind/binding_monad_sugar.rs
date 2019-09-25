@@ -10,11 +10,21 @@ pub trait BindingMonadAndThen : BindingMonad {
     /// code by chaining operations in the order that they occur
     ///
     fn and_then<OutputMonad: 'static+BindingMonad, NextFn: 'static+Fn(Self::Binding) -> OutputMonad+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=OutputMonad::Binding>>;
+
+    ///
+    /// Maps the value contained by this monad to another value
+    ///
+    fn map<Out: 'static+Clone+Send+Sync, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>>;
 }
 
 impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
     fn and_then<OutputMonad: 'static+BindingMonad, NextFn: 'static+Fn(Self::Binding) -> OutputMonad+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=OutputMonad::Binding>> {
         let result = flat_map_binding(action, self);
+        Box::new(result)
+    }
+
+    fn map<Out: 'static+Clone+Send+Sync, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
+        let result = flat_map_binding(move |val| wrap_binding(action(val)), self);
         Box::new(result)
     }
 }

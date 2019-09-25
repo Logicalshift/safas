@@ -13,6 +13,7 @@ pub use self::binding_monad::*;
 pub use self::binding_monad_sugar::*;
 pub use self::bind_args_monad::*;
 pub use self::bind_statement::*;
+pub use self::allocate_cell_monad::*;
 pub use self::compile_statement::*;
 pub use self::bind_error::*;
 pub use self::syntax_compiler::*;
