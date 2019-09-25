@@ -19,6 +19,8 @@ impl BindingMonad for AllocateCellMonad {
 
 ///
 /// Creates a binding monad that will allocate a new cell in the current frame, and returns it
+/// 
+/// For example: `allocate_cell().and_then(|cell_id| { /* Do something with the cell */ })`
 ///
 pub fn allocate_cell() -> impl BindingMonad<Binding=usize> {
     AllocateCellMonad

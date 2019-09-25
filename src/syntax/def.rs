@@ -32,9 +32,15 @@ pub fn def_keyword() -> SyntaxCompiler {
                 let value           = value.clone();
                 let cell: CellRef   = SafasCell::FrameReference(cell_id, 0).into();
 
-                define_symbol(name, cell.clone()).and_then_ok(move |_| {
-                    // Binding contains the frame reference cell and the bound value
-                    wrap_binding(Ok(SafasCell::list_with_cells(vec![cell.clone(), value.clone()])))
+                define_symbol_value(name, cell.clone()).and_then_ok(move |_| {
+                    let value   = value.clone();
+                    let cell    = cell.clone();
+
+                    // Export the atom into the environment
+                    export_symbol(name).and_then(move |_| {
+                        // Binding contains the frame reference cell and the bound value
+                        wrap_binding(Ok(SafasCell::list_with_cells(vec![cell.clone(), value.clone()])))
+                    })
                 })
             })
         })
@@ -147,16 +153,16 @@ mod test {
 
     #[test]
     fn define_and_read_atom() {
-        let val = eval("(def a 1) a").unwrap().0.to_string();
+        let val = eval("(def x 1) x").unwrap().0.to_string();
         assert!(val == "1".to_string());
     }
 
     #[test]
     fn define_multiple_atoms() {
-        let val = eval("(def a 1) (def b 2) a").unwrap().0.to_string();
+        let val = eval("(def x 1) (def y 2) x").unwrap().0.to_string();
         assert!(val == "1".to_string());
 
-        let val = eval("(def a 1) (def b 2) b").unwrap().0.to_string();
+        let val = eval("(def x 1) (def y 2) y").unwrap().0.to_string();
         assert!(val == "2".to_string());
     }
 }
