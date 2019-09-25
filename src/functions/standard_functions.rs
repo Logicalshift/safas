@@ -18,7 +18,7 @@ where Monad: 'static+FrameMonad<Binding=RuntimeResult> {
     let monad = Box::new(monad);
     let monad = SafasCell::Monad(monad);
 
-    define_symbol_value(atom, monad)
+    define_symbol_value(AtomId::from(atom), monad)
 }
 
 ///

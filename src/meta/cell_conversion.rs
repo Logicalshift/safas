@@ -3,6 +3,7 @@ use super::number::*;
 
 use crate::exec::*;
 use crate::bind::*;
+use crate::meta::*;
 
 use std::result::{Result};
 use std::convert::{TryFrom};
@@ -93,6 +94,18 @@ impl TryFrom<CellRef> for AtomId {
 impl Into<CellRef> for AtomId {
     fn into(self) -> CellRef {
         SafasCell::Atom(self.0).into()
+    }
+}
+
+impl<'a> From<&'a str> for AtomId {
+    fn from(name: &'a str) -> AtomId {
+        AtomId(get_id_for_atom_with_name(name))
+    }
+}
+
+impl From<u64> for AtomId {
+    fn from(id: u64) -> AtomId {
+        AtomId(id)
     }
 }
 
