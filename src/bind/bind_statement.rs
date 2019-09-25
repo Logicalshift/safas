@@ -2,15 +2,13 @@ use super::symbol_bindings::*;
 use super::bind_error::*;
 
 use crate::meta::*;
-use crate::exec::*;
 
-use smallvec::*;
 use std::sync::*;
 
 ///
 /// Performs binding to generate the actions for a simple statement
 ///
-pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
+pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
     use self::SafasCell::*;
 
     match &*source {
@@ -34,19 +32,19 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<S
                     List(_, _)                      |
                     Monad(_)                        |
                     MacroMonad(_)                   |
-                    ActionMonad(_)                  => Ok((smallvec![Action::Value(symbol_value)], bindings)),
+                    ActionMonad(_)                  => Ok((symbol_value, bindings)),
                     FrameReference(cell_num, frame) => {
                         let (cell_num, frame) = (*cell_num, *frame);
                         if frame == 0 {
                             // Local symbol
-                            Ok((smallvec![Action::CellValue(cell_num)], bindings))
+                            Ok((symbol_value, bindings))
                         } else {
                             // Import from a parent frame
                             let mut bindings    = bindings;
                             let local_cell_id   = bindings.alloc_cell();
                             bindings.import(SafasCell::FrameReference(cell_num, frame).into(), local_cell_id);
 
-                            Ok((smallvec![Action::CellValue(local_cell_id)], bindings))
+                            Ok((SafasCell::FrameReference(local_cell_id, 0).into(), bindings))
                         }
                     },
                 }
@@ -57,14 +55,14 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<S
         }
 
         // Normal values just get loaded into cell 0
-        _other          => { Ok((smallvec![Action::Value(Arc::clone(&source))], bindings)) }
+        _other          => { Ok((source, bindings)) }
     }
 }
 
 ///
 /// Binds a list statement, like `(cons 1 2)`
 ///
-pub fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
+fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
     use self::SafasCell::*;
 
     // Action depends on the type of car
@@ -83,7 +81,7 @@ pub fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                     String(_)                           |
                     Char(_)                             |
                     List(_, _)                          |
-                    Monad(_)                            => { bind_call(smallvec![Action::Value(symbol_value)], cdr, bindings) },
+                    Monad(_)                            => { bind_call(symbol_value, cdr, bindings) },
 
                     // Frame references load the value from the frame and call that
                     FrameReference(_cell_num, _frame)   => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
@@ -93,21 +91,12 @@ pub fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                         let mut bindings        = bindings.push_interior_frame();
                         bindings.args           = Some(cdr);
                         let (bindings, bound)   = syntax_compiler.binding_monad.resolve(bindings);
-                        let (bindings, actions) = match bound {
-                            Ok(bound) => {
-                                let action_monad = (syntax_compiler.generate_actions)(bound);
-                                action_monad.resolve(bindings)
-                            },
-                            Err(err) => {
-                                (bindings, Err(err))
-                            }
-                        };
                         let (bindings, imports) = bindings.pop();
 
                         if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
 
-                        match actions {
-                            Ok(actions)     => Ok((actions, bindings)),
+                        match bound {
+                            Ok(bound)       => Ok((bound, bindings)),
                             Err(error)      => Err((error, bindings))
                         }
                     }
@@ -146,24 +135,23 @@ pub fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
 ///
 /// Binds a call function, given the actions needed to load the function value
 ///
-pub fn bind_call(load_fn: SmallVec<[Action; 8]>, args: CellRef, bindings: SymbolBindings) -> BindResult<SmallVec<[Action; 8]>> {
+fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
     let mut bindings = bindings;
 
     // Start by pushing the function value onto the stack (we'll pop it later on to call the function)
-    let mut actions = load_fn;
-    actions.push(Action::Push);
+    let mut actions = vec![load_fn];
 
     // Push the arguments
     let mut arg_count   = 0;
     let mut next_arg    = args;
+    let mut hanging_cdr = false;
 
     loop {
         match &*next_arg {
             SafasCell::List(car, cdr) => {
                 // Evaluate car and push it onto the stack
                 let (next_action, next_bindings) = bind_statement(Arc::clone(car), bindings)?;
-                actions.extend(next_action);
-                actions.push(Action::Push);
+                actions.push(next_action);
 
                 bindings    = next_bindings;
 
@@ -173,32 +161,26 @@ pub fn bind_call(load_fn: SmallVec<[Action; 8]>, args: CellRef, bindings: Symbol
             }
 
             SafasCell::Nil => {
-                // Got a complete list: pop all of the arguments from the stack to call the function
-                actions.push(Action::PopList(arg_count));
+                // Got a complete list
                 break;
             }
 
             _other => {
                 // Incomplete list: evaluate the CDR value
                 let (next_action, next_bindings) = bind_statement(next_arg, bindings)?;
-                actions.extend(next_action);
-                actions.push(Action::Push);
+                actions.push(next_action);
 
-                bindings = next_bindings;
-
-                // Build the args by setting the 'hanging' value as the CDR
-                actions.push(Action::PopListWithCdr(arg_count));
+                bindings    = next_bindings;
+                hanging_cdr = true;
                 break;
             }
         }
     }
 
-    // Store the arg values into cell 0 (used by call)
-    actions.push(Action::StoreCell(0));
-
-    // Pop the function value and call it
-    actions.push(Action::Pop);
-    actions.push(Action::Call);
-
-    Ok((actions, bindings))
+    if hanging_cdr {
+        let cdr = actions.pop();
+        Ok((SafasCell::list_with_cells_and_cdr(actions, cdr.unwrap()).into(), bindings))
+    } else {
+        Ok((SafasCell::list_with_cells(actions).into(), bindings))
+    }
 }
