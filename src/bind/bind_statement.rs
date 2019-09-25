@@ -82,8 +82,10 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     Atom(_)                             |
                     String(_)                           |
                     Char(_)                             |
-                    List(_, _)                          |
                     Monad(_)                            => { bind_call(symbol_value, cdr, bindings) },
+
+                    // Lists bind themselves before calling
+                    List(_, _)                          => { let (bound_symbol, bindings) = bind_statement(symbol_value, bindings)?; bind_call(bound_symbol, cdr, bindings) }
 
                     // Frame references load the value from the frame and call that
                     FrameReference(_cell_num, _frame)   => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
