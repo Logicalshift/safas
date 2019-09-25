@@ -26,12 +26,13 @@ impl DefKeyword {
 }
 
 pub fn def_keyword() -> SyntaxCompiler {
-    let bind = flat_map_binding_error(|args: ListTuple<(AtomId, CellRef)>| {
-        // The arguments are just the name and the value
-        let ListTuple((name, value)) = args;
+    let bind = get_expression_arguments()
+        .and_then_ok(|args: ListTuple<(AtomId, CellRef)>| {
+            // The arguments are just the name and the value
+            let ListTuple((name, value)) = args;
 
-        wrap_binding::<Result<CellRef, BindError>>(Err(BindError::RuntimeError))
-    }, BindArgsMonad::new());
+            wrap_binding::<Result<CellRef, BindError>>(Err(BindError::RuntimeError))
+        });
 
     unimplemented!()
 }

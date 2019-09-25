@@ -50,3 +50,13 @@ where   TArgs: TryFrom<CellRef>,
         }
     }
 }
+
+///
+/// Returns a monad that gets the arguments for the expression that is being bound
+///
+pub fn get_expression_arguments<TArgs>() -> impl BindingMonad<Binding=Result<TArgs, BindError>>
+where   TArgs: TryFrom<CellRef>,
+        TArgs: Send+Sync,
+        <TArgs as TryFrom<CellRef>>::Error: Into<BindError> {
+    BindArgsMonad::new()
+}
