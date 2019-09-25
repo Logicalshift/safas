@@ -98,7 +98,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                         if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
 
                         match bound {
-                            Ok(bound)       => Ok((bound, bindings)),
+                            Ok(bound)       => Ok((SafasCell::List(symbol_value, bound).into(), bindings)),
                             Err(error)      => Err((error, bindings))
                         }
                     }
@@ -116,7 +116,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                         };
 
                         match actions {
-                            Ok((actions, bindings)) => Ok((actions, bindings.pop().0)),
+                            Ok((actions, bindings)) => Ok((SafasCell::List(symbol_value, actions).into(), bindings.pop().0)),
                             Err((error, bindings))  => Err((error, bindings.pop().0))
                         }
                     }
@@ -144,7 +144,6 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
     let mut actions = vec![load_fn];
 
     // Push the arguments
-    let mut arg_count   = 0;
     let mut next_arg    = args;
     let mut hanging_cdr = false;
 
@@ -159,7 +158,6 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
 
                 // cdr contains the next argument
                 next_arg    = Arc::clone(cdr);
-                arg_count   += 1;
             }
 
             SafasCell::Nil => {
