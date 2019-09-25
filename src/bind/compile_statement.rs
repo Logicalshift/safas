@@ -45,8 +45,10 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         Atom(_)                             |
         String(_)                           |
         Char(_)                             |
-        List(_, _)                          |
         Monad(_)                            => { compile_call(smallvec![Action::Value(car)], cdr) },
+
+        // Lists evaluate to their usual value before calling
+        List(_, _)                          => { let actions = compile_statement(car)?; compile_call(actions, cdr) }
 
         // Frame references load the value from the frame and call that
         FrameReference(_cell_num, _frame)   => { let actions = compile_statement(car)?; compile_call(actions, cdr) }
