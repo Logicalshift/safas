@@ -66,8 +66,16 @@ impl BindingMonad for FunKeyword {
         let mut actions             = smallvec![];
 
         for statement in statements {
-            // bind the statement
-            let (statement_actions, next_binding) = match bind_statement(statement, inner_bindings) {
+            // Bind the statement
+            let bound_statement = bind_statement(statement, inner_bindings)
+                .and_then(|(bound, next_bindings)| {
+                    match compile_statement(bound) {
+                        Ok(actions) => Ok((actions, next_bindings)),
+                        Err(err)    => Err((err.into(), next_bindings))
+                    }
+                });
+
+            let (statement_actions, next_binding) = match bound_statement {
                 Ok((statement_actions, next_binding))   => (statement_actions, next_binding),
                 Err((error, next_binding))              => return (next_binding.pop().0, Err(error))
             };

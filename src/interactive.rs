@@ -37,13 +37,10 @@ pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
     let mut result      = SafasCell::Nil.into();
     while let SafasCell::List(car, cdr) = &*statement {
         // Bind this statement
-        let bind_result = bind_statement(Arc::clone(&car), bindings);
-        let monad       = match bind_result {
-            Ok((actions, new_bindings))   => { bindings = new_bindings; actions.into_iter().collect::<Vec<_>>() },
-            Err((error, _new_bindings))   => { 
-                return Err(RuntimeError::BindingError(error));
-            }
-        };
+        let (bound, new_bindings)   = match bind_statement(Arc::clone(&car), bindings) { Ok((bound, new_bindings)) => (bound, new_bindings), Err((err, _new_bindings)) => return Err(err.into()) };
+        let actions                 = compile_statement(bound)?;
+        let monad                   = actions.into_iter().collect::<Vec<_>>();
+        bindings                    = new_bindings;
 
         // Evaluate the monad
         frame.allocate_for_bindings(&bindings);
@@ -110,7 +107,11 @@ pub fn run_interactive() {
         let mut statement = Arc::clone(&input);
         while let SafasCell::List(car, cdr) = &*statement {
             // Bind this statement
-            let bind_result = bind_statement(Arc::clone(&car), bindings);
+            let bind_result = bind_statement(Arc::clone(&car), bindings)
+                .and_then(|(bound, new_bindings)| match compile_statement(bound) {
+                    Ok(actions) => Ok((actions, new_bindings)),
+                    Err(err)    => Err((err, new_bindings))
+                });
             let monad       = match bind_result {
                 Ok((actions, new_bindings))   => { bindings = new_bindings; actions.into_iter().collect::<Vec<_>>() },
                 Err((error, new_bindings))    => { 

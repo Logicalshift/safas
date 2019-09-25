@@ -63,9 +63,10 @@ impl BindingMonad for DefKeyword {
         // Evaluate the value
         let statement               = bind_statement(Arc::clone(value), bindings);
         let (statement, bindings)   = match statement {
-            Ok((statement, bindings))   => (statement, bindings),
+            Ok((statement, bindings))   => (compile_statement(statement), bindings),
             Err((err, bindings))        => return (bindings, Err(err))
         };
+        let statement               = match statement { Ok(statement) => statement, Err(err) => return (bindings, Err(err)) };
 
         // Allocate a spot for this value
         let mut bindings    = bindings;

@@ -1,4 +1,3 @@
-use super::symbol_bindings::*;
 use super::bind_error::*;
 
 use crate::meta::*;
@@ -20,7 +19,7 @@ pub fn compile_statement(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindE
 
         // Frame references load their respective references
         FrameReference(cell_id, frame) => {
-            if frame != 0 {
+            if *frame != 0 {
                 Err(BindError::CannotLoadCellInOtherFrame)
             } else {
                 Ok(smallvec![Action::CellValue(*cell_id)])
