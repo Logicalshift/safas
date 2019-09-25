@@ -26,7 +26,7 @@ where BitCodeFn: Send+Sync+Fn(Vec<SafasNumber>) -> Vec<BitCode> {
     type Binding=RuntimeResult;
 
     fn description(&self) -> String {
-        format!("##bitcode#{:p}##", self)
+        format!("##bitcode#{:p}##", &self)
     }
 
     fn resolve(&self, frame: Frame) -> (Frame, Self::Binding) {

@@ -54,7 +54,7 @@ where   Fun:    Send+Sync+Fn(Args) -> CellRef,
     type Binding = RuntimeResult;
 
     fn description(&self) -> String {
-        format!("##fn#{:p}##", &self.action)
+        format!("##fn#{:p}##", &self)
     }
 
     fn resolve(&self, frame: Frame) -> (Frame, Self::Binding) {
