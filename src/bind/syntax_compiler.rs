@@ -17,5 +17,5 @@ pub struct SyntaxCompiler {
     pub binding_monad: Box<dyn BindingMonad<Binding=Result<CellRef, BindError>>>,
 
     /// Generates the actions for the bound syntax
-    pub generate_actions: Box<dyn Fn(CellRef) -> Box<dyn BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>>+Send+Sync>
+    pub generate_actions: Box<dyn Fn(CellRef) -> Result<SmallVec<[Action; 8]>, BindError>+Send+Sync>
 }

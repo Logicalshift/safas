@@ -67,6 +67,24 @@ impl SafasCell {
     }
 
     ///
+    /// Turns an iterator of cells into a list
+    ///
+    pub fn list_with_cells_and_cdr<Cells: IntoIterator<Item=CellRef>>(cells: Cells, cdr: CellRef) -> CellRef 
+    where Cells::IntoIter : DoubleEndedIterator {
+        // The first cell requires special treatment
+        let cells       = cells.into_iter().rev();
+
+        // We build the list by adding to the end
+        let mut cell    = cdr;
+        for current_cell in cells {
+            cell = SafasCell::List(current_cell, cell).into();
+        }
+
+        // Final result
+        cell
+    }
+
+    ///
     /// Returns true if this cell is nil
     ///
     pub fn is_nil(&self) -> bool {

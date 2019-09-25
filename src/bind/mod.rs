@@ -3,6 +3,7 @@ mod binding_monad;
 mod binding_monad_sugar;
 mod bind_args_monad;
 mod bind_statement;
+mod compile_statement;
 mod bind_error;
 mod syntax_compiler;
 
@@ -11,5 +12,6 @@ pub use self::binding_monad::*;
 pub use self::binding_monad_sugar::*;
 pub use self::bind_args_monad::*;
 pub use self::bind_statement::*;
+pub use self::compile_statement::*;
 pub use self::bind_error::*;
 pub use self::syntax_compiler::*;
