@@ -2,6 +2,7 @@ mod symbol_bindings;
 mod binding_monad;
 mod binding_monad_sugar;
 mod bind_args_monad;
+mod allocate_cell_monad;
 mod bind_statement;
 mod compile_statement;
 mod bind_error;
