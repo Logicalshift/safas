@@ -20,8 +20,8 @@ pub fn standard_syntax() -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8
     /*
     let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::ActionMonad(DefSyntaxKeyword::new())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("fun",           SafasCell::ActionMonad(FunKeyword::new())), syntax);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("quote",         SafasCell::ActionMonad(QuoteKeyword::new())), syntax);
     */
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("quote",         SafasCell::ActionMonad(quote_keyword())), syntax);
 
     syntax
 }

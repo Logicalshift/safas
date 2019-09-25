@@ -20,26 +20,25 @@ pub fn def_keyword() -> SyntaxCompiler {
     //   This retrieves the arguments, binds the value, allocates a cell and associates the name with 
     //   the cell and generates a list containing (cell_binding, value_binding) to pass to the compiler
     //   
-    let bind = get_expression_arguments()
-        .and_then_ok(|args: ListTuple<(AtomId, CellRef)>| {
-            // The arguments are just the name and the value
-            let ListTuple((name, value)) = args;
+    let bind = get_expression_arguments().and_then_ok(|args: ListTuple<(AtomId, CellRef)>| {
+        // The arguments are just the name and the value
+        let ListTuple((name, value)) = args;
 
-            // Bind the value
-            bind(value).and_then_ok(move |value| {
-                // Allocate the cell to store the value in
-                allocate_cell().and_then(move |cell_id| {
-                    // Define the symbol to map to this cell
-                    let value           = value.clone();
-                    let cell: CellRef   = SafasCell::FrameReference(cell_id, 0).into();
+        // Bind the value
+        bind(value).and_then_ok(move |value| {
+            // Allocate the cell to store the value in
+            allocate_cell().and_then(move |cell_id| {
+                // Define the symbol to map to this cell
+                let value           = value.clone();
+                let cell: CellRef   = SafasCell::FrameReference(cell_id, 0).into();
 
-                    define_symbol(name, cell.clone()).and_then_ok(move |_| {
-                        // Binding contains the frame reference cell and the bound value
-                        wrap_binding(Ok(SafasCell::list_with_cells(vec![cell.clone(), value.clone()])))
-                    })
+                define_symbol(name, cell.clone()).and_then_ok(move |_| {
+                    // Binding contains the frame reference cell and the bound value
+                    wrap_binding(Ok(SafasCell::list_with_cells(vec![cell.clone(), value.clone()])))
                 })
             })
-        });
+        })
+    });
 
     // Create the action compiler (load the value and store in the cell)
     let compiler = |value: CellRef| -> Result<_, BindError> {
