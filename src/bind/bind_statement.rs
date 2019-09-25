@@ -191,17 +191,24 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
 /// Monad that performs binding on a statement
 ///
 struct BindMonad {
-    source: CellRef
+    source: Vec<CellRef>
 }
 
 impl BindingMonad for BindMonad {
-    type Binding=Result<CellRef, BindError>;
+    type Binding=Result<Vec<CellRef>, BindError>;
 
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
-        match bind_statement(self.source.clone(), bindings) {
-            Ok((result, bindings))  => (bindings, Ok(result)),
-            Err((err, bindings))    => (bindings, Err(err))
+        let mut result      = vec![];
+        let mut bindings    = bindings;
+
+        for cell in self.source.iter() {
+            match bind_statement(cell.clone(), bindings) {
+                Ok((bound, new_bindings))   => { bindings = new_bindings; result.push(bound); }
+                Err((err, bindings))        => return (bindings, Err(err))
+            }
         }
+
+        (bindings, Ok(result))
     }
 }
 
@@ -209,5 +216,12 @@ impl BindingMonad for BindMonad {
 /// Creates a binding monad that will bind the specified source
 ///
 pub fn bind(source: CellRef) -> impl BindingMonad<Binding=Result<CellRef, BindError>> {
-    BindMonad { source }
+    flat_map_binding_error(|mut results| wrap_binding(Ok(results.pop().unwrap())), BindMonad { source: vec![source] })
+}
+
+///
+/// Creates a binding monad that will bind many items from the specified source
+///
+pub fn bind_all<Items: IntoIterator<Item=CellRef>>(source: Items) -> impl BindingMonad<Binding=Result<Vec<CellRef>, BindError>> {
+    BindMonad { source: source.into_iter().collect() }
 }
