@@ -30,6 +30,21 @@ impl BindingMonad for () {
 }
 
 ///
+/// Binding monad generated from a resolve function
+///
+pub struct BindingFn<TFn: Fn(SymbolBindings) -> (SymbolBindings, TBinding), TBinding>(pub TFn);
+
+impl<TFn, TBinding> BindingMonad for BindingFn<TFn, TBinding> 
+where TFn: Fn(SymbolBindings) -> (SymbolBindings, TBinding)+Send+Sync {
+    type Binding = TBinding;
+
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, TBinding) {
+        let BindingFn(ref fun) = self;
+        fun(bindings)
+    }
+}
+
+///
 /// Binding monad that returns a constant value
 ///
 struct ReturnValue<Binding: Clone> {

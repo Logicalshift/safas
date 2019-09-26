@@ -14,7 +14,7 @@ pub trait BindingMonadAndThen : BindingMonad {
     ///
     /// Maps the value contained by this monad to another value
     ///
-    fn map<Out: 'static+Clone+Send+Sync, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>>;
+    fn map<Out: 'static, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>>;
 }
 
 impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
@@ -23,8 +23,12 @@ impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
         Box::new(result)
     }
 
-    fn map<Out: 'static+Clone+Send+Sync, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
-        let result = flat_map_binding(move |val| wrap_binding(action(val)), self);
+    fn map<Out: 'static, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
+        let result = BindingFn(move |bindings| {
+            let (bindings, val) = self.resolve(bindings);
+            let map_val         = action(val);
+            (bindings, map_val)
+        });
         Box::new(result)
     }
 }
