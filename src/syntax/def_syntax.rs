@@ -85,9 +85,15 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
                     let mut macro_bindings      = evaluation_bindings.push_interior_frame();
 
                     // Bind the arguments for the pattern
+                    let mut pattern_cells = vec![];
                     for AtomId(arg_atom_id) in pattern_def.bindings() {
-                        let arg_cell = macro_bindings.alloc_cell();
-                        macro_bindings.symbols.insert(arg_atom_id, SafasCell::FrameReference(arg_cell, 0).into());
+                        // Create a new cell for this atom
+                        let arg_cell            = macro_bindings.alloc_cell();
+                        let arg_cell: CellRef   = SafasCell::FrameReference(arg_cell, 0).into();
+
+                        // Add to the bindings and the list of cells for this pattern
+                        macro_bindings.symbols.insert(arg_atom_id, arg_cell.clone());
+                        pattern_cells.push(arg_cell);
                     }
                     
                     // Bind the macro definition
@@ -95,7 +101,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
                     let (macro_bindings, bind_result) = match bind_result { Ok((result, bindings)) => ((bindings, Ok(result))), Err((err, bindings)) => (bindings, Err(err)) };
 
                     // Store in the results
-                    bound_patterns.push(bind_result.map(move |bound| (pattern_def, bound)));
+                    bound_patterns.push(bind_result.map(move |bound| (pattern_def, pattern_cells, bound)));
 
                     // Revert the inner frame
                     let (new_bindings, _)       = macro_bindings.pop();
