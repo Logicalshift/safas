@@ -162,3 +162,42 @@ where   A1:         TryFrom<CellRef>,
         Ok(ListTuple((A1::try_from(first)?, A2::try_from(second)?)))
     }
 }
+
+///
+/// Like ListTuple, except will try to parse the final CDR as the tail type (so the list can be as long as needed)
+/// rather than producing a fixed-size list
+///
+pub struct ListWithTail<THead, TTail>(pub THead, pub TTail);
+
+impl<A1, TTail> TryFrom<CellRef> for ListWithTail<(A1, ), TTail>
+where   A1:             TryFrom<CellRef>,
+        TTail:          TryFrom<CellRef>,
+        RuntimeError:   From<A1::Error>,
+        RuntimeError:   From<TTail::Error> {
+    type Error=RuntimeError;
+    fn try_from(cell: CellRef) -> Result<Self, Self::Error> {
+        // Read the list values
+        let (first, cdr) = cell.list_value().ok_or(RuntimeError::BindingError(BindError::SyntaxExpectingList))?;
+
+        // Convert them and generate the tuple
+        Ok(ListWithTail((A1::try_from(first)?, ), TTail::try_from(cdr)?))
+    }
+}
+
+impl<A1, A2, TTail> TryFrom<CellRef> for ListWithTail<(A1, A2), TTail>
+where   A1:         TryFrom<CellRef>,
+        A2:         TryFrom<CellRef>,
+        TTail:          TryFrom<CellRef>,
+        RuntimeError:   From<A1::Error>,
+        RuntimeError:   From<A2::Error>,
+        RuntimeError:   From<TTail::Error> {
+    type Error=RuntimeError;
+    fn try_from(cell: CellRef) -> Result<Self, Self::Error> {
+        // Read the list values
+        let (first, cdr)    = cell.list_value().ok_or(RuntimeError::BindingError(BindError::SyntaxExpectingList))?;
+        let (second, cdr)   = cdr.list_value().ok_or(RuntimeError::BindingError(BindError::MissingArgument))?;
+
+        // Convert them and generate the tuple
+        Ok(ListWithTail((A1::try_from(first)?, A2::try_from(second)?), TTail::try_from(cdr)?))
+    }
+}
