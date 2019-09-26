@@ -65,7 +65,10 @@ pub enum BindError {
     RuntimeError,
 
     /// A number couldn't be converted for this syntax
-    NumberTooLarge
+    NumberTooLarge,
+
+    /// An attempt was made to use a symbol that was not yet defined
+    ForwardReferencesNotAllowed
 }
 
 /// Result of a binding operation

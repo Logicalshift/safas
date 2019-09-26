@@ -72,10 +72,17 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
             // Bind the macros in an inner frame
             let mut evaluation_bindings     = bindings.push_new_frame();
 
-            // TODO: create the bindings for the symbols so macros can reference each other
+            // Macros can reference each other. Only back-references are allowed so we can bind them properly
+            // Initially all symbols generate errors
+            for (symbol_id, _) in macros.iter() {
+                // Symbols are intially bound to some syntax that generates an error
+                let error = SyntaxCompiler { binding_monad: Box::new(BindingFn(|bindings| (bindings, Err(BindError::ForwardReferencesNotAllowed)))), generate_actions: Box::new(|_| Err(BindError::ForwardReferencesNotAllowed)) };
+                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::ActionMonad(error).into());
+            }
 
-            for (symbol, symbol_patterns) in macros.iter() {
-                let mut bound_patterns = vec![];
+            for (symbol_id, symbol_patterns) in macros.iter() {
+                // bound_patterns will store the patterns that will be bound by this syntax0
+                let mut bound_patterns          = vec![];
 
                 for (pattern_def, macro_def) in symbol_patterns.iter() {
                     let pattern_def             = Arc::clone(pattern_def);
