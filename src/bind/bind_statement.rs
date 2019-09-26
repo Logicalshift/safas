@@ -1,6 +1,7 @@
 use super::symbol_bindings::*;
 use super::bind_error::*;
 use super::binding_monad::*;
+use super::binding_monad_sugar::*;
 
 use crate::meta::*;
 
@@ -218,7 +219,7 @@ impl BindingMonad for BindMonad {
 /// Creates a binding monad that will bind the specified source
 ///
 pub fn bind(source: CellRef) -> impl BindingMonad<Binding=Result<CellRef, BindError>> {
-    flat_map_binding_error(|mut results| wrap_binding(Ok(results.pop().unwrap())), BindMonad { source: vec![source] })
+    BindMonad { source: vec![source] }.and_then_ok(|mut results| wrap_binding(Ok(results.pop().unwrap())))
 }
 
 ///

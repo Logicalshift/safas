@@ -79,6 +79,21 @@ impl PatternMatch {
     }
 
     ///
+    /// Returns the atom IDs that will be bound by this pattern (in the order that they will appear in the result)
+    ///
+    pub fn bindings(&self) -> Vec<AtomId> {
+        self.symbols.iter()
+            .filter_map(|symbol| {
+                match symbol {
+                    MatchSymbol::StatementBinding(atom_id)  => Some(AtomId(*atom_id)),
+                    MatchSymbol::SymbolBinding(atom_id)     => Some(AtomId(*atom_id)),
+                    _                                       => None
+                }
+            })
+            .collect()
+    }
+
+    ///
     /// Creates a pattern matcher from a list of SafasCells
     ///
     pub fn from_pattern_as_cells(list: CellRef) -> Result<PatternMatch, BindError> {
