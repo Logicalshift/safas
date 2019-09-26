@@ -8,6 +8,7 @@ use itertools::*;
 use smallvec::*;
 use std::sync::*;
 use std::collections::{HashMap};
+use std::convert::*;
 
 ///
 /// The (def_syntax) keyword, expressed as a binding monad
@@ -21,7 +22,36 @@ use std::collections::{HashMap};
 /// ```(<name> <statements>)```
 ///
 pub fn def_syntax_keyword() -> SyntaxCompiler {
-    let bind = get_expression_arguments();
+    let bind = get_expression_arguments().map(|args: Result<ListWithTail<(AtomId, CellRef), CellRef>, BindError>| {
+        // Fetch the arguments
+        let ListWithTail((name, patterns), statements) = args?;
+
+        // Process the patterns (each is of the form <pattern> <macro>)
+        let mut current_pattern = patterns;
+        let mut macros          = vec![];
+        while !current_pattern.is_nil() {
+            // Each pattern is two cells, the pattern definition and the macro definition
+            let pattern_def: ListWithTail<(CellRef, CellRef), CellRef>  = ListWithTail::try_from(current_pattern)?;
+            let ListWithTail((pattern_def, macro_def), next_pattern)    = pattern_def;
+
+            // Compile the pattern
+            let pattern_def     = PatternMatch::from_pattern_as_cells(pattern_def)?;
+
+            // Add to the macros
+            macros.push((pattern_def, macro_def));
+
+            // Move to the next pattern
+            current_pattern = next_pattern;
+        }
+
+        // Result of the first stage is the list of patterns
+        Ok((name, Arc::new(macros), statements))
+    }).map(|args: Result<(_, _, _), BindError>| {
+        // Fetch the values computed by the previous step
+        let (name, macros, statements) = args?;
+
+        Ok(SafasCell::Nil.into())
+    });
 
     let compile = |args: CellRef| {
         Ok(smallvec![])
@@ -173,5 +203,15 @@ impl SyntaxSymbol {
     ///
     pub fn new(bindings: SymbolBindings, patterns: Vec<(PatternMatch, CellRef)>) -> (SymbolBindings, SyntaxSymbol) {
         (bindings, SyntaxSymbol { patterns: patterns })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+
+    #[test]
+    fn evaluate_def_syntax() {
+        eval("(def_syntax x ((lda #<x>) (d x)))").unwrap().0.to_string();
     }
 }
