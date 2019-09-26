@@ -20,6 +20,19 @@ use std::collections::{HashMap};
 /// 
 /// ```(<name> <statements>)```
 ///
+pub fn def_syntax_keyword() -> SyntaxCompiler {
+    let bind = get_expression_arguments();
+
+    let compile = |args: CellRef| {
+        Ok(smallvec![])
+    };
+
+    SyntaxCompiler {
+        binding_monad:      Box::new(bind),
+        generate_actions:   Box::new(compile)
+    }
+}
+
 pub struct DefSyntaxKeyword {
 }
 

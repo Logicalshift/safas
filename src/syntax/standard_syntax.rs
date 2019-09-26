@@ -17,9 +17,7 @@ pub fn standard_syntax() -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8
     // Define the standard syntax
     let syntax  = wrap_binding(Ok(smallvec![]));
     let syntax  = flat_map_binding_actions(move || define_symbol_value("def",           SafasCell::ActionMonad(def_keyword())), syntax);
-    /*
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::ActionMonad(DefSyntaxKeyword::new())), syntax);
-    */
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::ActionMonad(def_syntax_keyword())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("fun",           SafasCell::ActionMonad(fun_keyword())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("quote",         SafasCell::ActionMonad(quote_keyword())), syntax);
 
