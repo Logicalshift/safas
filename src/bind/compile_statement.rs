@@ -45,6 +45,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         Atom(_)                             |
         String(_)                           |
         Char(_)                             |
+        MacroReference(_)                   |
         Monad(_)                            => { compile_call(smallvec![Action::Value(car)], cdr) },
 
         // Lists evaluate to their usual value before calling
@@ -56,7 +57,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         // Action and macro monads resolve their respective syntaxes
         ActionMonad(syntax_compiler)        => (syntax_compiler.generate_actions)(cdr),
 
-        MacroMonad(macro_monad)             => Err(BindError::MacrosShouldBeBoundBeforeCompiling)
+        MacroMonad(_macro_monad)            => Err(BindError::MacrosShouldBeBoundBeforeCompiling)
     }
 }
 

@@ -34,6 +34,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                     List(_, _)                      |
                     Monad(_)                        |
                     MacroMonad(_)                   |
+                    MacroReference(_)               |
                     ActionMonad(_)                  => Ok((symbol_value, bindings)),
                     FrameReference(cell_num, frame) => {
                         let (cell_num, frame) = (*cell_num, *frame);
@@ -82,6 +83,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     Atom(_)                             |
                     String(_)                           |
                     Char(_)                             |
+                    MacroReference(_)                   |
                     Monad(_)                            => { bind_call(symbol_value, cdr, bindings) },
 
                     // Lists bind themselves before calling
