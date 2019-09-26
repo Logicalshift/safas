@@ -31,18 +31,28 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
         let mut macros          = vec![];
         while !current_pattern.is_nil() {
             // Each pattern is two cells, the pattern definition and the macro definition
-            let pattern_def: ListWithTail<(CellRef, CellRef), CellRef>  = ListWithTail::try_from(current_pattern)?;
-            let ListWithTail((pattern_def, macro_def), next_pattern)    = pattern_def;
+            // Format is `(<symbol> . <pattern>) <macro>`
+            let pattern_def: ListWithTail<(ListWithTail<(AtomId, ), CellRef>, CellRef), CellRef>    = ListWithTail::try_from(current_pattern)?;
+            let ListWithTail((ListWithTail((symbol_name, ), pattern_def), macro_def), next_pattern) = pattern_def;
 
             // Compile the pattern
-            let pattern_def     = PatternMatch::from_pattern_as_cells(pattern_def)?;
+            let pattern_def = PatternMatch::from_pattern_as_cells(pattern_def)?;
 
             // Add to the macros
-            macros.push((pattern_def, macro_def));
+            macros.push((symbol_name, pattern_def, macro_def));
 
             // Move to the next pattern
             current_pattern = next_pattern;
         }
+
+        // Group by symbol
+        let macros = macros.into_iter().group_by(|(AtomId(symbol_name), _pattern_def, _macro_def)| *symbol_name);
+        let macros = macros.into_iter()
+            .map(|(symbol, values)| {
+                let values = values.into_iter().map(|(_symbol, pattern_def, macro_def)| (pattern_def, macro_def));
+                (symbol, values.collect::<Vec<_>>())
+            })
+            .collect::<HashMap<_, _>>();
 
         // Result of the first stage is the list of patterns
         Ok((name, Arc::new(macros), statements))
