@@ -81,7 +81,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
             }
 
             for (symbol_id, symbol_patterns) in macros.iter() {
-                // bound_patterns will store the patterns that will be bound by this syntax0
+                // bound_patterns will store the patterns that will be bound by this syntax
                 let mut bound_patterns          = vec![];
 
                 for (pattern_def, macro_def) in symbol_patterns.iter() {
@@ -105,15 +105,26 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
                     
                     // Bind the macro definition
                     let bind_result             = bind_statement(macro_def, macro_bindings);
-                    let (macro_bindings, bind_result) = match bind_result { Ok((result, bindings)) => ((bindings, Ok(result))), Err((err, bindings)) => (bindings, Err(err)) };
+                    let (macro_bindings, bind_result) = match bind_result { 
+                        Ok((result, bindings))  => ((bindings, result)), 
+                        Err((err, bindings))    => {
+                            return (bindings.pop().0.pop().0, Err(err));
+                        }
+                    };
 
                     // Store in the results
-                    bound_patterns.push(bind_result.map(move |bound| (pattern_def, pattern_cells, bound)));
+                    bound_patterns.push((pattern_def, pattern_cells, bind_result));
 
                     // Revert the inner frame
                     let (new_bindings, _)       = macro_bindings.pop();
                     evaluation_bindings         = new_bindings;
                 }
+
+                // Create a syntax symbol
+                let symbol = SyntaxSymbol::new(bound_patterns);
+
+                // Define this as our symbol name
+                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::ActionMonad(symbol.syntax()).into());
             }
 
             // Pop the evaluation frame
@@ -135,36 +146,37 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
 }
 
 ///
-/// The syntax struct creates the keyword that evaluates a particular syntax
-///
-struct Syntax {
-    /// The extra keywords added by this syntax
-    syntax: HashMap<u64, SyntaxSymbol> 
-}
-
-impl Syntax {
-    ///
-    /// Creates a new syntax keyword
-    ///
-    pub fn new(syntax: HashMap<u64, SyntaxSymbol>) -> Syntax {
-        Syntax { syntax }
-    }
-}
-
-///
 /// The syntax symbol struct evaluates a single syntax symbol
 ///
 struct SyntaxSymbol {
-    /// The patterns that can be matched against this symbol (and their macro binding)
-    patterns: Vec<(PatternMatch, CellRef)>
+    /// The patterns, their frame bindings and the partially-bound macro
+    patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>
 }
 
 impl SyntaxSymbol {
     ///
     /// Creates a new syntax symbol that will match one of the specified patterns
     ///
-    pub fn new(bindings: SymbolBindings, patterns: Vec<(PatternMatch, CellRef)>) -> (SymbolBindings, SyntaxSymbol) {
-        (bindings, SyntaxSymbol { patterns: patterns })
+    pub fn new(patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>) -> SyntaxSymbol {
+        SyntaxSymbol { patterns: patterns }
+    }
+
+    ///
+    /// Creates the syntax compiler for this symbol
+    ///
+    pub fn syntax(self) -> SyntaxCompiler {
+        SyntaxCompiler {
+            binding_monad:      Box::new(self),
+            generate_actions:   Box::new(|_| unimplemented!())
+        }
+    }
+}
+
+impl BindingMonad for SyntaxSymbol {
+    type Binding=Result<CellRef, BindError>;
+
+    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        unimplemented!()
     }
 }
 
