@@ -103,9 +103,6 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
                         pattern_cells.push(arg_cell);
                     }
                     
-                    // TODO: if the statement here is something like 'def' and allocates cells we need to deal with that somehow
-                    // (these allocated cells need to get bound to a cell allocated from outside of the macro)
-                    // 
                     // Bind the macro definition
                     let bind_result             = bind_statement(macro_def, macro_bindings);
                     let (macro_bindings, bind_result) = match bind_result { 
@@ -164,6 +161,8 @@ impl SyntaxSymbol {
     /// Creates a new syntax symbol that will match one of the specified patterns
     ///
     pub fn new(patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>) -> SyntaxSymbol {
+        // TODO : we currently initialize the imported bindings to nothing, expecting to fill them in later but this has the
+        // issue that when using a macro from within another macro, it won't work properly
         SyntaxSymbol { patterns: patterns, imported_bindings: Arc::new(HashMap::new()) }
     }
 
@@ -198,6 +197,9 @@ impl BindingMonad for SyntaxSymbol {
                 // Some values will be imported from outside the macro (we can find these in imported_bindings), and some
                 // will be bound by the pattern. We start by finding the pattern that matches the arguments and then
                 // binding those statements.
+                // 
+                // Some values will defined within the macro; these are left unbound after the binding has completed and
+                // we assign new cells to them after binding everything else
 
                 let mut substitutions = HashMap::new();
 
@@ -222,8 +224,8 @@ impl BindingMonad for SyntaxSymbol {
                     substitutions.insert(cell_id, bound_val);
                 }
 
-                // Perform the substititions (TODO: and the global bindings too...)
-                let bound = substitute_cells(partially_bound, move |cell_id| {
+                // Perform the substititions
+                let (bound, bindings) = substitute_cells(bindings, partially_bound, &move |cell_id| {
                     substitutions.get(&cell_id)
                         .or_else(|| self.imported_bindings.get(&cell_id))
                         .cloned()
@@ -240,10 +242,42 @@ impl BindingMonad for SyntaxSymbol {
 }
 
 ///
-/// Substitutes any FrameReferences in the partially bound statement for bound values
+/// Substitutes any FrameReferences in the partially bound statement for bound values, and rebinds any FrameReferences that are
+/// not currently bound
 ///
-fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(partially_bound: &CellRef, substitutions: SubstituteFn) -> CellRef {
-    unimplemented!()
+fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: SymbolBindings, partially_bound: &CellRef, substitutions: &SubstituteFn) -> (CellRef, SymbolBindings) {
+    // Bind the cells
+    let pos = partially_bound;
+
+    match &**pos {
+        // Lists are bound recursively
+        SafasCell::List(car, cdr) => {
+            // TODO: would be more efficient to bind in a loop
+            let (car, bindings) = substitute_cells(bindings, car, substitutions);
+            let (cdr, bindings) = substitute_cells(bindings, cdr, substitutions);
+
+            (SafasCell::List(car, cdr).into(), bindings)
+        }
+
+        // Frame references are bound by the substitution function
+        SafasCell::FrameReference(cell_id, frame) => {
+            if *frame == 0 {
+                // Is from the macro frame: bind via the subtitutions function
+                if let Some(actual_cell) = substitutions(*cell_id) {
+                    (actual_cell, bindings)
+                } else {
+                    // TODO
+                    unimplemented!("Need to be able to bind unbound cells in macros")
+                }
+            } else {
+                // Bound from a different frame
+                (pos.clone(), bindings)
+            }
+        }
+
+        // Other cell types have no binding to do
+        _ => (pos.clone(), bindings)
+    }
 }
 
 #[cfg(test)]
