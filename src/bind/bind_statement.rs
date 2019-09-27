@@ -28,6 +28,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
 
                 match &*symbol_value {
                     Nil                             |
+                    Any(_)                          |
                     Number(_)                       |
                     Atom(_)                         |
                     String(_)                       |
@@ -80,6 +81,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                 match &*symbol_value {
                     // Constant values just load that value and call it
                     Nil                                 |
+                    Any(_)                              |
                     Number(_)                           |
                     Atom(_)                             |
                     String(_)                           |

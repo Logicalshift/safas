@@ -41,6 +41,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
     match &*car {
         // Constant values just load that value and call it
         Nil                                 |
+        Any(_)                              |
         Number(_)                           |
         Atom(_)                             |
         String(_)                           |

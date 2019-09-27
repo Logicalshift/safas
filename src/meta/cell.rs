@@ -7,6 +7,7 @@ use crate::exec::*;
 use std::sync::*;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
+use std::any::*;
 
 ///
 /// A SAFAS cell represents a single value: for example 'D' or '24'
@@ -45,7 +46,10 @@ pub enum SafasCell {
     MacroMonad(Box<dyn BindingMonad<Binding=Result<CellRef, BindError>>>),
 
     /// An action expands directly to a set of interpreter actions
-    ActionMonad(SyntaxCompiler)
+    ActionMonad(SyntaxCompiler),
+
+    /// An arbitrary Rust type
+    Any(Box<dyn Any+Send+Sync>)
 }
 
 pub type CellRef = Arc<SafasCell>;
@@ -174,6 +178,7 @@ impl SafasCell {
             Monad(monad)                => monad.description(),
             MacroMonad(monad)           => format!("macro#{}", monad.description()),
             ActionMonad(syntax)         => format!("compile#{}", syntax.binding_monad.description()),
+            Any(val)                    => format!("any#{:p}", val),
             List(first, second)         => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;
