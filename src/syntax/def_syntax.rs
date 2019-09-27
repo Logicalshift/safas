@@ -103,6 +103,9 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
                         pattern_cells.push(arg_cell);
                     }
                     
+                    // TODO: if the statement here is something like 'def' and allocates cells we need to deal with that somehow
+                    // (these allocated cells need to get bound to a cell allocated from outside of the macro)
+                    // 
                     // Bind the macro definition
                     let bind_result             = bind_statement(macro_def, macro_bindings);
                     let (macro_bindings, bind_result) = match bind_result { 
@@ -150,7 +153,10 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
 ///
 struct SyntaxSymbol {
     /// The patterns, their frame bindings and the partially-bound macro
-    patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>
+    patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>,
+
+    /// The bindings that were imported from outside of this symbol
+    imported_bindings: Arc<HashMap<usize, CellRef>>
 }
 
 impl SyntaxSymbol {
@@ -158,7 +164,7 @@ impl SyntaxSymbol {
     /// Creates a new syntax symbol that will match one of the specified patterns
     ///
     pub fn new(patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>) -> SyntaxSymbol {
-        SyntaxSymbol { patterns: patterns }
+        SyntaxSymbol { patterns: patterns, imported_bindings: Arc::new(HashMap::new()) }
     }
 
     ///
@@ -176,8 +182,68 @@ impl BindingMonad for SyntaxSymbol {
     type Binding=Result<CellRef, BindError>;
 
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
-        unimplemented!()
+        // Get the arguments for this symbol
+        let args            = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
+        let mut bindings    = bindings;
+
+        // Try to match them against each pattern
+        for (pattern_match, pattern_cells, partially_bound) in self.patterns.iter() {
+            if let Ok(pattern) = pattern_match.match_against(&args) {
+
+                // Substitute the arguments into the pattern
+                // 
+                // Every value in the macro will refer to the 'fake' macro frame so will be a FrameReference(foo, 0). We
+                // substitute these for the actual values.
+                // 
+                // Some values will be imported from outside the macro (we can find these in imported_bindings), and some
+                // will be bound by the pattern. We start by finding the pattern that matches the arguments and then
+                // binding those statements.
+
+                let mut substitutions = HashMap::new();
+
+                for arg_idx in 0..pattern_cells.len() {
+                    // The pattern cell is expected to always be a frame reference
+                    let FrameReference(cell_id, _) = pattern_cells[arg_idx].clone().try_into().unwrap();
+
+                    // Bind the value in this argument
+                    let bound_val = match &pattern[arg_idx] {
+                        MatchBinding::Statement(_atom_id, statement_val)    => bind_statement(statement_val.clone(), bindings),
+                        MatchBinding::Symbol(_atom_id, symbol_val)          => Ok((symbol_val.clone(), bindings)),
+                    };
+
+                    // Check for errors
+                    let (bound_val, new_bindings) = match bound_val {
+                        Ok((bound_val, bindings))   => (bound_val, bindings),
+                        Err((err, bindings))        => return (bindings, Err(err))
+                    };
+                    bindings = new_bindings;
+
+                    // Store as a substitution
+                    substitutions.insert(cell_id, bound_val);
+                }
+
+                // Perform the substititions (TODO: and the global bindings too...)
+                let bound = substitute_cells(partially_bound, move |cell_id| {
+                    substitutions.get(&cell_id)
+                        .or_else(|| self.imported_bindings.get(&cell_id))
+                        .cloned()
+                });
+
+                // This is the result
+                return (bindings, Ok(bound));
+            }
+        }
+
+        // No matching pattern
+        (bindings, Err(BindError::SyntaxMatchFailed))
     }
+}
+
+///
+/// Substitutes any FrameReferences in the partially bound statement for bound values
+///
+fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(partially_bound: &CellRef, substitutions: SubstituteFn) -> CellRef {
+    unimplemented!()
 }
 
 #[cfg(test)]

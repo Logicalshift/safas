@@ -223,7 +223,7 @@ impl PatternMatch {
     ///
     /// Attempts to match this pattern against some input, returning the bindings if it matches
     ///
-    pub fn match_against(&self, input: CellRef) -> Result<Vec<MatchBinding>, BindError> {
+    pub fn match_against(&self, input: &CellRef) -> Result<Vec<MatchBinding>, BindError> {
         Self::match_with_symbols(&self.symbols, input)
     }
 
@@ -251,7 +251,7 @@ impl PatternMatch {
                 SymbolBinding(atom_id)      => { bindings.push(MatchBinding::Symbol(*atom_id, Arc::clone(car))); }
 
                 List(list_pattern)  => {
-                    let list_bindings = Self::match_with_symbols(list_pattern, Arc::clone(car))?;
+                    let list_bindings = Self::match_with_symbols(list_pattern, &Arc::clone(car))?;
                     bindings.extend(list_bindings);
                 }
             }
@@ -266,9 +266,9 @@ impl PatternMatch {
     ///
     /// Performs matching directly against a symbol list
     ///
-    fn match_with_symbols(symbols: &Vec<MatchSymbol>, input: CellRef) -> Result<Vec<MatchBinding>, BindError> {
+    fn match_with_symbols(symbols: &Vec<MatchSymbol>, input: &CellRef) -> Result<Vec<MatchBinding>, BindError> {
         // Current position in the input
-        let mut input_pos   = &*input;
+        let mut input_pos   = &**input;
         let mut bindings    = vec![];
 
         // Match the input position against the expected symbol
@@ -304,7 +304,7 @@ mod test {
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
         let match_against   = eval("(quote (lda #10))").unwrap().0;
 
-        let bindings        = matcher.match_against(match_against).unwrap();
+        let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
 
         if let MatchBinding::Statement(atom_id, val) = &bindings[0] {
@@ -321,7 +321,7 @@ mod test {
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
         let match_against   = eval("(quote (lda #10, (X)))").unwrap().0;
 
-        let bindings        = matcher.match_against(match_against).unwrap();
+        let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
 
         if let MatchBinding::Statement(atom_id, val) = &bindings[0] {
@@ -338,7 +338,7 @@ mod test {
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
         let match_against   = eval("(quote (lda (#10)))").unwrap().0;
 
-        let bindings        = matcher.match_against(match_against).unwrap();
+        let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
 
         if let MatchBinding::Statement(atom_id, val) = &bindings[0] {
@@ -355,7 +355,7 @@ mod test {
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
         let match_against   = eval("(quote (lda #10))").unwrap().0;
 
-        let bindings        = matcher.match_against(match_against);
+        let bindings        = matcher.match_against(&match_against);
         assert!(bindings.is_err());
         assert!(if let Err(BindError::SyntaxMatchedPrefix) = bindings { true } else { false });
     }
@@ -366,7 +366,7 @@ mod test {
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
         let match_against   = eval("(quote (lda 10))").unwrap().0;
 
-        let bindings        = matcher.match_against(match_against);
+        let bindings        = matcher.match_against(&match_against);
         assert!(bindings.is_err());
         assert!(if let Err(BindError::SyntaxMatchFailed) = bindings { true } else { false });
     }
