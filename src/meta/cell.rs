@@ -36,14 +36,8 @@ pub enum SafasCell {
     /// A reference to a value on the frame
     FrameReference(usize, u32),
 
-    /// A reference to value from a macro
-    MacroReference(usize),
-
     /// A monad that transforms the state of the current frame (generally a lambda)
     Monad(Box<dyn FrameMonad<Binding=RuntimeResult>>),
-
-    /// A macro expands to a statement, which is recursively compiled
-    MacroMonad(Box<dyn BindingMonad<Binding=Result<CellRef, BindError>>>),
 
     /// An action expands directly to a set of interpreter actions
     ActionMonad(SyntaxCompiler),
@@ -173,10 +167,8 @@ impl SafasCell {
             Number(number)              => number.to_string(),
             String(string_value)        => format!("\"{}\"", string_value),         // TODO: character quoting
             Char(chr_value)             => format!("'{}'", chr_value),              // TODO: character quoting,
-            MacroReference(var)         => format!("macro#{}", var),
             FrameReference(cell, frame) => format!("cell#({},{})", cell, frame),
             Monad(monad)                => monad.description(),
-            MacroMonad(monad)           => format!("macro#{}", monad.description()),
             ActionMonad(syntax)         => format!("compile#{}", syntax.binding_monad.description()),
             Any(val)                    => format!("any#{:p}", val),
             List(first, second)         => {

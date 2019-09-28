@@ -35,8 +35,6 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                     Char(_)                         |
                     List(_, _)                      |
                     Monad(_)                        |
-                    MacroMonad(_)                   |
-                    MacroReference(_)               |
                     ActionMonad(_)                  => Ok((symbol_value, bindings)),
                     FrameReference(cell_num, frame) => {
                         let (cell_num, frame) = (*cell_num, *frame);
@@ -86,7 +84,6 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     Atom(_)                             |
                     String(_)                           |
                     Char(_)                             |
-                    MacroReference(_)                   |
                     Monad(_)                            => { bind_call(symbol_value, cdr, bindings) },
 
                     // Lists bind themselves before calling
@@ -107,24 +104,6 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                         match bound {
                             Ok(bound)       => Ok((SafasCell::List(symbol_value, bound).into(), bindings)),
                             Err(error)      => Err((error, bindings))
-                        }
-                    }
-
-                    MacroMonad(macro_monad)             => { 
-                        let mut bindings            = bindings.push_interior_frame();
-                        bindings.args               = Some(cdr);
-                        let (bindings, expanded)    = macro_monad.resolve(bindings);
-
-                        // Rust doesn't really help with the error handling here. We want to bind the statement or preserve the error
-                        // then we want to pop the bindings regardless of the error.
-                        let actions                 = match expanded {
-                            Ok(expanded)            => bind_statement(expanded, bindings),
-                            Err(error)              => Err((error, bindings))
-                        };
-
-                        match actions {
-                            Ok((actions, bindings)) => Ok((SafasCell::List(symbol_value, actions).into(), bindings.pop().0)),
-                            Err((error, bindings))  => Err((error, bindings.pop().0))
                         }
                     }
                 } 
