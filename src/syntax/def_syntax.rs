@@ -475,11 +475,33 @@ mod test {
     }
 
     #[test]
+    fn choose_syntax_3() {
+        let val = eval(
+            "(def_syntax some_syntax ( (lda #<x>) ((list 1 x))   (ldx <x>) ((list 2 x)) ))
+            (some_syntax (ldx 3))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "(2 3)");
+    }
+
+    #[test]
     fn read_external_binding() {
         let val = eval(
             "(def z 4)
             (def_syntax some_syntax ((lda #<x>) ((list x z))))
             (some_syntax (lda #3))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "(3 4)");
+    }
+
+
+    #[test]
+    fn read_external_binding_in_function() {
+        let val = eval(
+            "(def z 4)
+            (def_syntax some_syntax ((lda #<x>) ((list x z))))
+            ((fun () (some_syntax (lda #3))))"
             ).unwrap().0.to_string();
 
         assert!(val == "(3 4)");
