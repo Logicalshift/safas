@@ -23,7 +23,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
             // Look up the value for this symbol
             let symbol_value = bindings.look_up(*atom_id);
 
-            if let Some(symbol_value) = symbol_value {
+            if let Some((symbol_value, _symbol_level)) = symbol_value {
                 use self::SafasCell::*;
 
                 match &*symbol_value {
@@ -75,7 +75,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
             use self::SafasCell::*;
             let symbol_value = bindings.look_up(*atom_id);
 
-            if let Some(symbol_value) = symbol_value {
+            if let Some((symbol_value, symbol_level)) = symbol_value {
                 match &*symbol_value {
                     // Constant values just load that value and call it
                     Nil                                 |
@@ -96,6 +96,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     ActionMonad(syntax_compiler)        => {
                         let mut bindings        = bindings.push_interior_frame();
                         bindings.args           = Some(cdr);
+                        bindings.depth          = Some(symbol_level);
                         let (bindings, bound)   = syntax_compiler.binding_monad.resolve(bindings);
                         let (bindings, imports) = bindings.pop();
 

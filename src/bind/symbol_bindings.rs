@@ -13,7 +13,7 @@ pub struct SymbolBindings {
     pub args: Option<CellRef>,
 
     /// When binding a macro or other syntax item, the depth (number of frames) that the item was found at
-    pub depth: Option<usize>,
+    pub depth: Option<u32>,
 
     /// The symbols in this binding
     pub symbols: HashMap<u64, CellRef>,
@@ -52,9 +52,14 @@ impl SymbolBindings {
     }
 
     ///
-    /// Looks up the value for a symbol in this binding
+    /// Looks up the value for a symbol in this binding. If the symbol is found the return value is the
+    /// cell bound to this symbol and the number of frames 'above' the current stack frame that the
+    /// match was made.
+    /// 
+    /// For frame references, the FrameReference is returned updated with the level where the symbol
+    /// could be found.
     ///
-    pub fn look_up(&self, symbol: u64) -> Option<CellRef> {
+    pub fn look_up(&self, symbol: u64) -> Option<(CellRef, u32)> {
         let mut binding = Some(self);
         let mut level   = 0;
 
@@ -64,12 +69,12 @@ impl SymbolBindings {
                 // Return the value if we find it, adjusting the frame level for cells that need to be imported
                 if let Some((cell, bound_level)) = symbol.frame_reference() {
                     if level == 0 {
-                        return Some(Arc::clone(&symbol));
+                        return Some((Arc::clone(&symbol), level));
                     } else {
-                        return Some(SafasCell::FrameReference(cell, bound_level + level).into());
+                        return Some((SafasCell::FrameReference(cell, bound_level + level).into(), level));
                     }
                 } else {
-                    return Some(Arc::clone(&symbol));
+                    return Some((Arc::clone(&symbol), level));
                 }
             }
 
@@ -234,8 +239,9 @@ mod test {
 
         let symbol = frame.look_up(0);
         assert!(!symbol.is_none());
-        let symbol = symbol.unwrap();
+        let (symbol, level) = symbol.unwrap();
         assert!(symbol.number_value().unwrap() == 1.into());
+        assert!(level == 0);
     }
 
     #[test]
@@ -246,8 +252,9 @@ mod test {
 
         let symbol = frame.look_up(0);
         assert!(!symbol.is_none());
-        let symbol = symbol.unwrap();
+        let (symbol, level) = symbol.unwrap();
         assert!(symbol.number_value().unwrap() == 1.into());
+        assert!(level == 1);
     }
 
     #[test]
@@ -259,8 +266,9 @@ mod test {
 
         let symbol = frame.look_up(0);
         assert!(!symbol.is_none());
-        let symbol = symbol.unwrap();
+        let (symbol, level) = symbol.unwrap();
         assert!(symbol.number_value().unwrap() == 2.into());
+        assert!(level == 0);
     }
 
     #[test]
@@ -327,7 +335,8 @@ mod test {
         frame.import(SafasCell::FrameReference(2, 2).into(), 3);
 
         // Symbol we added should now point at the current frame
-        let symbol = frame.look_up(0).unwrap();
+        let (symbol, level) = frame.look_up(0).unwrap();
         assert!(symbol.frame_reference() == Some((3, 0)));
+        assert!(level == 0);
     }
 }
