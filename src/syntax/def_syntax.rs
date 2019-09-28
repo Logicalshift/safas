@@ -443,4 +443,57 @@ mod test {
     fn evaluate_def_syntax() {
         eval("(def_syntax x ((lda #<x>) (d x)))").unwrap().0.to_string();
     }
+
+    #[test]
+    fn evaluate_macro() {
+        let val = eval(
+            "(def_syntax some_syntax ((lda #<x>) (x)))
+            (some_syntax (lda #3))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "3");
+    }
+
+    #[test]
+    fn choose_syntax_1() {
+        let val = eval(
+            "(def_syntax some_syntax ( (lda #<x>) ((list 1 x))   (lda <x>) ((list 2 x)) ))
+            (some_syntax (lda #3))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "(1 3)");
+    }
+
+    #[test]
+    fn choose_syntax_2() {
+        let val = eval(
+            "(def_syntax some_syntax ( (lda #<x>) ((list 1 x))   (lda <x>) ((list 2 x)) ))
+            (some_syntax (lda 3))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "(2 3)");
+    }
+
+    #[test]
+    fn read_external_binding() {
+        let val = eval(
+            "(def z 4)
+            (def_syntax some_syntax ((lda #<x>) ((list x z))))
+            (some_syntax (lda #3))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "(3 4)");
+    }
+
+    #[test]
+    fn external_bindings_are_hygenic() {
+        let val = eval(
+            "(def z 4)
+            (def_syntax some_syntax ((lda #<x>) ((list x z))))
+            (def z 5)
+            (some_syntax (lda #3))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "(3 4)");
+    }
 }
