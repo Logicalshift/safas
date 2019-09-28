@@ -495,7 +495,6 @@ mod test {
         assert!(val == "(3 4)");
     }
 
-
     #[test]
     fn read_external_binding_in_function() {
         let val = eval(
@@ -517,5 +516,15 @@ mod test {
             ).unwrap().0.to_string();
 
         assert!(val == "(3 4)");
+    }
+
+    #[test]
+    fn define_value_in_macro() {
+        let val = eval(
+            "(def_syntax some_syntax ((lda #<x>) ((def y x) y)))
+            (some_syntax (lda #3))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "3");
     }
 }
