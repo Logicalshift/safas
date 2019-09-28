@@ -397,6 +397,10 @@ impl BindingMonad for SyntaxClosure {
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Get the arguments for this symbol
         let args                    = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
+        let depth                   = bindings.depth.unwrap_or(0);
+
+        // If this comes from an exterior frame, we need to import the bound symbols and regenerate the syntax
+        if depth != 0 { unimplemented!("Need to rebind when importing from a deeper frame") }
 
         // Push an interior frame
         let mut interior_bindings   = bindings.push_interior_frame();
