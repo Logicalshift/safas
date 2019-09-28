@@ -9,8 +9,11 @@ use std::collections::{HashMap};
 ///
 #[derive(Clone)]
 pub struct SymbolBindings {
-    /// When binding on a macro or similar, the arguments that were supplied to the macro
+    /// When binding on a macro or other syntax item, the arguments that were supplied to the macro
     pub args: Option<CellRef>,
+
+    /// When binding a macro or other syntax item, the depth (number of frames) that the item was found at
+    pub depth: Option<usize>,
 
     /// The symbols in this binding
     pub symbols: HashMap<u64, CellRef>,
@@ -38,6 +41,7 @@ impl SymbolBindings {
     pub fn new() -> SymbolBindings {
         SymbolBindings {
             args:           None,
+            depth:          None,
             symbols:        HashMap::new(),
             export_symbols: smallvec![],
             import_symbols: smallvec![],
@@ -86,6 +90,7 @@ impl SymbolBindings {
     pub fn push_new_frame(self) -> SymbolBindings {
         SymbolBindings {
             args:           None,
+            depth:          None,
             symbols:        HashMap::new(),
             export_symbols: smallvec![],
             import_symbols: smallvec![],
@@ -101,6 +106,7 @@ impl SymbolBindings {
     pub fn push_interior_frame(self) -> SymbolBindings {
         SymbolBindings {
             args:           None,
+            depth:          None,
             symbols:        HashMap::new(),
             export_symbols: smallvec![],
             import_symbols: smallvec![],
