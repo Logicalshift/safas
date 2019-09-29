@@ -35,6 +35,12 @@ pub enum Action {
 
     /// Calls the current value
     Call,
+
+    /// Treats the current value as a monad, and calls the FlatMap function
+    FlatMap,
+
+    /// Treats the current value as a monad, and clals the Wrap function
+    Wrap
 }
 
 impl FrameMonad for SmallVec<[Action; 8]> {
@@ -122,6 +128,32 @@ impl FrameMonad for Vec<Action> {
                         },
                         _                           => return (frame, Err(RuntimeError::NotAFunction(Arc::clone(&result))))
                     }
+                }
+
+                FlatMap                     => {
+                    match &*result {
+                        // Result must be a monad
+                        SafasCell::Monad(value, monad_type) => {
+                            // Call the monad's flat_map function with this cell value
+                            let (new_frame, new_result) = monad_type.flat_map(value.clone(), frame);
+                            if let Ok(new_result) = new_result {
+                                frame                   = new_frame;
+                                result                  = new_result;
+                            } else {
+                                return (new_frame, new_result);
+                            }
+                        },
+
+                        _ => return (frame, Err(RuntimeError::NotAMonad(Arc::clone(&result))))
+                    }
+                },
+
+                Wrap => {
+                    let wrap            = WrapFlatMap(result);
+                    let wrap_flat_map   = SafasCell::FrameMonad(Box::new(wrap));
+                    let monad_type      = MonadType::new(wrap_flat_map.into());
+
+                    result              = SafasCell::Monad(SafasCell::Nil.into(), monad_type).into();
                 }
             }
         }

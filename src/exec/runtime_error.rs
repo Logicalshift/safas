@@ -29,6 +29,9 @@ pub enum RuntimeError {
     /// Value cannot be called as a function
     NotAFunction(CellRef),
 
+    /// Value cannot be treated as a monad
+    NotAMonad(CellRef),
+
     /// Not enough arguments were passed to a function
     TooManyArguments(CellRef),
 
