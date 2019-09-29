@@ -99,7 +99,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     
                     // Action and macro monads resolve their respective syntaxes
                     ActionMonad(syntax_compiler)        => {
-                        // If we're on a different syntax level, try rebinding the monad
+                        // If we're on a different syntax level, try rebinding the monad (the syntax might need to import symbols from an outer frame, for example)
                         let mut bindings = bindings;
 
                         if symbol_level != 0 {
@@ -108,7 +108,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
 
                             // If the compiler rebinds itself...
                             if let Some(rebound_monad) = rebound_monad {
-                                // Create a new syntax using the rebound binding monad
+                                // ... create a new syntax using the rebound binding monad
                                 let new_syntax = SyntaxCompiler {
                                     binding_monad:      rebound_monad,
                                     generate_actions:   Arc::clone(&syntax_compiler.generate_actions)
@@ -123,7 +123,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                                 return bind_list_statement(car, cdr, new_bindings);
                             }
 
-                            // Update the bindings
+                            // Update the bindings to apply the effects of the rebinding
                             bindings = new_bindings
                         }
 
@@ -174,6 +174,9 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
                 let (next_action, next_bindings) = bind_statement(Arc::clone(car), bindings)?;
                 actions.push(next_action);
 
+                // TODO: if next_bindings is a monad, we should generate a monad instead of a call here
+                // ... in fact, load_fn could be a monad ...
+
                 bindings    = next_bindings;
 
                 // cdr contains the next argument
@@ -197,6 +200,7 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
         }
     }
 
+    // If there was a 'hanging' CDR, then generate a result with the same format, otherwise generate a well-formed list
     if hanging_cdr {
         let cdr = actions.pop();
         Ok((SafasCell::list_with_cells_and_cdr(actions, cdr.unwrap()).into(), bindings))
