@@ -649,4 +649,14 @@ mod test {
 
         assert!(val == "3");
     }
+
+    #[test]
+    fn define_value_in_macro_list() {
+        let val = eval(
+            "(def_syntax some_syntax ((lda #<x>) ((def y x) y)))
+            (some_syntax (list (lda #3) (lda #4) (lda #5)))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "(3 4 5)");
+    }
 }
