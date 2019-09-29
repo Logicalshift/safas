@@ -452,6 +452,72 @@ impl BindingMonad for SyntaxClosure {
         let (bindings, _imports)    = interior_bindings.pop();
         (bindings, Ok(bound.into()))
     }
+
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) {
+        // Rebind all of the imported bindings, importing the frame reference and the action monads if there are any
+        let mut bindings                    = bindings;
+        let mut rebound_imported_bindings   = (*self.imported_bindings).clone();
+        let mut rebound                     = false;
+
+        for (_cell, binding) in rebound_imported_bindings.iter_mut() {
+            match &**binding {
+                // Frame references need to be imported into the current frame
+                SafasCell::FrameReference(outer_cell_id, bound_level) => {
+                    // Import this frame reference
+                    let local_cell_id   = bindings.alloc_cell();
+                    let outer_cell      = SafasCell::FrameReference(*outer_cell_id, *bound_level + frame_depth).into();
+                    bindings.import(outer_cell, local_cell_id);
+
+                    // Update the binding
+                    *binding            = SafasCell::FrameReference(local_cell_id, 0).into();
+                    rebound             = true;
+                }
+
+                // Action monads might need to be rebound to the current frame
+                SafasCell::ActionMonad(old_syntax) => {
+                    // Try to rebind the syntax
+                    let (new_bindings, new_syntax) = old_syntax.binding_monad.rebind_from_outer_frame(bindings, frame_depth);
+
+                    // Update the binding if the syntax update
+                    if let Some(new_syntax) = new_syntax {
+                        let new_syntax  = SyntaxCompiler { binding_monad: new_syntax, generate_actions: old_syntax.generate_actions.clone() };
+                        *binding        = SafasCell::ActionMonad(new_syntax).into();
+                        rebound         = true;
+                    }
+
+                    // Update the bindings from the result
+                    bindings = new_bindings;
+                }
+
+                // Other types are not affected by rebinding
+                _ => { }
+            }
+        }
+
+        // If no bindings were updated, just keep using the same syntax as before
+        if !rebound {
+            return (bindings, None);
+        }
+
+        // Regenerate the syntax symbols with the new imported bindings
+        let rebound_imported_bindings   = Arc::new(rebound_imported_bindings);
+        let new_syntax                  = self.syntax_symbols.iter()
+            .map(|(atom_id, symbol)| {
+                let patterns    = symbol.patterns.clone();
+                let new_symbol  = SyntaxSymbol {
+                    patterns:           patterns, 
+                    imported_bindings:  Arc::clone(&rebound_imported_bindings)
+                };
+
+                (AtomId(*atom_id), Arc::new(new_symbol))
+            })
+            .collect::<Vec<_>>();
+
+        // Create a new syntax closure with these symbols
+        let new_syntax_closure = SyntaxClosure::new(new_syntax, rebound_imported_bindings);
+
+        (bindings, Some(Box::new(new_syntax_closure)))
+    }
 }
 
 #[cfg(test)]
