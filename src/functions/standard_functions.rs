@@ -16,7 +16,7 @@ use std::result::{Result};
 pub fn define_function<Monad>(atom: &str, monad: Monad) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>
 where Monad: 'static+FrameMonad<Binding=RuntimeResult> {
     let monad = Box::new(monad);
-    let monad = SafasCell::Monad(monad);
+    let monad = SafasCell::FrameMonad(monad);
 
     define_symbol_value(AtomId::from(atom), monad)
 }

@@ -36,10 +36,10 @@ pub enum SafasCell {
     /// A reference to a value on the frame
     FrameReference(usize, u32),
 
-    /// A monad that transforms the state of the current frame (generally a lambda)
-    Monad(Box<dyn FrameMonad<Binding=RuntimeResult>>),
+    /// A monad that transforms the state of a frame (generally a lambda)
+    FrameMonad(Box<dyn FrameMonad<Binding=RuntimeResult>>),
 
-    /// An action expands directly to a set of interpreter actions
+    /// An action will transform the binding state of the compiler and generate a binding, and will compile that binding to a set of interpreter actions
     ActionMonad(SyntaxCompiler),
 
     /// An arbitrary Rust type
@@ -168,7 +168,7 @@ impl SafasCell {
             String(string_value)        => format!("\"{}\"", string_value),         // TODO: character quoting
             Char(chr_value)             => format!("'{}'", chr_value),              // TODO: character quoting,
             FrameReference(cell, frame) => format!("cell#({},{})", cell, frame),
-            Monad(monad)                => monad.description(),
+            FrameMonad(monad)           => monad.description(),
             ActionMonad(syntax)         => format!("compile#{}", syntax.binding_monad.description()),
             Any(val)                    => format!("any#{:p}", val),
             List(first, second)         => {

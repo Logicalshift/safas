@@ -143,7 +143,7 @@ impl BindingMonad for FunBinder {
             // Return the closure
             let closure         = Closure::new(actions, cell_imports, num_cells, num_args);
             let closure         = Box::new(closure);
-            let closure         = SafasCell::Monad(closure);
+            let closure         = SafasCell::FrameMonad(closure);
 
             // Closure needs to be called to create the actual function
             (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*CLOSURE_ATOM).into(), closure.into()])))
@@ -151,7 +151,7 @@ impl BindingMonad for FunBinder {
             // No imports, so return a straight lambda
             let lambda          = Lambda::new(actions, num_cells, num_args);
             let lambda          = Box::new(lambda);
-            let lambda          = SafasCell::Monad(lambda);
+            let lambda          = SafasCell::FrameMonad(lambda);
 
             // Lambda can just be executed directly
             (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*LAMBDA_ATOM).into(), lambda.into()])))

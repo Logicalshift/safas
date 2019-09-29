@@ -111,7 +111,7 @@ impl FrameMonad for Vec<Action> {
 
                 Call                        => { 
                     match &*result {
-                        SafasCell::Monad(action)    => { 
+                        SafasCell::FrameMonad(action)    => { 
                             let (new_frame, new_result) = action.resolve(frame);
                             if let Ok(new_result) = new_result {
                                 frame                   = new_frame;
