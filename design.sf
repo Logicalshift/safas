@@ -89,3 +89,17 @@
     (lda #10)
     (lda $1000)
 )
+
+;; Labels let us use values we haven't computed yet (. is shorthand for (label <name> ip))
+(assemble_6502
+    (jmp test)
+    (lda #10)
+    (. test)
+    (lda #20)
+    (jmp test)
+)
+
+(assemble_6502
+    (lda #some_const)
+    (label some_const 42)
+)
