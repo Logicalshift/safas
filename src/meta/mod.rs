@@ -11,6 +11,7 @@ mod atom;
 mod bitcode;
 mod list;
 mod varargs;
+mod monad_type;
 
 pub use self::cell::*;
 pub use self::cell_conversion::*;
@@ -20,3 +21,4 @@ pub use self::atom::*;
 pub use self::bitcode::*;
 pub use self::list::*;
 pub use self::varargs::*;
+pub use self::monad_type::*;
