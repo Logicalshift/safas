@@ -20,7 +20,7 @@ pub trait BindingMonad : Send+Sync {
     /// 
     /// Can return None if this monad is not changed by the rebinding.
     ///
-    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) { (bindings, None) }
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, _frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) { (bindings, None) }
 
     ///
     /// Resolves this monad
