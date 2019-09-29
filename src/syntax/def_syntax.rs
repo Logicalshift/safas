@@ -581,11 +581,35 @@ mod test {
     }
 
     #[test]
+    fn macro_in_macro() {
+        let val = eval(
+            "(def z 4)
+            (def_syntax some_syntax ((lda #<x>) ((list x z))))
+            (def_syntax other_syntax ((ld #<x>) ( (some_syntax (lda #x)) )))
+            (other_syntax (ld #3))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "(3 4)");
+    }
+
+    #[test]
     fn read_external_binding_in_function() {
         let val = eval(
             "(def z 4)
             (def_syntax some_syntax ((lda #<x>) ((list x z))))
             ((fun () (some_syntax (lda #3))))"
+            ).unwrap().0.to_string();
+
+        assert!(val == "(3 4)");
+    }
+
+    #[test]
+    fn macro_in_macro_in_function() {
+        let val = eval(
+            "(def z 4)
+            (def_syntax some_syntax ((lda #<x>) ((list x z))))
+            (def_syntax other_syntax ((ld #<x>) ( (some_syntax (lda #x)) )))
+            ((fun () (other_syntax (ld #3))))"
             ).unwrap().0.to_string();
 
         assert!(val == "(3 4)");
