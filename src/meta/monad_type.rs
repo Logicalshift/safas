@@ -20,3 +20,12 @@ pub struct MonadType {
 /// Reference to a monad type
 ///
 pub type MonadTypeRef = Arc<MonadType>;
+
+impl MonadType {
+    ///
+    /// Creates a string representation of this monad type
+    ///
+    pub fn to_string(&self) -> String {
+        format!("(flat_map: {}, wrap: {})", self.flat_map.to_string(), self.wrap.to_string())
+    }
+}

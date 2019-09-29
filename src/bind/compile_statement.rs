@@ -47,6 +47,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         String(_)                           |
         Char(_)                             |
         BitCode(_)                          |
+        Monad(_, _)                         |
         FrameMonad(_)                       => { compile_call(smallvec![Action::Value(car)], cdr) },
 
         // Lists evaluate to their usual value before calling

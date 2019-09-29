@@ -1,6 +1,7 @@
 use super::number::*;
 use super::atom::*;
 use super::bitcode::*;
+use super::monad_type::*;
 
 use crate::bind::*;
 use crate::exec::*;
@@ -39,6 +40,9 @@ pub enum SafasCell {
 
     /// A reference to a value on the frame
     FrameReference(usize, u32),
+
+    /// A monad with the specified type and type
+    Monad(CellRef, MonadType),
 
     /// A monad that transforms the state of a frame (generally a lambda)
     FrameMonad(Box<dyn FrameMonad<Binding=RuntimeResult>>),
@@ -173,6 +177,7 @@ impl SafasCell {
             String(string_value)        => format!("\"{}\"", string_value),         // TODO: character quoting
             Char(chr_value)             => format!("'{}'", chr_value),              // TODO: character quoting,
             FrameReference(cell, frame) => format!("cell#({},{})", cell, frame),
+            Monad(cell, monad)          => format!("monad#{}#{}", cell.to_string(), monad.to_string()),
             FrameMonad(monad)           => monad.description(),
             ActionMonad(syntax)         => format!("compile#{}", syntax.binding_monad.description()),
             Any(val)                    => format!("any#{:p}", val),
