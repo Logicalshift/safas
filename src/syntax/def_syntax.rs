@@ -278,7 +278,7 @@ impl BindingMonad for Arc<SyntaxSymbol> {
                 }
 
                 // Perform the substititions
-                let (bound, bindings) = substitute_cells(bindings, partially_bound, &move |cell_id| {
+                let (bound, bindings) = substitute_cells(bindings, &mut HashMap::new(), partially_bound, &move |cell_id| {
                     substitutions.get(&cell_id)
                         .or_else(|| self.imported_bindings.get(&cell_id))
                         .cloned()
@@ -298,16 +298,16 @@ impl BindingMonad for Arc<SyntaxSymbol> {
 /// Substitutes any FrameReferences in the partially bound statement for bound values, and rebinds any FrameReferences that are
 /// not currently bound
 ///
-fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: SymbolBindings, partially_bound: &CellRef, substitutions: &SubstituteFn) -> (CellRef, SymbolBindings) {
+fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: SymbolBindings, allocated_cells: &mut HashMap<usize, usize>, partially_bound: &CellRef, substitutions: &SubstituteFn) -> (CellRef, SymbolBindings) {
     // Bind the cells
-    let pos = partially_bound;
+    let pos                 = partially_bound;
 
     match &**pos {
         // Lists are bound recursively
         SafasCell::List(car, cdr) => {
             // TODO: would be more efficient to bind in a loop
-            let (car, bindings) = substitute_cells(bindings, car, substitutions);
-            let (cdr, bindings) = substitute_cells(bindings, cdr, substitutions);
+            let (car, bindings) = substitute_cells(bindings, allocated_cells, car, substitutions);
+            let (cdr, bindings) = substitute_cells(bindings, allocated_cells, cdr, substitutions);
 
             (SafasCell::List(car, cdr).into(), bindings)
         }
@@ -319,8 +319,21 @@ fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: Symbol
                 if let Some(actual_cell) = substitutions(*cell_id) {
                     (actual_cell, bindings)
                 } else {
-                    // TODO
-                    unimplemented!("Need to be able to bind unbound cells in macros")
+                    // Cells that aren't substituted are allocated on the current frame (they should be internal bindings introduced by calls like def)
+                    let mut bindings = bindings;
+
+                    let bound_cell_id = if let Some(bound_cell_id) = allocated_cells.get(cell_id) {
+                        // We've already bound this cell to a value on frame
+                        *bound_cell_id
+                    } else {
+                        // This cell needs to be allocated on the current frame
+                        let bound_cell_id = bindings.alloc_cell();
+                        allocated_cells.insert(*cell_id, bound_cell_id);
+                        bound_cell_id
+                    };
+
+                    // Return the bound cell
+                    (SafasCell::FrameReference(bound_cell_id, 0).into(), bindings)
                 }
             } else {
                 // Bound from a different frame
