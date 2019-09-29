@@ -337,8 +337,14 @@ fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: Symbol
 /// Represents a syntax closure, which binds syntax to the environment
 ///
 struct SyntaxClosure {
-    /// The syntax symbols to import into this closure
-    syntax_symbols: Vec<(u64, CellRef)>
+    /// The syntax symbols to import into this closure (as the cells they should be bound to)
+    syntax_cells: Vec<(u64, CellRef)>,
+
+    /// The syntax symbols to import into this closure (as the SyntaxSymbols they were derived from)
+    syntax_symbols: Vec<(u64, Arc<SyntaxSymbol>)>,
+
+    /// The imported bindings used for the current set of symbols
+    imported_bindings: Arc<HashMap<usize, CellRef>>
 }
 
 impl SyntaxClosure {
@@ -347,7 +353,8 @@ impl SyntaxClosure {
     ///
     pub fn new<SymbolList: IntoIterator<Item=(AtomId, Arc<SyntaxSymbol>)>>(syntax_symbols: SymbolList, imported_bindings: Arc<HashMap<usize, CellRef>>) -> SyntaxClosure {
         // Add the imported bindings into each syntax symbol to generate the syntax symbols list
-        let mut bound_symbols = vec![];
+        let mut bound_symbols   = vec![];
+        let mut all_symbols     = vec![];
 
         for (AtomId(symbol_id), symbol) in syntax_symbols.into_iter() {
             // Set the imported bindings for the symbol
@@ -356,14 +363,19 @@ impl SyntaxClosure {
             let symbol      = Arc::new(symbol);
 
             // Turn into an action monad that we can add to a binding environment
-            let symbol = SafasCell::ActionMonad(SyntaxSymbol::syntax(symbol)).into();
+            let symbol_cell = SafasCell::ActionMonad(SyntaxSymbol::syntax(symbol.clone())).into();
 
             // Push to the results
-            bound_symbols.push((symbol_id, symbol));
+            bound_symbols.push((symbol_id, symbol_cell));
+            all_symbols.push((symbol_id, symbol));
         }
 
         // Generate the closure
-        SyntaxClosure { syntax_symbols: bound_symbols }
+        SyntaxClosure {
+            syntax_cells:       bound_symbols, 
+            syntax_symbols:     all_symbols, 
+            imported_bindings:  imported_bindings
+        }
     }
 
     ///
@@ -409,7 +421,7 @@ impl BindingMonad for SyntaxClosure {
         let mut interior_bindings   = bindings.push_interior_frame();
 
         // Add the syntax symbols
-        for (atom_id, symbol) in self.syntax_symbols.iter() {
+        for (atom_id, symbol) in self.syntax_cells.iter() {
             interior_bindings.symbols.insert(*atom_id, symbol.clone());
         }
 
