@@ -33,6 +33,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                     Number(_)                       |
                     Atom(_)                         |
                     String(_)                       |
+                    BitCode(_)                      |
                     Char(_)                         |
                     List(_, _)                      |
                     FrameMonad(_)                   |
@@ -84,6 +85,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     Number(_)                           |
                     Atom(_)                             |
                     String(_)                           |
+                    BitCode(_)                          |
                     Char(_)                             |
                     FrameMonad(_)                       => { bind_call(symbol_value, cdr, bindings) },
 
