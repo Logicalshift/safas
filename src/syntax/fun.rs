@@ -4,6 +4,7 @@ use crate::exec::*;
 
 use smallvec::*;
 use std::convert::*;
+use std::sync::*;
 
 lazy_static! {
     static ref CLOSURE_ATOM: u64 = get_id_for_atom_with_name("CLOSURE");
@@ -42,7 +43,7 @@ pub fn fun_keyword() -> SyntaxCompiler {
 
     SyntaxCompiler {
         binding_monad:      Box::new(bind),
-        generate_actions:   Box::new(compile)
+        generate_actions:   Arc::new(compile)
     }
 }
 

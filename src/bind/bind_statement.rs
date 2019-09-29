@@ -2,6 +2,7 @@ use super::symbol_bindings::*;
 use super::bind_error::*;
 use super::binding_monad::*;
 use super::binding_monad_sugar::*;
+use super::syntax_compiler::*;
 
 use crate::meta::*;
 
@@ -94,6 +95,34 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     
                     // Action and macro monads resolve their respective syntaxes
                     ActionMonad(syntax_compiler)        => {
+                        // If we're on a different syntax level, try rebinding the monad
+                        let mut bindings = bindings;
+
+                        if symbol_level != 0 {
+                            // Try to rebind the syntax from an outer frame
+                            let (mut new_bindings, rebound_monad) = syntax_compiler.binding_monad.rebind_from_outer_frame(bindings, symbol_level);
+
+                            // If the compiler rebinds itself...
+                            if let Some(rebound_monad) = rebound_monad {
+                                // Create a new syntax using the rebound binding monad
+                                let new_syntax = SyntaxCompiler {
+                                    binding_monad:      rebound_monad,
+                                    generate_actions:   Arc::clone(&syntax_compiler.generate_actions)
+                                };
+
+                                // Add to the symbols in the current bindings so we don't need to rebind the syntax multiple times
+                                let new_syntax = ActionMonad(new_syntax).into();
+                                new_bindings.symbols.insert(*atom_id, new_syntax);
+                                new_bindings.export(*atom_id);
+
+                                // Re-evaluate this binding (as we insert the binding at the current level we won't rebind the next time through)
+                                return bind_list_statement(car, cdr, new_bindings);
+                            }
+
+                            // Update the bindings
+                            bindings = new_bindings
+                        }
+
                         let mut bindings        = bindings.push_interior_frame();
                         bindings.args           = Some(cdr);
                         bindings.depth          = Some(symbol_level);

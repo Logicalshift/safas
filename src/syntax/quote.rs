@@ -3,6 +3,7 @@ use crate::exec::*;
 use crate::meta::*;
 
 use smallvec::*;
+use std::sync::*;
 
 ///
 /// The monad for the 'quote' syntax (quote literal)
@@ -23,7 +24,7 @@ pub fn quote_keyword() -> SyntaxCompiler {
 
     SyntaxCompiler {
         binding_monad:      Box::new(bind),
-        generate_actions:   Box::new(compiler)
+        generate_actions:   Arc::new(compiler)
     }
 }
 

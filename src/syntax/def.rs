@@ -63,7 +63,7 @@ pub fn def_keyword() -> SyntaxCompiler {
 
     SyntaxCompiler {
         binding_monad:      Box::new(bind),
-        generate_actions:   Box::new(compiler)
+        generate_actions:   Arc::new(compiler)
     }
 }
 

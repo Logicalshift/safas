@@ -12,6 +12,17 @@ pub trait BindingMonad : Send+Sync {
     type Binding;
 
     ///
+    /// Rebinds this monad to bind at a particular frame depth
+    /// 
+    /// This is used when this binding is first used from an 'outer' frame and might need to import its symbols
+    /// to generate a closure (for example, a macro that depends on a value from an outer frame will need to
+    /// import that symbol to access it)
+    /// 
+    /// Can return None if this monad is not changed by the rebinding.
+    ///
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) { (bindings, None) }
+
+    ///
     /// Resolves this monad
     ///
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
@@ -61,6 +72,10 @@ impl<Binding: Send+Sync+Clone> BindingMonad for ReturnValue<Binding> {
 
 impl<Binding> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
     type Binding=Binding;
+
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) {
+        (**self).rebind_from_outer_frame(bindings, frame_depth)
+    }
 
     fn description(&self) -> String { (**self).description() }
 
