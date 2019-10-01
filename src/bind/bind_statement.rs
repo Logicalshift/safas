@@ -219,6 +219,8 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
 /// taking account of SAFAS's use of dynamic types instead of static ones)
 ///
 fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
+    // TODO: to make this fully work we need to make (fun () monad) itself a monad
+
     // The remainder of the function will need to be evaluated in a function
     let mut interior_frame  = bindings.push_new_frame();
 

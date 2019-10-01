@@ -104,6 +104,19 @@ impl SafasCell {
     }
 
     ///
+    /// Returns true if this cell is a monad
+    /// 
+    /// (A cell is a monad if it's directly a monad, or if it's a list beginning with a monad)
+    ///
+    pub fn is_monad(&self) -> bool {
+        match self {
+            SafasCell::Monad(_, _)  => true,
+            SafasCell::List(car, _) => car.is_monad(),
+            _                       => false
+        }
+    }
+
+    ///
     /// If this is an atom, returns the atom ID (or None if it is not)
     ///
     pub fn to_atom_id(&self) -> Option<u64> {
