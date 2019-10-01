@@ -3,8 +3,10 @@ use super::bind_error::*;
 use super::binding_monad::*;
 use super::binding_monad_sugar::*;
 use super::syntax_compiler::*;
+use super::compile_statement::*;
 
 use crate::meta::*;
+use crate::exec::*;
 
 use std::sync::*;
 use std::result::{Result};
@@ -207,6 +209,83 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
     } else {
         Ok((SafasCell::list_with_cells(actions).into(), bindings))
     }
+}
+
+///
+/// Given a partially bound function with a monad parameter, rewrites it as a flat_map binding
+/// 
+/// Say we are evaluating the call (foo x) where 'x' is a monad. This will map this to (flat_map (fun (x) (foo x)) x),
+/// returning a new monad as the result of the call. (This is equivalent to 'do' syntax in languages like Haskell but
+/// taking account of SAFAS's use of dynamic types instead of static ones)
+///
+fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
+    // The remainder of the function will need to be evaluated in a function
+    let mut interior_frame  = bindings.push_new_frame();
+
+    // The first parameter of the flat_map function is the value of the monad argument
+    let monad_value_cell    = interior_frame.alloc_cell();
+
+    // Next parameters are bound from the closure and are the arguments so far (including the function, if present)
+    let other_arguments     = args_so_far.iter().map(|_| interior_frame.alloc_cell()).collect::<Vec<_>>();
+
+    // Generate a partially-bound statement using these arguments (remaining_args are still unbound and go on the end)
+    let monad_fn            = SafasCell::List(SafasCell::FrameReference(monad_value_cell, 0).into(), remaining_args);
+    let mut monad_fn        = Arc::new(monad_fn);
+    for cell_id in other_arguments.iter().rev() {
+        monad_fn = SafasCell::List(SafasCell::FrameReference(*cell_id, 0).into(), monad_fn).into();
+    }
+
+    // Bind this function
+    // (Note: the args_so_far are all frame references here so they should bind to themselves, saving us some issues with rebinding)
+    let bound_monad_fn                      = bind_statement(monad_fn, interior_frame);
+    let (bound_monad_fn, interior_frame)    = match bound_monad_fn { Ok(fun) => fun, Err((err, interior_frame)) => return Err((err, interior_frame.pop().0)) };
+
+    // Compile to a closure (this generates the function passed to FlatMap later on)
+    let monad_flat_map                      = compile_statement(bound_monad_fn);
+    let monad_flat_map                      = match monad_flat_map { Ok(flat_map) => flat_map, Err(err) => return Err((err, interior_frame.pop().0)) };
+    let interior_frame_size                 = interior_frame.num_cells;
+
+    // Pop the interior frame and bring in any imports
+    let (bindings, imports)                 = interior_frame.pop();
+
+    // Add any imports to the list of arguments (all the arguments get imported into our closure)
+    let mut other_arguments                 = other_arguments;
+    let mut args_so_far                     = args_so_far;
+    let mut bindings                        = bindings;
+
+    for (symbol_value, import_into_cell_id) in imports.into_iter() {
+        match &*symbol_value {
+            SafasCell::FrameReference(_our_cell_id, 0) => {
+                // Cell from this frame
+                other_arguments.push(import_into_cell_id);
+                args_so_far.push(symbol_value);
+            },
+
+            SafasCell::FrameReference(their_cell_id, frame_count) => {
+                // Import from a parent frame
+                let our_cell_id = bindings.alloc_cell();
+                bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count).into(), our_cell_id);
+
+                other_arguments.push(import_into_cell_id);
+                args_so_far.push(SafasCell::FrameReference(our_cell_id, 0).into());
+            },
+
+            _ => panic!("Don't know how to import this type of symbol")
+        }
+    }
+
+
+    // Bind to a closure
+    let monad_flat_map                      = StackClosure::new(monad_flat_map, other_arguments, interior_frame_size, 1);
+
+    // Convert things to the final result
+    let args_so_far                         = SafasCell::list_with_cells(args_so_far);
+    let monad_flat_map                      = SafasCell::FrameMonad(Box::new(monad_flat_map)).into();
+
+    // Result is a list starting with the monad
+    let result                              = SafasCell::list_with_cells(vec![monad, args_so_far, monad_flat_map]).into();
+
+    Ok((result, bindings))
 }
 
 ///
