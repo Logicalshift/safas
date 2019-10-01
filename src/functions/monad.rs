@@ -33,4 +33,12 @@ mod test {
                 "(wrap 1)"
             ).unwrap().0.to_string();
     }
+
+    #[test]
+    fn fun_wrap() {
+        eval(
+                "(def y (fun (y) y))
+                (y (wrap 1))"
+            ).unwrap().0.to_string();
+    }
 }
