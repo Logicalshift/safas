@@ -69,7 +69,7 @@ impl FrameMonad for WrapFlatMap {
             let WrapFlatMap(value)  = self;
             let value               = value.clone();
             let mut frame           = frame;
-            frame.cells[0]          = value;
+            frame.cells[0]          = SafasCell::List(value, SafasCell::Nil.into()).into();
 
             // Result is the result of calling this function
             map_fn.resolve(frame)
