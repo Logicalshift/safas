@@ -60,6 +60,10 @@ pub struct WrapFlatMap(pub CellRef);
 impl FrameMonad for WrapFlatMap {
     type Binding = RuntimeResult;
 
+    fn description(&self) -> String {
+        format!("##wrap({})", self.0.to_string())
+    }
+
     fn resolve(&self, frame: Frame) -> (Frame, Self::Binding) {
         let args                    = ListTuple::<(CellRef, )>::try_from(frame.cells[0].clone());
         let args                    = match args { Ok(args) => args, Err(err) => return (frame, Err(err)) };
