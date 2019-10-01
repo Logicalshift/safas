@@ -22,3 +22,15 @@ pub fn wrap_monad() -> CellRef {
 
     SafasCell::Monad(SafasCell::Nil.into(), MonadType::new(wrap_monad)).into()
 }
+
+#[cfg(test)]
+mod test {
+    use crate::interactive::*;
+
+    #[test]
+    fn simple_wrap() {
+        eval(
+                "(wrap 1)"
+            ).unwrap().0.to_string();
+    }
+}
