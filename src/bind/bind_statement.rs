@@ -7,9 +7,14 @@ use super::compile_statement::*;
 
 use crate::meta::*;
 use crate::exec::*;
+use crate::syntax::*;
 
 use std::sync::*;
 use std::result::{Result};
+
+lazy_static! {
+    static ref WRAP_KEYWORD: CellRef = SafasCell::ActionMonad(wrap_keyword()).into();
+}
 
 ///
 /// Performs binding to generate the actions for a simple statement
@@ -244,6 +249,10 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
     for cell_id in other_arguments.iter().rev() {
         monad_fn = SafasCell::List(SafasCell::FrameReference(*cell_id, 0).into(), monad_fn).into();
     }
+
+    // The return value from the monad fn is wrapped to make it a monad too
+    let monad_fn            = SafasCell::List(monad_fn, SafasCell::Nil.into()).into();
+    let monad_fn            = SafasCell::List(WRAP_KEYWORD.clone(), monad_fn).into();
 
     // Bind this function
     // (Note: the args_so_far are all frame references here so they should bind to themselves, saving us some issues with rebinding)
