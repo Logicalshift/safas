@@ -182,7 +182,7 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
 
                 if next_action.is_monad() {
                     // Convert to a monad
-                    return bind_monad(actions, next_action, next_arg, next_bindings);
+                    return bind_monad(actions, next_action, Arc::clone(cdr), next_bindings);
                 }
 
                 actions.push(next_action);
