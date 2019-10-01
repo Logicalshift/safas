@@ -16,5 +16,9 @@ pub fn wrap_monad() -> CellRef {
     });
     let wrap_fn     = SafasCell::FrameMonad(Box::new(wrap_fn)).into();
 
-    SafasCell::Monad(SafasCell::Nil.into(), MonadType::new(wrap_fn)).into()
+    // Wrap the wrapping function in a monad
+    let wrap_monad  = WrapFlatMap(wrap_fn);
+    let wrap_monad  = SafasCell::FrameMonad(Box::new(wrap_monad)).into();
+
+    SafasCell::Monad(SafasCell::Nil.into(), MonadType::new(wrap_monad)).into()
 }

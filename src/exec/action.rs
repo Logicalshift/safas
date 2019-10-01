@@ -36,7 +36,7 @@ pub enum Action {
     /// Calls the current value
     Call,
 
-    /// Treats the current value as a monad, and calls the FlatMap function
+    /// Given a monad on the stack and a function as the current value, calls the monad's flat_map value
     FlatMap,
 
     /// Treats the current value as a monad, and clals the Wrap function
@@ -131,11 +131,17 @@ impl FrameMonad for Vec<Action> {
                 }
 
                 FlatMap                     => {
-                    match &*result {
-                        // Result must be a monad
+                    let monad = if let Some(monad) = frame.stack.pop() {
+                        monad
+                    } else {
+                        return (frame, Err(RuntimeError::StackIsEmpty));
+                    };
+
+                    match &*monad {
+                        // Result contains the map function
                         SafasCell::Monad(value, monad_type) => {
                             // Call the monad's flat_map function with this cell value
-                            let (new_frame, new_result) = monad_type.flat_map(value.clone(), frame);
+                            let (new_frame, new_result) = monad_type.flat_map(value.clone(), result, frame);
                             if let Ok(new_result) = new_result {
                                 frame                   = new_frame;
                                 result                  = new_result;

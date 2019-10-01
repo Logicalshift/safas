@@ -17,11 +17,6 @@ pub struct MonadType {
     flat_map: CellRef,
 }
 
-///
-/// Reference to a monad type
-///
-pub type MonadTypeRef = Arc<MonadType>;
-
 impl MonadType {
     ///
     /// Creates a new monad from a cell representing a flat_map function
@@ -42,11 +37,11 @@ impl MonadType {
     ///
     /// Performs the flat_map operation on a monad value
     ///
-    pub fn flat_map(&self, value: CellRef, frame: Frame) -> (Frame, RuntimeResult) {
+    pub fn flat_map(&self, value: CellRef, map_fn: CellRef, frame: Frame) -> (Frame, RuntimeResult) {
         match &*self.flat_map {
             SafasCell::FrameMonad(action) => {
                 let mut frame   = frame;
-                frame.cells[0]  = value;
+                frame.cells[0]  = SafasCell::List(value, map_fn).into();
                 action.resolve(frame)
             },
             _ => return (frame, Err(RuntimeError::NotAFunction(Arc::clone(&self.flat_map))))
@@ -65,12 +60,11 @@ impl FrameMonad for WrapFlatMap {
     }
 
     fn resolve(&self, frame: Frame) -> (Frame, Self::Binding) {
-        let args                    = ListTuple::<(CellRef, )>::try_from(frame.cells[0].clone());
+        let args                    = FlatMapArgs::try_from(frame.cells[0].clone());
         let args                    = match args { Ok(args) => args, Err(err) => return (frame, Err(err)) };
-        let ListTuple((map_fn, ))   = args;
 
         // Argument should be a frame monad
-        if let SafasCell::FrameMonad(map_fn) = &*map_fn {
+        if let SafasCell::FrameMonad(map_fn) = &*args.map_fn {
             // Store the value in cell 0
             let WrapFlatMap(value)  = self;
             let value               = value.clone();
@@ -81,7 +75,7 @@ impl FrameMonad for WrapFlatMap {
             map_fn.resolve(frame)
         } else {
             // Not a monad
-            return (frame, Err(RuntimeError::NotAFunction(map_fn)))
+            return (frame, Err(RuntimeError::NotAFunction(args.map_fn)))
         }
     }
 }

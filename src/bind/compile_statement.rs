@@ -5,6 +5,7 @@ use crate::exec::*;
 
 use smallvec::*;
 use std::sync::*;
+use std::convert::*;
 use std::result::{Result};
 
 ///
@@ -32,7 +33,7 @@ pub fn compile_statement(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindE
 }
 
 ///
-/// Binds a list statement, like `(cons 1 2)`
+/// Compiles a list statement, like `(cons 1 2)`
 ///
 fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
     use self::SafasCell::*;
@@ -48,10 +49,22 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         Char(_)                             |
         BitCode(_)                          |
         Monad(_, _)                         |
-        FrameMonad(_)                       => { compile_call(smallvec![Action::Value(car)], cdr) },
+        FrameMonad(_)                       => {
+            if car.is_monad() {
+                compile_monad_flat_map(smallvec![Action::Value(car)], cdr)
+            } else {
+                compile_call(smallvec![Action::Value(car)], cdr) 
+            }
+        },
 
         // Lists evaluate to their usual value before calling
-        List(_, _)                          => { let actions = compile_statement(car)?; compile_call(actions, cdr) }
+        List(_, _)                          => { 
+            if car.is_monad() {
+                let actions = compile_statement(car)?; compile_monad_flat_map(actions, cdr) 
+            } else {
+                let actions = compile_statement(car)?; compile_call(actions, cdr) 
+            }
+        }
 
         // Frame references load the value from the frame and call that
         FrameReference(_cell_num, _frame)   => { let actions = compile_statement(car)?; compile_call(actions, cdr) }
@@ -62,7 +75,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
 }
 
 ///
-/// Binds a call function, given the actions needed to load the function value
+/// Compiles a call function, given the actions needed to load the function value
 ///
 pub fn compile_call(load_fn: SmallVec<[Action; 8]>, args: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
     // Start by pushing the function value onto the stack (we'll pop it later on to call the function)
@@ -111,6 +124,44 @@ pub fn compile_call(load_fn: SmallVec<[Action; 8]>, args: CellRef) -> Result<Sma
     // Pop the function value and call it
     actions.push(Action::Pop);
     actions.push(Action::Call);
+
+    Ok(actions)
+}
+
+///
+/// Compiles a monad flat_map expression
+/// 
+/// load_monad specifies the actions required to load the monad into the current value
+/// 
+/// args specifies the arguments of the monad. There are two of these: the bindings to compile and push on to the stack,
+/// and the closure to resolve with these bindings.
+///
+pub fn compile_monad_flat_map(load_monad: SmallVec<[Action; 8]>, args: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
+    // Start by pushing the monad onto the stack
+    let mut actions = load_monad;
+    actions.push(Action::Push);
+
+    // Next push the closure arguments onto the stack. The first value in args should be a list of bindings
+    let ListTuple((values, closure)): ListTuple<(CellRef, CellRef)> = args.try_into()?;
+
+    let mut pos = &values;
+    while let SafasCell::List(car, cdr) = &**pos {
+        // Compile this value
+        actions.extend(compile_statement(car.clone())?);
+
+        // Push onto the stack
+        actions.push(Action::Push);
+
+        // Move to the next value in the list
+        pos = cdr;
+    }
+
+    // Generate the closure body by evaluating it
+    actions.push(Action::Value(closure));
+    actions.push(Action::Call);
+
+    // Call FlatMap to resolve the monad
+    actions.push(Action::FlatMap);
 
     Ok(actions)
 }

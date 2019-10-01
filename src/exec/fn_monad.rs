@@ -153,6 +153,36 @@ impl FnArgs for VarArgs {
     }
 }
 
+///
+/// Represents the arguments to a monad flat_map function
+///
+pub struct FlatMapArgs {
+    /// The value wrapped by the monad
+    pub monad_value:    CellRef,
+
+    /// The map function to apply to the value
+    pub map_fn:         CellRef
+}
+
+impl FnArgs for FlatMapArgs {
+    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
+        match &*frame.cells[0] {
+            SafasCell::List(car, cdr)   => Ok(FlatMapArgs { monad_value: car.clone(), map_fn: cdr.clone() }),
+            _                           => Err(RuntimeError::NotAMonad(frame.cells[0].clone()))
+        }
+    }
+}
+
+impl TryFrom<CellRef> for FlatMapArgs {
+    type Error=RuntimeError;
+    fn try_from(cell: CellRef) -> Result<Self, RuntimeError> { 
+        match &*cell {
+            SafasCell::List(car, cdr)   => Ok(FlatMapArgs { monad_value: car.clone(), map_fn: cdr.clone() }),
+            _                           => Err(RuntimeError::NotAMonad(cell))
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
