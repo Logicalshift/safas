@@ -3,6 +3,7 @@ use crate::exec::*;
 use crate::meta::*;
 
 use std::sync::*;
+use std::convert::*;
 
 ///
 /// Generates a syntax compiler for a (wrap value) statement
@@ -17,7 +18,11 @@ pub fn wrap_keyword() -> SyntaxCompiler {
     });
 
     let compile = |args: CellRef| {
-        let mut actions = compile_statement(args)?;
+        // Compile the statement as usual
+        let ListTuple((args, )) = args.try_into()?;
+        let mut actions         = compile_statement(args)?;
+
+        // Add a wrap action
         actions.push(Action::Wrap);
         Ok(actions)
     };
