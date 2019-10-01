@@ -29,16 +29,18 @@ mod test {
 
     #[test]
     fn simple_wrap() {
-        eval(
+        let val = eval(
                 "(wrap 1)"
-            ).unwrap().0.to_string();
+            ).unwrap().0;
+        assert!(val.is_monad());
     }
 
     #[test]
     fn fun_wrap() {
-        eval(
+        let val = eval(
                 "(def y (fun (y) y))
                 (y (wrap 1))"
-            ).unwrap().0.to_string();
+            ).unwrap().0;
+        assert!(val.is_monad());
     }
 }
