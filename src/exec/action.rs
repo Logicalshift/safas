@@ -50,10 +50,10 @@ impl FrameMonad for SmallVec<[Action; 8]> {
         format!("{:?}", self)
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
+    fn execute(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // We just convert to a normal vec and run the actions from there
         let actions = self.iter().cloned().collect::<Vec<_>>();
-        actions.resolve(frame)
+        actions.execute(frame)
     }
 }
 
@@ -64,7 +64,7 @@ impl FrameMonad for Vec<Action> {
         format!("{:?}", self)
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
+    fn execute(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // Initial state
         let mut frame   = frame;
         let mut result  = SafasCell::Nil.into();
@@ -118,7 +118,7 @@ impl FrameMonad for Vec<Action> {
                 Call                        => { 
                     match &*result {
                         SafasCell::FrameMonad(action)    => { 
-                            let (new_frame, new_result) = action.resolve(frame);
+                            let (new_frame, new_result) = action.execute(frame);
                             if let Ok(new_result) = new_result {
                                 frame                   = new_frame;
                                 result                  = new_result;

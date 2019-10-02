@@ -57,7 +57,7 @@ where   Fun:    Send+Sync+Fn(Args) -> CellRef,
         format!("##fn#{:p}##", &self)
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, Self::Binding) {
+    fn execute(&self, frame: Frame) -> (Frame, Self::Binding) {
         let args    = Args::args_from_frame(&frame);
         let args    = match args { Ok(args) => args, Err(err) => return (frame, Err(err)) };
         let result  = (self.action)(args);

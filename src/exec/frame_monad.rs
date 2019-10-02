@@ -8,8 +8,8 @@ use std::marker::{PhantomData};
 pub trait FrameMonad : Send+Sync {
     type Binding;
 
-    /// Resolves this monad against a frame
-    fn resolve(&self, frame: Frame) -> (Frame, Self::Binding);
+    /// Executes this monad against a frame
+    fn execute(&self, frame: Frame) -> (Frame, Self::Binding);
 
     /// Retrieves a description of this monad when we need to display it to the user
     fn description(&self) -> String { format!("<frame_monad#{:p}>", self) }
@@ -19,7 +19,7 @@ impl FrameMonad for () {
     type Binding = ();
 
     fn description(&self) -> String { "##nop##".to_string() }
-    fn resolve(&self, frame: Frame) -> (Frame, ()) { (frame, ()) }
+    fn execute(&self, frame: Frame) -> (Frame, ()) { (frame, ()) }
 }
 
 ///
@@ -32,7 +32,7 @@ struct ReturnValue<Binding: Clone> {
 impl<Binding: Clone+Send+Sync> FrameMonad for ReturnValue<Binding> {
     type Binding=Binding;
 
-    fn resolve(&self, frame: Frame) -> (Frame, Binding) {
+    fn execute(&self, frame: Frame) -> (Frame, Binding) {
         (frame, self.value.clone())
     }
 }
@@ -56,10 +56,10 @@ where   InputMonad:     FrameMonad,
         NextFn:         Send+Sync+Fn(InputMonad::Binding) -> OutputMonad {
     type Binding = OutputMonad::Binding;
 
-    fn resolve(&self, frame: Frame) -> (Frame, OutputMonad::Binding) {
-        let (frame, value)  = self.input.resolve(frame);
+    fn execute(&self, frame: Frame) -> (Frame, OutputMonad::Binding) {
+        let (frame, value)  = self.input.execute(frame);
         let next            = (self.next)(value);
-        next.resolve(frame)
+        next.execute(frame)
     }
 
     fn description(&self) -> String { format!("{} >>= <fn#{:p}>", self.input.description(), &self.next) }

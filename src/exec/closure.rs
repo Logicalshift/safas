@@ -54,7 +54,7 @@ impl<Action: 'static+FrameMonad<Binding=RuntimeResult>> FrameMonad for Closure<A
         format!("(closure ({}) {})", args, self.action.description())
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
+    fn execute(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // Read the cells from the current frame
         let cells   = self.import_cells.iter().map(|(src_idx, tgt_idx)| (*tgt_idx, Arc::clone(&frame.cells[*src_idx]))).collect();
 
@@ -117,7 +117,7 @@ impl<Action: 'static+FrameMonad<Binding=RuntimeResult>> FrameMonad for StackClos
         format!("(closure ({}) {})", args, self.action.description())
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, RuntimeResult) {
+    fn execute(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // Read the cells from the current frame
         let mut cells   = vec![];
         let mut frame   = frame;
@@ -157,7 +157,7 @@ impl<Action: FrameMonad> FrameMonad for ClosureBody<Action> {
         format!("(closure_body ({}) {})", self.cells.iter().map(|(_index, value)| value.to_string()).collect::<Vec<_>>().join(" "), self.action.description())
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, Action::Binding) {
+    fn execute(&self, frame: Frame) -> (Frame, Action::Binding) {
         let mut frame = frame;
 
         // Store the values of the cells
@@ -166,6 +166,6 @@ impl<Action: FrameMonad> FrameMonad for ClosureBody<Action> {
         }
 
         // Resolve the action
-        self.action.resolve(frame)
+        self.action.execute(frame)
     }
 }

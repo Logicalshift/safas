@@ -43,7 +43,7 @@ impl<Action: FrameMonad> FrameMonad for Lambda<Action> {
         format!("(fun ({}) {})", args, self.action.description())
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, Action::Binding) {
+    fn execute(&self, frame: Frame) -> (Frame, Action::Binding) {
         // Args in cell 0 from the calling frame
         let mut args        = Arc::clone(&frame.cells[0]);
 
@@ -75,7 +75,7 @@ impl<Action: FrameMonad> FrameMonad for Lambda<Action> {
         }
 
         // Resolve the action (actually calling the function)
-        let (frame, result) = self.action.resolve(frame);
+        let (frame, result) = self.action.execute(frame);
 
         // Pop the frame we pushed for the action
         let frame = frame.pop().expect("Calling frame");

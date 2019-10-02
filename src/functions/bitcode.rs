@@ -29,7 +29,7 @@ where BitCodeFn: Send+Sync+Fn(Vec<SafasNumber>) -> Vec<BitCode> {
         format!("##bitcode#{:p}##", &self)
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, Self::Binding) {
+    fn execute(&self, frame: Frame) -> (Frame, Self::Binding) {
         // Arguments are the argument list and the statements
         let args = frame.cells[0].to_vec();
         let args = match args { Some(args) => args, None => vec![] };

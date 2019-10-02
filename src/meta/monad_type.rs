@@ -1,5 +1,4 @@
 use super::cell::*;
-use super::cell_conversion::*;
 
 use crate::exec::*;
 
@@ -42,7 +41,7 @@ impl MonadType {
             SafasCell::FrameMonad(action) => {
                 let mut frame   = frame;
                 frame.cells[0]  = SafasCell::List(value, map_fn).into();
-                action.resolve(frame)
+                action.execute(frame)
             },
             _ => return (frame, Err(RuntimeError::NotAFunction(Arc::clone(&self.flat_map))))
         }
@@ -59,7 +58,7 @@ impl FrameMonad for WrapFlatMap {
         format!("##wrap({})", self.0.to_string())
     }
 
-    fn resolve(&self, frame: Frame) -> (Frame, Self::Binding) {
+    fn execute(&self, frame: Frame) -> (Frame, Self::Binding) {
         let args                    = FlatMapArgs::try_from(frame.cells[0].clone());
         let args                    = match args { Ok(args) => args, Err(err) => return (frame, Err(err)) };
 
@@ -72,7 +71,7 @@ impl FrameMonad for WrapFlatMap {
             frame.cells[0]          = SafasCell::List(value, SafasCell::Nil.into()).into();
 
             // Result is the result of calling this function
-            map_fn.resolve(frame)
+            map_fn.execute(frame)
         } else {
             // Not a monad
             return (frame, Err(RuntimeError::NotAFunction(args.map_fn)))

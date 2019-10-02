@@ -23,8 +23,8 @@ pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
     let (bindings, actions)     = syntax.resolve(bindings);
     let (bindings, fn_actions)  = functions.resolve(bindings);
     frame.allocate_for_bindings(&bindings);
-    let (frame, _)              = actions.unwrap().resolve(frame);
-    let (frame, _)              = fn_actions.unwrap().resolve(frame);
+    let (frame, _)              = actions.unwrap().execute(frame);
+    let (frame, _)              = fn_actions.unwrap().execute(frame);
 
     let mut frame               = frame;
     let mut bindings            = bindings;
@@ -44,7 +44,7 @@ pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
 
         // Evaluate the monad
         frame.allocate_for_bindings(&bindings);
-        let expr_result = monad.resolve(frame);
+        let expr_result = monad.execute(frame);
         match expr_result {
             (new_frame, Ok(expr_result))    => { frame = new_frame; result = expr_result; }
             (_new_frame, Err(error))        => { return Err(error); }
@@ -74,8 +74,8 @@ pub fn run_interactive() {
     let (bindings, actions)     = syntax.resolve(bindings);
     let (bindings, fn_actions)  = functions.resolve(bindings);
     frame.allocate_for_bindings(&bindings);
-    let (frame, _)              = actions.unwrap().resolve(frame);
-    let (frame, _)              = fn_actions.unwrap().resolve(frame);
+    let (frame, _)              = actions.unwrap().execute(frame);
+    let (frame, _)              = fn_actions.unwrap().execute(frame);
 
     let mut frame               = frame;
     let mut bindings            = bindings;
@@ -123,7 +123,7 @@ pub fn run_interactive() {
 
             // Evaluate the monad
             frame.allocate_for_bindings(&bindings);
-            let result      = monad.resolve(frame);
+            let result      = monad.execute(frame);
             match result {
                 (new_frame, Ok(result)) => { frame = new_frame; println!("{}", result.to_string()); }
                 (new_frame, Err(error)) => { frame = new_frame; println!("!! Error: {:?}", error); }    
