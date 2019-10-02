@@ -78,7 +78,7 @@ impl Action {
                 }
 
                 (action1, action2, Some(Action::CellValue(cell_id)), Some(Action::Push)) => {
-                    // CellValue, Push => PushValue
+                    // CellValue, Push => PushCell
                     window = (None, action1, action2, Some(Action::PushCell(cell_id)));
                 }
 
