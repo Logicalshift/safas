@@ -47,7 +47,7 @@ pub fn standard_functions() -> impl BindingMonad<Binding=Result<SmallVec<[Action
     let functions   = flat_map_binding_actions(move || define_function("sbits",     sbits_fn()), functions);
 
     // Monad functions
-    let functions   = flat_map_binding_actions(move || define_symbol_value("wrap",  wrap_monad()), functions);
+    let functions   = flat_map_binding_actions(move || define_function("wrap",      wrap_fn()), functions);
 
     functions
 }

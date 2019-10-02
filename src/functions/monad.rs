@@ -3,11 +3,8 @@ use crate::meta::*;
 
 ///
 /// `(wrap x)` -> monad wrapping x
-/// 
-/// `wrap` is itself a monad, returning a function that returns a monad that wraps its value (this property makes
-/// its return value a monad to the binder)
 ///
-pub fn wrap_monad() -> CellRef {
+pub fn wrap_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     // Our monad just returns this wrapping function
     let wrap_fn     = FnMonad::from(|(val, ): (CellRef, )| {
         let wrap_monad  = WrapFlatMap(val.clone());
@@ -17,7 +14,6 @@ pub fn wrap_monad() -> CellRef {
         wrap_monad
     });
     let wrap_fn     = ReturnsMonad(wrap_fn);
-    let wrap_fn     = SafasCell::FrameMonad(Box::new(wrap_fn)).into();
 
     wrap_fn
 }
