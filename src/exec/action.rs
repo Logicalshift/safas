@@ -36,6 +36,9 @@ pub enum Action {
     /// Calls the current value
     Call,
 
+    /// Pops a number of values from the stack as a list, stores them in cell 0, then pops a further value and calls it
+    PopCall(usize),
+
     /// Given a monad on the stack and a function as the current value, calls the monad's flat_map value
     FlatMap,
 
@@ -116,6 +119,43 @@ impl FrameMonad for Vec<Action> {
                 }
 
                 Call                        => { 
+                    match &*result {
+                        SafasCell::FrameMonad(action)    => { 
+                            let (new_frame, new_result) = action.execute(frame);
+                            if let Ok(new_result) = new_result {
+                                frame                   = new_frame;
+                                result                  = new_result;
+                            } else {
+                                return (new_frame, new_result);
+                            }
+                        },
+                        _                           => return (frame, Err(RuntimeError::NotAFunction(Arc::clone(&result))))
+                    }
+                }
+
+                PopCall(num_cells)          => {
+                    // Pop cells
+                    result = SafasCell::Nil.into();
+                    for _ in 0..*num_cells {
+                        let val = if let Some(val) = frame.stack.pop() {
+                            val
+                        } else {
+                            return (frame, Err(RuntimeError::StackIsEmpty));
+                        };
+                        result = SafasCell::List(val, result).into();
+                    }
+
+                    // Store in frame 0
+                    frame.cells[0] = result;
+
+                    // Pop a function
+                    result = if let Some(function) = frame.stack.pop() {
+                        function
+                    } else {
+                        return (frame, Err(RuntimeError::StackIsEmpty));
+                    };
+
+                    // Call it
                     match &*result {
                         SafasCell::FrameMonad(action)    => { 
                             let (new_frame, new_result) = action.execute(frame);

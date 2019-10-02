@@ -118,12 +118,19 @@ pub fn compile_call(load_fn: SmallVec<[Action; 8]>, args: CellRef) -> Result<Sma
         }
     }
 
-    // Store the arg values into cell 0 (used by call)
-    actions.push(Action::StoreCell(0));
+    if let Some(Action::PopList(arg_count)) = actions.last() {
+        // For basic list calls, we can use PopCall here instead of 'PopList, Store, Call'
+        let arg_count = *arg_count;
+        actions.pop();
+        actions.push(Action::PopCall(arg_count));
+    } else {
+        // Store the arg values into cell 0 (used by call)
+        actions.push(Action::StoreCell(0));
 
-    // Pop the function value and call it
-    actions.push(Action::Pop);
-    actions.push(Action::Call);
+        // Pop the function value and call it
+        actions.push(Action::Pop);
+        actions.push(Action::Call);
+    }
 
     Ok(actions)
 }
