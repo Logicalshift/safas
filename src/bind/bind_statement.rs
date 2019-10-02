@@ -230,6 +230,10 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
 /// Say we are evaluating the call (foo x) where 'x' is a monad. This will map this to (flat_map (fun (x) (foo x)) x),
 /// returning a new monad as the result of the call. (This is equivalent to 'do' syntax in languages like Haskell but
 /// taking account of SAFAS's use of dynamic types instead of static ones)
+/// 
+/// That is, we can use the monad's `flat_map` function to get the value wrapped in it, so we rewrite the function call
+/// such that it occurs inside the `flat_map` call. The function is assumed not to return a monad itself in this case,
+/// so the return value will be wrapped into a nil monad (which will get processed by the parent flat_map function)
 ///
 fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
     // TODO: to make this fully work we need to make (fun () monad) itself a monad
