@@ -108,7 +108,6 @@ mod test {
         assert!(val == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
 
-    /*
     #[test]
     fn def_monad() {
         // (def foo (wrap 1)) should produce a value that works like (wrap 1) (ie, which we see as a monad)
@@ -120,6 +119,7 @@ mod test {
         assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
 
+    /*
     #[test]
     fn fun_monad() {
         // Calling a function that returns a monad should act like a monad in context
