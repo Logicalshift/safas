@@ -293,6 +293,8 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
         }
     }
 
+    // Arguments are loaded in reverse order from the stack, so we need to reverse their order
+    other_arguments.reverse();
 
     // Bind to a closure
     let monad_flat_map                      = StackClosure::new(monad_flat_map, other_arguments, interior_frame_size, 1);
