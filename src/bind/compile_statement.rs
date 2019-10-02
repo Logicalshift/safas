@@ -14,7 +14,7 @@ use std::result::{Result};
 pub fn compile_statement(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
     use self::SafasCell::*;
 
-    match &*source {
+    let actions = match &*source {
         // Lists are processed according to their first value
         List(car, cdr)  => { compile_list_statement(Arc::clone(car), Arc::clone(cdr)) }
 
@@ -29,7 +29,9 @@ pub fn compile_statement(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindE
 
         // Normal values just get loaded into cell 0
         _other          => { Ok(smallvec![Action::Value(Arc::clone(&source))]) }
-    }
+    };
+
+    Ok(Action::peephole_optimise(actions?))
 }
 
 ///
