@@ -250,14 +250,28 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
         monad_fn = SafasCell::List(SafasCell::FrameReference(*cell_id, 0).into(), monad_fn).into();
     }
 
-    // The return value from the monad fn is wrapped to make it a monad too
-    let monad_fn            = SafasCell::List(monad_fn, SafasCell::Nil.into()).into();
-    let monad_fn            = SafasCell::List(WRAP_KEYWORD.clone(), monad_fn).into();
-
     // Bind this function
     // (Note: the args_so_far are all frame references here so they should bind to themselves, saving us some issues with rebinding)
     let bound_monad_fn                      = bind_statement(monad_fn, interior_frame);
     let (bound_monad_fn, interior_frame)    = match bound_monad_fn { Ok(fun) => fun, Err((err, interior_frame)) => return Err((err, interior_frame.pop().0)) };
+
+    // If the result is not bound to a monad expression, we need to wrap the result
+    let is_inner                            = if let SafasCell::List(car, _cdr) = &*bound_monad_fn {
+        // Monads are bound to lists starting with a monad
+        !car.is_monad()
+    } else {
+        // Not a monad
+        true
+    };
+
+    let bound_monad_fn                      = if is_inner {
+        // The inner result of a monadic expression needs to be wrapped so the return value is itself a monad (note we don't bind the bound monad fn itself here)
+        let bound_monad_fn                  = SafasCell::List(bound_monad_fn, SafasCell::Nil.into()).into();
+        let bound_monad_fn                  = SafasCell::List(WRAP_KEYWORD.clone(), bound_monad_fn).into();
+        bound_monad_fn
+    } else {
+        bound_monad_fn
+    };
 
     // Compile to a closure (this generates the function passed to FlatMap later on)
     let monad_flat_map                      = compile_statement(bound_monad_fn);
