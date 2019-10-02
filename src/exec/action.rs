@@ -27,6 +27,12 @@ pub enum Action {
     /// Pops a value from the stack
     Pop,
 
+    /// Pushes a value onto the stack (and sets it as the current result)
+    PushValue(CellRef),
+
+    /// Pushes the content of a cell onto the stack (and sets it as the current result)
+    PushCell(usize),
+
     /// Pops a number of values from the stack and turns them into a list
     PopList(usize),
 
@@ -77,10 +83,12 @@ impl FrameMonad for Vec<Action> {
             use self::Action::*;
 
             match action {
-                Value(cell)                 => { result = Arc::clone(&cell); },
-                CellValue(pos)              => { result = Arc::clone(&frame.cells[*pos]); },
-                StoreCell(cell)             => { frame.cells[*cell] = Arc::clone(&result); },
                 Push                        => { frame.stack.push(Arc::clone(&result)); },
+                Value(cell)                 => { result = Arc::clone(&cell); },
+                PushValue(cell)             => { result = Arc::clone(&cell); frame.stack.push(Arc::clone(&result)); }
+                CellValue(pos)              => { result = Arc::clone(&frame.cells[*pos]); },
+                PushCell(pos)               => { result = Arc::clone(&frame.cells[*pos]); frame.stack.push(Arc::clone(&result)); }
+                StoreCell(cell)             => { frame.cells[*cell] = Arc::clone(&result); },
                 Pop                         => { 
                     if let Some(value) = frame.stack.pop() {
                         result = value;
