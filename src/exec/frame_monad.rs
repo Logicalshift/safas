@@ -13,6 +13,9 @@ pub trait FrameMonad : Send+Sync {
 
     /// Retrieves a description of this monad when we need to display it to the user
     fn description(&self) -> String { format!("<frame_monad#{:p}>", self) }
+
+    /// True if the return value of this function should be treated as a monad by the binder
+    fn returns_monad(&self) -> bool { false }
 }
 
 impl FrameMonad for () {
