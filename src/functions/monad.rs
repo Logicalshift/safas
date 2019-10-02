@@ -9,14 +9,17 @@ use crate::meta::*;
 ///
 pub fn wrap_monad() -> CellRef {
     // Our monad just returns this wrapping function
-    let wrap_fn     = FnMonad::from(|(val, ): (CellRef, )| { val });
+    let wrap_fn     = FnMonad::from(|(val, ): (CellRef, )| {
+        let wrap_monad  = WrapFlatMap(val.clone());
+        let wrap_monad  = SafasCell::FrameMonad(Box::new(wrap_monad)).into();
+        let wrap_monad  = SafasCell::Monad(val, MonadType::new(wrap_monad)).into();
+
+        wrap_monad
+    });
+    let wrap_fn     = ReturnsMonad(wrap_fn);
     let wrap_fn     = SafasCell::FrameMonad(Box::new(wrap_fn)).into();
 
-    // Wrap the wrapping function in a monad
-    let wrap_monad  = WrapFlatMap(wrap_fn);
-    let wrap_monad  = SafasCell::FrameMonad(Box::new(wrap_monad)).into();
-
-    SafasCell::Monad(SafasCell::Nil.into(), MonadType::new(wrap_monad)).into()
+    wrap_fn
 }
 
 #[cfg(test)]
