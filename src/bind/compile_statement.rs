@@ -12,9 +12,21 @@ use std::result::{Result};
 /// Compiles a statement once it has been bound by bind_statement
 ///
 pub fn compile_statement(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
+    let actions = compile_statement_quick(source)?;
+
+    Ok(Action::peephole_optimise(actions))
+}
+
+///
+/// Compiles a statement once it has been bound by bind_statement (without perfoming optimisation on the result)
+/// 
+/// Calling the _quick variant is faster when building sequences of actions, as the peephole optimiser only
+/// needs to be run once all the actions are together
+///
+pub fn compile_statement_quick(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
     use self::SafasCell::*;
 
-    let actions = match &*source {
+    match &*source {
         // Lists are processed according to their first value
         List(car, cdr)  => { compile_list_statement(Arc::clone(car), Arc::clone(cdr)) }
 
@@ -29,9 +41,7 @@ pub fn compile_statement(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindE
 
         // Normal values just get loaded into cell 0
         _other          => { Ok(smallvec![Action::Value(Arc::clone(&source))]) }
-    };
-
-    Ok(Action::peephole_optimise(actions?))
+    }
 }
 
 ///
@@ -62,14 +72,14 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         // Lists evaluate to their usual value before calling
         List(_, _)                          => { 
             if car.is_monad() {
-                let actions = compile_statement(car)?; compile_monad_flat_map(actions, cdr) 
+                let actions = compile_statement_quick(car)?; compile_monad_flat_map(actions, cdr) 
             } else {
-                let actions = compile_statement(car)?; compile_call(actions, cdr) 
+                let actions = compile_statement_quick(car)?; compile_call(actions, cdr) 
             }
         }
 
         // Frame references load the value from the frame and call that
-        FrameReference(_cell_num, _frame)   => { let actions = compile_statement(car)?; compile_call(actions, cdr) }
+        FrameReference(_cell_num, _frame)   => { let actions = compile_statement_quick(car)?; compile_call(actions, cdr) }
         
         // Action and macro monads resolve their respective syntaxes
         ActionMonad(syntax_compiler)        => (syntax_compiler.generate_actions)(cdr),
@@ -92,7 +102,7 @@ pub fn compile_call(load_fn: SmallVec<[Action; 8]>, args: CellRef) -> Result<Sma
         match &*next_arg {
             SafasCell::List(car, cdr) => {
                 // Evaluate car and push it onto the stack
-                let next_action = compile_statement(Arc::clone(car))?;
+                let next_action = compile_statement_quick(Arc::clone(car))?;
                 actions.extend(next_action);
                 actions.push(Action::Push);
 
@@ -109,7 +119,7 @@ pub fn compile_call(load_fn: SmallVec<[Action; 8]>, args: CellRef) -> Result<Sma
 
             _other => {
                 // Incomplete list: evaluate the CDR value
-                let next_action = compile_statement(next_arg)?;
+                let next_action = compile_statement_quick(next_arg)?;
                 actions.extend(next_action);
                 actions.push(Action::Push);
 
@@ -156,7 +166,7 @@ pub fn compile_monad_flat_map(load_monad: SmallVec<[Action; 8]>, args: CellRef) 
     let mut pos = &values;
     while let SafasCell::List(car, cdr) = &**pos {
         // Compile this value
-        actions.extend(compile_statement(car.clone())?);
+        actions.extend(compile_statement_quick(car.clone())?);
 
         // Push onto the stack
         actions.push(Action::Push);
