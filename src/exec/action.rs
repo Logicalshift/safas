@@ -61,35 +61,39 @@ impl Action {
         let mut actions = actions.into_iter().fuse();
 
         // The window represents the instructions we're inspecting
-        let mut window = (None, None, actions.next());
+        let mut window = (None, None, None, actions.next());
         let mut result = vec![];
         
         // Actions are read in from the right of the window, and are 
         loop {
             // Stop once there are no more actions to process
-            if let (None, None, None) = window {
+            if let (None, None, None, None) = window {
                 break;
             }
 
             match window {
-                (action1, Some(Action::Value(val)), Some(Action::Push)) => {
+                (action1, action2, Some(Action::Value(val)), Some(Action::Push)) => {
                     // Value, Push => PushValue
-                    window = (None, action1, Some(Action::PushValue(val)));
+                    window = (None, action1, action2, Some(Action::PushValue(val)));
                 }
 
-                (action1, Some(Action::CellValue(cell_id)), Some(Action::Push)) => {
+                (action1, action2, Some(Action::CellValue(cell_id)), Some(Action::Push)) => {
                     // CellValue, Push => PushValue
-                    window = (None, action1, Some(Action::PushCell(cell_id)));
+                    window = (None, action1, action2, Some(Action::PushCell(cell_id)));
                 }
 
-                (action1, action2, action3) => {
+                (Some(Action::PopList(arg_count)), Some(Action::StoreCell(0)), Some(Action::Pop), Some(Action::Call)) => {
+                    window = (None, None, None, Some(Action::PopCall(arg_count)));
+                }
+
+                (action1, action2, action3, action4) => {
                     // Actions leaving the window are added to the result
                     if let Some(action) = action1 { 
                         result.push(action)
                     }
 
                     // Update the window
-                    window = (action2, action3, actions.next());
+                    window = (action2, action3, action4, actions.next());
                 }
             }
         }
