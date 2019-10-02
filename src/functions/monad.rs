@@ -38,4 +38,31 @@ mod test {
             ).unwrap().0;
         assert!(val.is_monad());
     }
+
+    #[test]
+    fn list_wrap_1() {
+        let val = eval(
+                "(def y (fun (a b) (list a b) ))
+                (y (wrap 1) 2)"
+            ).unwrap().0;
+        assert!(val.is_monad());
+    }
+
+    #[test]
+    fn list_wrap_2() {
+        let val = eval(
+                "(def y (fun (a b) (list a b) ))
+                (y 1 (wrap 2))"
+            ).unwrap().0;
+        assert!(val.is_monad());
+    }
+
+    #[test]
+    fn list_wrap_3() {
+        let val = eval(
+                "(def y (fun (a b) (list a b) ))
+                (y (wrap 1) (wrap 2))"
+            ).unwrap().0;
+        assert!(val.is_monad());
+    }
 }
