@@ -65,4 +65,13 @@ mod test {
             ).unwrap().0;
         assert!(val.is_monad());
     }
+
+    #[test]
+    fn list_wrap_4() {
+        let val = eval(
+                "(def y (fun (a b c) (list a b c) ))
+                (y (wrap 1) (wrap 2) (wrap 3))"
+            ).unwrap().0;
+        assert!(val.is_monad());
+    }
 }
