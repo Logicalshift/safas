@@ -6,6 +6,7 @@ use crate::meta::*;
 
 use smallvec::*;
 use std::sync::*;
+use std::iter::{FromIterator};
 
 ///
 /// An action that can be run against a frame
@@ -50,6 +51,52 @@ pub enum Action {
 
     /// Treats the current value as a monad, and clals the Wrap function
     Wrap
+}
+
+impl Action {
+    ///
+    /// Performs simple peephole optimisation on a series of actions, combining operations that are easy to combine
+    ///
+    pub fn peephole_optimise<ActionIter: IntoIterator<Item=Action>, Target: FromIterator<Action>>(actions: ActionIter) -> Target {
+        let mut actions = actions.into_iter().fuse();
+
+        // The window represents the instructions we're inspecting
+        let mut window = (None, None, actions.next());
+        let mut result = vec![];
+        
+        // Actions are read in from the right of the window, and are 
+        loop {
+            // Stop once there are no more actions to process
+            if let (None, None, None) = window {
+                break;
+            }
+
+            match window {
+                (action1, Some(Action::Value(val)), Some(Action::Push)) => {
+                    // Value, Push => PushValue
+                    window = (None, action1, Some(Action::PushValue(val)));
+                }
+
+                (action1, Some(Action::CellValue(cell_id)), Some(Action::Push)) => {
+                    // CellValue, Push => PushValue
+                    window = (None, action1, Some(Action::PushCell(cell_id)));
+                }
+
+                (action1, action2, action3) => {
+                    // Actions leaving the window are added to the result
+                    if let Some(action) = action1 { 
+                        result.push(action)
+                    }
+
+                    // Update the window
+                    window = (action2, action3, actions.next());
+                }
+            }
+        }
+
+        // Convert the result back into a series of actions
+        result.into_iter().collect()
+    }
 }
 
 impl FrameMonad for SmallVec<[Action; 8]> {
