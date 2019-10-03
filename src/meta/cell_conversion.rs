@@ -112,15 +112,15 @@ impl From<u64> for AtomId {
 ///
 /// Represents a frame reference, used for conversions
 ///
-pub struct FrameReference(pub usize, pub u32);
+pub struct FrameReference(pub usize, pub u32, pub ReferenceType);
 
 impl TryFrom<CellRef> for FrameReference {
     type Error=RuntimeError;
 
     fn try_from(cell: CellRef) -> Result<FrameReference, RuntimeError> {
         match &*cell {
-            SafasCell::FrameReference(cell, frame)  => Ok(FrameReference(*cell, *frame)),
-            _                                       => Err(RuntimeError::BindingError(BindError::SyntaxExpectingAtom))
+            SafasCell::FrameReference(cell, frame, cell_type)   => Ok(FrameReference(*cell, *frame, *cell_type)),
+            _                                                   => Err(RuntimeError::BindingError(BindError::SyntaxExpectingAtom))
         }
     }
 }

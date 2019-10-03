@@ -12,6 +12,18 @@ use std::fmt::{Debug, Formatter};
 use std::any::*;
 
 ///
+/// The type of value stored in a frame reference
+///
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ReferenceType {
+    /// Normal value
+    Value,
+
+    /// Value that should be treated as a monad
+    Monad
+}
+
+///
 /// A SAFAS cell represents a single value: for example 'D' or '24'
 /// 
 /// The most complicated of these structures is the list, which just joins two cells
@@ -39,7 +51,7 @@ pub enum SafasCell {
     List(CellRef, CellRef),
 
     /// A reference to a value on the frame
-    FrameReference(usize, u32),
+    FrameReference(usize, u32, ReferenceType),
 
     /// A monad with the specified type and type
     Monad(CellRef, MonadType),
@@ -182,10 +194,10 @@ impl SafasCell {
     ///
     /// If this is a frame reference, returns the cell ID and the frame number
     ///
-    pub fn frame_reference(&self) -> Option<(usize, u32)> {
+    pub fn frame_reference(&self) -> Option<(usize, u32, ReferenceType)> {
         match self {
-            SafasCell::FrameReference(cell, frame)  => Some((*cell, *frame)),
-            _                                       => None
+            SafasCell::FrameReference(cell, frame, ref_type)    => Some((*cell, *frame, *ref_type)),
+            _                                                   => None
         }
     }
 
@@ -196,18 +208,19 @@ impl SafasCell {
         use self::SafasCell::*;
 
         match self {
-            Nil                         => "()".to_string(),
-            Atom(atom_id)               => name_for_atom_with_id(*atom_id),
-            Number(number)              => number.to_string(),
-            BitCode(bitcode)            => format!("{}", bitcode.iter().map(|bitcode| bitcode.to_string()).collect::<Vec<_>>().join("")),
-            String(string_value)        => format!("\"{}\"", string_value),         // TODO: character quoting
-            Char(chr_value)             => format!("'{}'", chr_value),              // TODO: character quoting,
-            FrameReference(cell, frame) => format!("cell#({},{})", cell, frame),
-            Monad(cell, monad)          => format!("monad#{}#{}", cell.to_string(), monad.to_string()),
-            FrameMonad(monad)           => monad.description(),
-            ActionMonad(syntax)         => format!("compile#{}", syntax.binding_monad.description()),
-            Any(val)                    => format!("any#{:p}", val),
-            List(first, second)         => {
+            Nil                                                 => "()".to_string(),
+            Atom(atom_id)                                       => name_for_atom_with_id(*atom_id),
+            Number(number)                                      => number.to_string(),
+            BitCode(bitcode)                                    => format!("{}", bitcode.iter().map(|bitcode| bitcode.to_string()).collect::<Vec<_>>().join("")),
+            String(string_value)                                => format!("\"{}\"", string_value),         // TODO: character quoting
+            Char(chr_value)                                     => format!("'{}'", chr_value),              // TODO: character quoting,
+            FrameReference(cell, frame, ReferenceType::Value)   => format!("cell#({},{})", cell, frame),
+            FrameReference(cell, frame, ReferenceType::Monad)   => format!("monadcell#({},{})", cell, frame),
+            Monad(cell, monad)                                  => format!("monad#{}#{}", cell.to_string(), monad.to_string()),
+            FrameMonad(monad)                                   => monad.description(),
+            ActionMonad(syntax)                                 => format!("compile#{}", syntax.binding_monad.description()),
+            Any(val)                                            => format!("any#{:p}", val),
+            List(first, second)                                 => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;
 

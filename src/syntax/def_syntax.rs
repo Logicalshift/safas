@@ -96,7 +96,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
                     for AtomId(arg_atom_id) in pattern_def.bindings() {
                         // Create a new cell for this atom
                         let arg_cell            = macro_bindings.alloc_cell();
-                        let arg_cell: CellRef   = SafasCell::FrameReference(arg_cell, 0).into();
+                        let arg_cell: CellRef   = SafasCell::FrameReference(arg_cell, 0, ReferenceType::Value).into();
 
                         // Add to the bindings and the list of cells for this pattern
                         macro_bindings.symbols.insert(arg_atom_id, arg_cell.clone());
@@ -145,16 +145,16 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
             let mut cell_imports        = HashMap::new();
             for (symbol_value, import_into_cell_id) in imports.into_iter() {
                 match &*symbol_value {
-                    SafasCell::FrameReference(_our_cell_id, 0) => {
+                    SafasCell::FrameReference(_our_cell_id, 0, _type) => {
                         // Cell from this frame
                         cell_imports.insert(import_into_cell_id, symbol_value);
                     },
 
-                    SafasCell::FrameReference(their_cell_id, frame_count) => {
+                    SafasCell::FrameReference(their_cell_id, frame_count, their_type) => {
                         // Import from a parent frame
                         let our_cell_id = bindings.alloc_cell();
-                        bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count).into(), our_cell_id);
-                        cell_imports.insert(import_into_cell_id, SafasCell::FrameReference(our_cell_id, 0).into());
+                        bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count, *their_type).into(), our_cell_id);
+                        cell_imports.insert(import_into_cell_id, SafasCell::FrameReference(our_cell_id, 0, *their_type).into());
                     },
 
                     _ => panic!("Don't know how to import this type of symbol")
@@ -258,7 +258,7 @@ impl BindingMonad for Arc<SyntaxSymbol> {
 
                 for arg_idx in 0..pattern_cells.len() {
                     // The pattern cell is expected to always be a frame reference
-                    let FrameReference(cell_id, _) = pattern_cells[arg_idx].clone().try_into().unwrap();
+                    let FrameReference(cell_id, _, _) = pattern_cells[arg_idx].clone().try_into().unwrap();
 
                     // Bind the value in this argument
                     let bound_val = match &pattern[arg_idx] {
@@ -313,7 +313,7 @@ fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: Symbol
         }
 
         // Frame references are bound by the substitution function
-        SafasCell::FrameReference(cell_id, frame) => {
+        SafasCell::FrameReference(cell_id, frame, cell_type) => {
             if *frame == 0 {
                 // Is from the macro frame: bind via the subtitutions function
                 if let Some(actual_cell) = substitutions(*cell_id) {
@@ -333,7 +333,7 @@ fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: Symbol
                     };
 
                     // Return the bound cell
-                    (SafasCell::FrameReference(bound_cell_id, 0).into(), bindings)
+                    (SafasCell::FrameReference(bound_cell_id, 0, *cell_type).into(), bindings)
                 }
             } else {
                 // Bound from a different frame
@@ -471,14 +471,14 @@ impl BindingMonad for SyntaxClosure {
         for (_cell, binding) in rebound_imported_bindings.iter_mut() {
             match &**binding {
                 // Frame references need to be imported into the current frame
-                SafasCell::FrameReference(outer_cell_id, bound_level) => {
+                SafasCell::FrameReference(outer_cell_id, bound_level, cell_type) => {
                     // Import this frame reference
                     let local_cell_id   = bindings.alloc_cell();
-                    let outer_cell      = SafasCell::FrameReference(*outer_cell_id, *bound_level + frame_depth).into();
+                    let outer_cell      = SafasCell::FrameReference(*outer_cell_id, *bound_level + frame_depth, *cell_type).into();
                     bindings.import(outer_cell, local_cell_id);
 
                     // Update the binding
-                    *binding            = SafasCell::FrameReference(local_cell_id, 0).into();
+                    *binding            = SafasCell::FrameReference(local_cell_id, 0, *cell_type).into();
                     rebound             = true;
                 }
 

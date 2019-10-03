@@ -67,11 +67,11 @@ impl SymbolBindings {
             // Look up in the current binding
             if let Some(symbol) = current_binding.symbols.get(&symbol) {
                 // Return the value if we find it, adjusting the frame level for cells that need to be imported
-                if let Some((cell, bound_level)) = symbol.frame_reference() {
+                if let Some((cell, bound_level, ref_type)) = symbol.frame_reference() {
                     if level == 0 {
                         return Some((Arc::clone(&symbol), level));
                     } else {
-                        return Some((SafasCell::FrameReference(cell, bound_level + level).into(), level));
+                        return Some((SafasCell::FrameReference(cell, bound_level + level, ref_type).into(), level));
                     }
                 } else {
                     return Some((Arc::clone(&symbol), level));
@@ -166,7 +166,7 @@ impl SymbolBindings {
     ///
     pub fn bind_atom_to_new_cell(&mut self, atom_id: u64) -> usize {
         let cell_id = self.alloc_cell();
-        self.symbols.insert(atom_id, SafasCell::FrameReference(cell_id, 0).into());
+        self.symbols.insert(atom_id, SafasCell::FrameReference(cell_id, 0, ReferenceType::Value).into());
         cell_id
     }
 
@@ -187,16 +187,16 @@ impl SymbolBindings {
     /// Any binding that references this symbol will be updated to point to the cell after this call
     ///
     pub fn import(&mut self, symbol: CellRef, cell_id: usize) {
-        if let Some((import_from_cell_id, import_from_frame_id)) = symbol.frame_reference() {
+        if let Some((import_from_cell_id, import_from_frame_id, import_ref_type)) = symbol.frame_reference() {
             if import_from_frame_id > 0 {
                 // Import from the symbol in the parent frame
-                self.import_symbols.push((SafasCell::FrameReference(import_from_cell_id, import_from_frame_id-1).into(), cell_id));
+                self.import_symbols.push((SafasCell::FrameReference(import_from_cell_id, import_from_frame_id-1, import_ref_type).into(), cell_id));
 
                 // Update any references to this parent cell to point to the imported cell
                 for (_symbol, value) in self.symbols.iter_mut() {
-                    if let SafasCell::FrameReference(reference_cell, reference_frame) = &**value {
+                    if let SafasCell::FrameReference(reference_cell, reference_frame, ref_type) = &**value {
                         if *reference_cell == import_from_cell_id && *reference_frame == import_from_frame_id {
-                            let replacement_symbol  = SafasCell::FrameReference(cell_id, 0);
+                            let replacement_symbol  = SafasCell::FrameReference(cell_id, 0, *ref_type);
                             *value                  = replacement_symbol.into();
                         }
                     }
@@ -283,13 +283,13 @@ mod test {
         let frame       = SymbolBindings::new();
         let mut frame   = frame.push_new_frame();
 
-        frame.import(SafasCell::FrameReference(3, 2).into(), 3);
+        frame.import(SafasCell::FrameReference(3, 2, ReferenceType::Value).into(), 3);
 
         let (_frame, imports) = frame.pop();
 
         // We generate imports in the context of the incoming frame, so the 'frame count' ends up being reduced by 1 here
         assert!(imports.len() == 1);
-        assert!(imports[0].0.frame_reference() == Some((3, 1)));
+        assert!(imports[0].0.frame_reference() == Some((3, 1, ReferenceType::Value)));
         assert!(imports[0].1 == 3);
     }
 
@@ -298,7 +298,7 @@ mod test {
         let frame       = SymbolBindings::new();
         let mut frame   = frame.push_interior_frame();
 
-        frame.import(SafasCell::FrameReference(3, 2).into(), 3);
+        frame.import(SafasCell::FrameReference(3, 2, ReferenceType::Value).into(), 3);
 
         let (_frame, imports) = frame.pop();
 
@@ -312,7 +312,7 @@ mod test {
         let frame       = frame.push_new_frame();
         let mut frame   = frame.push_interior_frame();
 
-        frame.import(SafasCell::FrameReference(3, 2).into(), 3);
+        frame.import(SafasCell::FrameReference(3, 2, ReferenceType::Value).into(), 3);
 
         // Pop the interior and the main frame (imports should pop)
         let (frame, _imports) = frame.pop();
@@ -320,7 +320,7 @@ mod test {
 
         // We generate imports in the context of the incoming frame, so the 'frame count' ends up being reduced by 1 here
         assert!(imports.len() == 1);
-        assert!(imports[0].0.frame_reference() == Some((3, 1)));
+        assert!(imports[0].0.frame_reference() == Some((3, 1, ReferenceType::Value)));
         assert!(imports[0].1 == 3);
     }
 
@@ -329,14 +329,14 @@ mod test {
         let mut frame = SymbolBindings::new();
 
         // Reference in a parent frame
-        frame.symbols.insert(0, SafasCell::FrameReference(2, 2).into());
+        frame.symbols.insert(0, SafasCell::FrameReference(2, 2, ReferenceType::Value).into());
 
         // Import into cell 3
-        frame.import(SafasCell::FrameReference(2, 2).into(), 3);
+        frame.import(SafasCell::FrameReference(2, 2, ReferenceType::Value).into(), 3);
 
         // Symbol we added should now point at the current frame
         let (symbol, level) = frame.look_up(0).unwrap();
-        assert!(symbol.frame_reference() == Some((3, 0)));
+        assert!(symbol.frame_reference() == Some((3, 0, ReferenceType::Value)));
         assert!(level == 0);
     }
 }

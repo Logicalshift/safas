@@ -30,7 +30,8 @@ pub fn def_keyword() -> SyntaxCompiler {
             allocate_cell().and_then(move |cell_id| {
                 // Define the symbol to map to this cell
                 let value           = value.clone();
-                let cell: CellRef   = SafasCell::FrameReference(cell_id, 0).into();
+                let cell_type       = if value.is_monad() { ReferenceType::Monad } else { ReferenceType::Value };
+                let cell: CellRef   = SafasCell::FrameReference(cell_id, 0, cell_type).into();
 
                 define_symbol_value(name, cell.clone()).and_then_ok(move |_| {
                     let value   = value.clone();
@@ -50,7 +51,7 @@ pub fn def_keyword() -> SyntaxCompiler {
     let compiler = |value: CellRef| -> Result<_, BindError> {
         // Fetch the frame reference and the bound value from the value
         let bound_values: ListTuple<(FrameReference, CellRef)>  = value.try_into()?;
-        let ListTuple((FrameReference(cell, _), value))         = bound_values;
+        let ListTuple((FrameReference(cell, _, _), value))      = bound_values;
 
         // Compile the actions to generate the value
         let mut actions                                         = compile_statement(value)?;
@@ -83,9 +84,9 @@ impl BindingMonad for DefineSymbol {
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Allocate a cell for this binding
         let mut bindings    = bindings;
-        let cell_id         = bindings.num_cells;
-        bindings.num_cells  += 1;
-        bindings.symbols.insert(self.atom_id, SafasCell::FrameReference(cell_id, 0).into());
+        let cell_id         = bindings.alloc_cell();
+        let cell_type       = if self.value.is_monad() { ReferenceType::Monad } else { ReferenceType::Value };
+        bindings.symbols.insert(self.atom_id, SafasCell::FrameReference(cell_id, 0, cell_type).into());
 
         // Actions just load the binding into the cell
         let actions         = smallvec![Action::Value(Arc::clone(&self.value)), Action::StoreCell(cell_id)];
