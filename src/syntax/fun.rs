@@ -124,6 +124,7 @@ impl BindingMonad for FunBinder {
             // Work out the cells to import into the closure
             for (symbol_value, import_into_cell_id) in imports.into_iter() {
                 match &*symbol_value {
+                    SafasCell::FrameMonadReference(our_cell_id, 0) |
                     SafasCell::FrameReference(our_cell_id, 0) => {
                         // Cell from this frame
                         cell_imports.push((*our_cell_id, import_into_cell_id));
@@ -133,6 +134,13 @@ impl BindingMonad for FunBinder {
                         // Import from a parent frame
                         let our_cell_id = bindings.alloc_cell();
                         bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count).into(), our_cell_id);
+                        cell_imports.push((our_cell_id, import_into_cell_id));
+                    },
+
+                    SafasCell::FrameMonadReference(their_cell_id, frame_count) => {
+                        // Import from a parent frame
+                        let our_cell_id = bindings.alloc_cell();
+                        bindings.import(SafasCell::FrameMonadReference(*their_cell_id, *frame_count).into(), our_cell_id);
                         cell_imports.push((our_cell_id, import_into_cell_id));
                     },
 

@@ -28,10 +28,11 @@ pub fn compile_statement_quick(source: CellRef) -> Result<SmallVec<[Action; 8]>,
 
     match &*source {
         // Lists are processed according to their first value
-        List(car, cdr)  => { compile_list_statement(Arc::clone(car), Arc::clone(cdr)) }
+        List(car, cdr)                      => { compile_list_statement(Arc::clone(car), Arc::clone(cdr)) }
 
         // Frame references load their respective references
-        FrameReference(cell_id, frame) => {
+        FrameMonadReference(cell_id, frame) |
+        FrameReference(cell_id, frame)      => {
             if *frame != 0 {
                 Err(BindError::CannotLoadCellInOtherFrame)
             } else {
@@ -53,15 +54,15 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
     // Action depends on the type of car
     match &*car {
         // Constant values just load that value and call it
-        Nil                                 |
-        Any(_)                              |
-        Number(_)                           |
-        Atom(_)                             |
-        String(_)                           |
-        Char(_)                             |
-        BitCode(_)                          |
-        Monad(_, _)                         |
-        FrameMonad(_)                       => {
+        Nil                                     |
+        Number(_)                               |
+        Any(_)                                  |
+        Atom(_)                                 |
+        String(_)                               |
+        Char(_)                                 |
+        BitCode(_)                              |
+        Monad(_, _)                             |
+        FrameMonad(_)                           => {
             if car.is_monad() {
                 compile_monad_flat_map(smallvec![Action::Value(car)], cdr)
             } else {
@@ -70,7 +71,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         },
 
         // Lists evaluate to their usual value before calling
-        List(_, _)                          => { 
+        List(_, _)                              => { 
             if car.is_monad() {
                 let actions = compile_statement_quick(car)?; compile_monad_flat_map(actions, cdr) 
             } else {
@@ -79,10 +80,11 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         }
 
         // Frame references load the value from the frame and call that
-        FrameReference(_cell_num, _frame)   => { let actions = compile_statement_quick(car)?; compile_call(actions, cdr) }
+        FrameMonadReference(_cell_num, _frame)  |
+        FrameReference(_cell_num, _frame)       => { let actions = compile_statement_quick(car)?; compile_call(actions, cdr) }
         
         // Action and macro monads resolve their respective syntaxes
-        ActionMonad(syntax_compiler)        => (syntax_compiler.generate_actions)(cdr),
+        ActionMonad(syntax_compiler)            => (syntax_compiler.generate_actions)(cdr),
     }
 }
 

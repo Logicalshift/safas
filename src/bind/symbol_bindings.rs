@@ -70,6 +70,8 @@ impl SymbolBindings {
                 if let Some((cell, bound_level)) = symbol.frame_reference() {
                     if level == 0 {
                         return Some((Arc::clone(&symbol), level));
+                    } else if symbol.is_monad() {
+                        return Some((SafasCell::FrameMonadReference(cell, bound_level + level).into(), level));
                     } else {
                         return Some((SafasCell::FrameReference(cell, bound_level + level).into(), level));
                     }
@@ -187,16 +189,22 @@ impl SymbolBindings {
     /// Any binding that references this symbol will be updated to point to the cell after this call
     ///
     pub fn import(&mut self, symbol: CellRef, cell_id: usize) {
+        let is_monad = symbol.is_monad();
+
         if let Some((import_from_cell_id, import_from_frame_id)) = symbol.frame_reference() {
             if import_from_frame_id > 0 {
                 // Import from the symbol in the parent frame
-                self.import_symbols.push((SafasCell::FrameReference(import_from_cell_id, import_from_frame_id-1).into(), cell_id));
+                if is_monad {
+                    self.import_symbols.push((SafasCell::FrameReference(import_from_cell_id, import_from_frame_id-1).into(), cell_id));
+                } else {
+                    self.import_symbols.push((SafasCell::FrameMonadReference(import_from_cell_id, import_from_frame_id-1).into(), cell_id));
+                }
 
                 // Update any references to this parent cell to point to the imported cell
                 for (_symbol, value) in self.symbols.iter_mut() {
-                    if let SafasCell::FrameReference(reference_cell, reference_frame) = &**value {
-                        if *reference_cell == import_from_cell_id && *reference_frame == import_from_frame_id {
-                            let replacement_symbol  = SafasCell::FrameReference(cell_id, 0);
+                    if let Some((reference_cell, reference_frame)) = value.frame_reference() {
+                        if reference_cell == import_from_cell_id && reference_frame == import_from_frame_id {
+                            let replacement_symbol  = if is_monad { SafasCell::FrameMonadReference(cell_id, 0) } else { SafasCell::FrameReference(cell_id, 0) };
                             *value                  = replacement_symbol.into();
                         }
                     }

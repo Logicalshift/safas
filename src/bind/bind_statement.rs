@@ -35,18 +35,18 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                 use self::SafasCell::*;
 
                 match &*symbol_value {
-                    Nil                             |
-                    Any(_)                          |
-                    Number(_)                       |
-                    Atom(_)                         |
-                    String(_)                       |
-                    BitCode(_)                      |
-                    Char(_)                         |
-                    List(_, _)                      |
-                    Monad(_, _)                     |
-                    FrameMonad(_)                   |
-                    ActionMonad(_)                  => Ok((symbol_value, bindings)),
-                    FrameReference(cell_num, frame) => {
+                    Nil                                     |
+                    Any(_)                                  |
+                    Number(_)                               |
+                    Atom(_)                                 |
+                    String(_)                               |
+                    BitCode(_)                              |
+                    Char(_)                                 |
+                    List(_, _)                              |
+                    Monad(_, _)                             |
+                    FrameMonad(_)                           |
+                    ActionMonad(_)                          => Ok((symbol_value, bindings)),
+                    FrameReference(cell_num, frame)         => {
                         let (cell_num, frame) = (*cell_num, *frame);
                         if frame == 0 {
                             // Local symbol
@@ -58,6 +58,20 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                             bindings.import(SafasCell::FrameReference(cell_num, frame).into(), local_cell_id);
 
                             Ok((SafasCell::FrameReference(local_cell_id, 0).into(), bindings))
+                        }
+                    },
+                    FrameMonadReference(cell_num, frame)    => {
+                        let (cell_num, frame) = (*cell_num, *frame);
+                        if frame == 0 {
+                            // Local symbol
+                            Ok((symbol_value, bindings))
+                        } else {
+                            // Import from a parent frame
+                            let mut bindings    = bindings;
+                            let local_cell_id   = bindings.alloc_cell();
+                            bindings.import(SafasCell::FrameMonadReference(cell_num, frame).into(), local_cell_id);
+
+                            Ok((SafasCell::FrameMonadReference(local_cell_id, 0).into(), bindings))
                         }
                     },
                 }
@@ -88,24 +102,25 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
             if let Some((symbol_value, symbol_level)) = symbol_value {
                 match &*symbol_value {
                     // Constant values just load that value and call it
-                    Nil                                 |
-                    Any(_)                              |
-                    Number(_)                           |
-                    Atom(_)                             |
-                    String(_)                           |
-                    BitCode(_)                          |
-                    Char(_)                             |
-                    Monad(_, _)                         |
-                    FrameMonad(_)                       => { bind_call(symbol_value, cdr, bindings) },
+                    Nil                                     |
+                    Any(_)                                  |
+                    Number(_)                               |
+                    Atom(_)                                 |
+                    String(_)                               |
+                    BitCode(_)                              |
+                    Char(_)                                 |
+                    Monad(_, _)                             |
+                    FrameMonad(_)                           => { bind_call(symbol_value, cdr, bindings) },
 
                     // Lists bind themselves before calling
-                    List(_, _)                          => { let (bound_symbol, bindings) = bind_statement(symbol_value, bindings)?; bind_call(bound_symbol, cdr, bindings) }
+                    List(_, _)                              => { let (bound_symbol, bindings) = bind_statement(symbol_value, bindings)?; bind_call(bound_symbol, cdr, bindings) }
 
                     // Frame references load the value from the frame and call that
-                    FrameReference(_cell_num, _frame)   => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
+                    FrameMonadReference(_cell_num, _frame)  |
+                    FrameReference(_cell_num, _frame)       => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
                     
                     // Action and macro monads resolve their respective syntaxes
-                    ActionMonad(syntax_compiler)        => {
+                    ActionMonad(syntax_compiler)            => {
                         // If we're on a different syntax level, try rebinding the monad (the syntax might need to import symbols from an outer frame, for example)
                         let mut bindings = bindings;
 
@@ -292,13 +307,23 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
 
     for (symbol_value, import_into_cell_id) in imports.into_iter() {
         match &*symbol_value {
-            SafasCell::FrameReference(_our_cell_id, 0) => {
+            SafasCell::FrameMonadReference(_our_cell_id, 0)             |
+            SafasCell::FrameReference(_our_cell_id, 0)                  => {
                 // Cell from this frame
                 other_arguments.push(import_into_cell_id);
                 args_so_far.push(symbol_value);
             },
 
-            SafasCell::FrameReference(their_cell_id, frame_count) => {
+            SafasCell::FrameMonadReference(their_cell_id, frame_count)  => {
+                // Import from a parent frame
+                let our_cell_id = bindings.alloc_cell();
+                bindings.import(SafasCell::FrameMonadReference(*their_cell_id, *frame_count).into(), our_cell_id);
+
+                other_arguments.push(import_into_cell_id);
+                args_so_far.push(SafasCell::FrameMonadReference(our_cell_id, 0).into());
+            },
+
+            SafasCell::FrameReference(their_cell_id, frame_count)       => {
                 // Import from a parent frame
                 let our_cell_id = bindings.alloc_cell();
                 bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count).into(), our_cell_id);

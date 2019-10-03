@@ -145,12 +145,20 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
             let mut cell_imports        = HashMap::new();
             for (symbol_value, import_into_cell_id) in imports.into_iter() {
                 match &*symbol_value {
-                    SafasCell::FrameReference(_our_cell_id, 0) => {
+                    SafasCell::FrameMonadReference(_our_cell_id, 0)         |
+                    SafasCell::FrameReference(_our_cell_id, 0)              => {
                         // Cell from this frame
                         cell_imports.insert(import_into_cell_id, symbol_value);
                     },
 
-                    SafasCell::FrameReference(their_cell_id, frame_count) => {
+                    SafasCell::FrameMonadReference(their_cell_id, frame_count)   => {
+                        // Import from a parent frame
+                        let our_cell_id = bindings.alloc_cell();
+                        bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count).into(), our_cell_id);
+                        cell_imports.insert(import_into_cell_id, SafasCell::FrameMonadReference(our_cell_id, 0).into());
+                    },
+
+                    SafasCell::FrameReference(their_cell_id, frame_count)   => {
                         // Import from a parent frame
                         let our_cell_id = bindings.alloc_cell();
                         bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count).into(), our_cell_id);
@@ -313,7 +321,8 @@ fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: Symbol
         }
 
         // Frame references are bound by the substitution function
-        SafasCell::FrameReference(cell_id, frame) => {
+        SafasCell::FrameMonadReference(cell_id, frame)  |
+        SafasCell::FrameReference(cell_id, frame)       => {
             if *frame == 0 {
                 // Is from the macro frame: bind via the subtitutions function
                 if let Some(actual_cell) = substitutions(*cell_id) {
@@ -479,6 +488,18 @@ impl BindingMonad for SyntaxClosure {
 
                     // Update the binding
                     *binding            = SafasCell::FrameReference(local_cell_id, 0).into();
+                    rebound             = true;
+                }
+
+                // Frame references need to be imported into the current frame
+                SafasCell::FrameMonadReference(outer_cell_id, bound_level) => {
+                    // Import this frame reference
+                    let local_cell_id   = bindings.alloc_cell();
+                    let outer_cell      = SafasCell::FrameMonadReference(*outer_cell_id, *bound_level + frame_depth).into();
+                    bindings.import(outer_cell, local_cell_id);
+
+                    // Update the binding
+                    *binding            = SafasCell::FrameMonadReference(local_cell_id, 0).into();
                     rebound             = true;
                 }
 
