@@ -41,9 +41,6 @@ pub enum SafasCell {
     /// A reference to a value on the frame
     FrameReference(usize, u32),
 
-    /// A reference to a value on the frame (which should be treated as a monad)
-    FrameMonadReference(usize, u32),
-
     /// A monad with the specified type and type
     Monad(CellRef, MonadType),
 
@@ -113,9 +110,8 @@ impl SafasCell {
     ///
     pub fn is_monad(&self) -> bool {
         match self {
-            SafasCell::Monad(_, _)                  => true,
-            SafasCell::FrameMonadReference(_, _)    => true,
-            SafasCell::List(car, _)                 => {
+            SafasCell::Monad(_, _)  => true,
+            SafasCell::List(car, _) => {
                 if let SafasCell::FrameMonad(frame_monad) = &**car {
                     if frame_monad.returns_monad() {
                         // Result of a function call should be treated as a monad if the frame returns a monad
@@ -129,7 +125,7 @@ impl SafasCell {
                     car.is_monad()
                 }
             },
-            _                                       => false
+            _                       => false
         }
     }
 
@@ -188,9 +184,8 @@ impl SafasCell {
     ///
     pub fn frame_reference(&self) -> Option<(usize, u32)> {
         match self {
-            SafasCell::FrameReference(cell, frame)      => Some((*cell, *frame)),
-            SafasCell::FrameMonadReference(cell, frame) => Some((*cell, *frame)),
-            _                                           => None
+            SafasCell::FrameReference(cell, frame)  => Some((*cell, *frame)),
+            _                                       => None
         }
     }
 
@@ -201,19 +196,18 @@ impl SafasCell {
         use self::SafasCell::*;
 
         match self {
-            Nil                                 => "()".to_string(),
-            Atom(atom_id)                       => name_for_atom_with_id(*atom_id),
-            Number(number)                      => number.to_string(),
-            BitCode(bitcode)                    => format!("{}", bitcode.iter().map(|bitcode| bitcode.to_string()).collect::<Vec<_>>().join("")),
-            String(string_value)                => format!("\"{}\"", string_value),         // TODO: character quoting
-            Char(chr_value)                     => format!("'{}'", chr_value),              // TODO: character quoting,
-            FrameMonadReference(cell, frame)    => format!("cell_monad#({},{})", cell, frame),
-            FrameReference(cell, frame)         => format!("cell#({},{})", cell, frame),
-            Monad(cell, monad)                  => format!("monad#{}#{}", cell.to_string(), monad.to_string()),
-            FrameMonad(monad)                   => monad.description(),
-            ActionMonad(syntax)                 => format!("compile#{}", syntax.binding_monad.description()),
-            Any(val)                            => format!("any#{:p}", val),
-            List(first, second)                 => {
+            Nil                         => "()".to_string(),
+            Atom(atom_id)               => name_for_atom_with_id(*atom_id),
+            Number(number)              => number.to_string(),
+            BitCode(bitcode)            => format!("{}", bitcode.iter().map(|bitcode| bitcode.to_string()).collect::<Vec<_>>().join("")),
+            String(string_value)        => format!("\"{}\"", string_value),         // TODO: character quoting
+            Char(chr_value)             => format!("'{}'", chr_value),              // TODO: character quoting,
+            FrameReference(cell, frame) => format!("cell#({},{})", cell, frame),
+            Monad(cell, monad)          => format!("monad#{}#{}", cell.to_string(), monad.to_string()),
+            FrameMonad(monad)           => monad.description(),
+            ActionMonad(syntax)         => format!("compile#{}", syntax.binding_monad.description()),
+            Any(val)                    => format!("any#{:p}", val),
+            List(first, second)         => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;
 

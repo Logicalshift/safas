@@ -29,14 +29,8 @@ pub fn def_keyword() -> SyntaxCompiler {
             // Allocate the cell to store the value in
             allocate_cell().and_then(move |cell_id| {
                 // Define the symbol to map to this cell
-                let is_monad        = value.is_monad();
                 let value           = value.clone();
-
-                let cell: CellRef   = if is_monad {
-                    SafasCell::FrameMonadReference(cell_id, 0).into()
-                } else {
-                    SafasCell::FrameReference(cell_id, 0).into()
-                };
+                let cell: CellRef   = SafasCell::FrameReference(cell_id, 0).into();
 
                 define_symbol_value(name, cell.clone()).and_then_ok(move |_| {
                     let value   = value.clone();
