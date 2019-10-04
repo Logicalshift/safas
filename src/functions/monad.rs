@@ -140,4 +140,16 @@ mod test {
         assert!(val.is_monad());
         assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
+
+    #[test]
+    fn closure_monad() {
+        // Calling a function that returns a monad should act like a monad in context
+        let val = eval(
+                "(def my_wrap (fun (x) (wrap x)))
+                (def some_val 1)
+                (list some_val (my_wrap 2))"
+            ).unwrap().0;
+        assert!(val.is_monad());
+        assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
+    }
 }
