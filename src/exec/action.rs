@@ -49,7 +49,7 @@ pub enum Action {
     /// Given a monad on the stack and a function as the current value, calls the monad's flat_map value
     FlatMap,
 
-    /// Treats the current value as a monad, and clals the Wrap function
+    /// Treats the current value as a monad, and calls the Wrap function
     Wrap,
 
     /// Calls flat_map on the monad on top of the stack with a function that returns the current value, pushing the result

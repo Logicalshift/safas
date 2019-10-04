@@ -87,14 +87,16 @@ impl BindingMonad for FunBinder {
         }
 
         // Compile the statements
-        let mut actions             = smallvec![];
+        let mut actions             = vec![];
+        let mut monadic_function    = false;
 
         for statement in statements {
             // Bind the statement
             let bound_statement = bind_statement(statement, inner_bindings)
                 .and_then(|(bound, next_bindings)| {
+                    let is_monad = bound.is_monad();
                     match compile_statement(bound) {
-                        Ok(actions) => Ok((actions, next_bindings)),
+                        Ok(actions) => Ok(((actions, is_monad), next_bindings)),
                         Err(err)    => Err((err.into(), next_bindings))
                     }
                 });
@@ -104,11 +106,39 @@ impl BindingMonad for FunBinder {
                 Err((error, next_binding))              => return (next_binding.pop().0, Err(error))
             };
 
+            // If any action has a monad type, then this function will be flagged as a 'monad' function, and will return a monad type via flat_map
+            if let (_, true) = statement_actions { monadic_function = true; }
+
             // Add these actions to our own
-            actions.extend(statement_actions);
+            actions.push(statement_actions);
 
             inner_bindings = next_binding;
         }
+
+        // If this is a 'monadic' function then add the extra steps needed to bind the final result to the actions
+        if monadic_function && actions.len() > 1 {
+            for action_num in 0..(actions.len()) {
+                let (actions, is_monad) = &mut actions[action_num];
+
+                // Wrap the value in a monad if the value is not itself a monad
+                if !*is_monad {
+                    actions.push(Action::Wrap)
+                }
+
+                // Push the monad on the first action, and flat_map it on any others
+                if action_num == 0 {
+                    actions.push(Action::Push);
+                } else {
+                    actions.push(Action::Next);
+                }
+            }
+
+            // Final action is to return the monad value
+            actions.push((smallvec![Action::Pop], true));
+        }
+
+        // Collapse the actions into a single set of actions
+        let actions             = actions.into_iter().flat_map(|(actions, _)| actions).collect::<SmallVec<[Action; 8]>>();
 
         // Capture the number of cells required for the lambda
         let num_cells           = inner_bindings.num_cells;
@@ -142,7 +172,7 @@ impl BindingMonad for FunBinder {
 
             // Return the closure
             let closure         = Closure::new(actions, cell_imports, num_cells, num_args);
-            let closure         = Box::new(closure);
+            let closure: Box<dyn FrameMonad<Binding=RuntimeResult>> = if monadic_function { Box::new(ReturnsMonad(closure)) } else { Box::new(closure) };
             let closure         = SafasCell::FrameMonad(closure);
 
             // Closure needs to be called to create the actual function
@@ -150,7 +180,7 @@ impl BindingMonad for FunBinder {
         } else {
             // No imports, so return a straight lambda
             let lambda          = Lambda::new(actions, num_cells, num_args);
-            let lambda          = Box::new(lambda);
+            let lambda: Box<dyn FrameMonad<Binding=RuntimeResult>> = if monadic_function { Box::new(ReturnsMonad(lambda)) } else { Box::new(lambda) };
             let lambda          = SafasCell::FrameMonad(lambda);
 
             // Lambda can just be executed directly
