@@ -124,7 +124,7 @@ impl SafasCell {
         match self {
             SafasCell::Monad(_, _)                                  => true,
             SafasCell::FrameReference(_, _, ReferenceType::Monad)   => true,
-            SafasCell::List(car, _)                                 => {
+            SafasCell::List(car, cdr)                               => {
                 if let SafasCell::FrameMonad(frame_monad) = &**car {
                     if frame_monad.returns_monad() {
                         // Result of a function call should be treated as a monad if the frame returns a monad
@@ -133,12 +133,14 @@ impl SafasCell {
                         // Otherwise just determine the usual way
                         car.is_monad()
                     }
+                } else if let SafasCell::ActionMonad(syntax) = &**car {
+                    syntax.binding_monad.returns_monad(cdr.clone())
                 } else {
                     // Other lists should be treated as a monad if the head of the list is a monad
                     car.is_monad()
                 }
             },
-            _                       => false
+            _                                                       => false
         }
     }
 
