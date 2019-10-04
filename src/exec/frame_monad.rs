@@ -28,15 +28,13 @@ impl FrameMonad for () {
 ///
 /// Frame monad that returns a constant value
 ///
-struct ReturnValue<Binding: Clone> {
-    value: Binding
-}
+struct ReturnValue<Binding: Clone>(pub Binding);
 
 impl<Binding: Clone+Send+Sync> FrameMonad for ReturnValue<Binding> {
     type Binding=Binding;
 
     fn execute(&self, frame: Frame) -> (Frame, Binding) {
-        (frame, self.value.clone())
+        (frame, self.0.clone())
     }
 }
 
@@ -44,7 +42,7 @@ impl<Binding: Clone+Send+Sync> FrameMonad for ReturnValue<Binding> {
 /// Wraps a value in a frame monad
 ///
 pub fn wrap_frame<Binding: Clone+Send+Sync>(value: Binding) -> impl FrameMonad<Binding=Binding> {
-    ReturnValue { value }
+    ReturnValue(value)
 }
 
 struct FlatMapValue<InputMonad, OutputMonad, NextFn> {
