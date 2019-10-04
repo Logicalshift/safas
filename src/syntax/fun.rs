@@ -9,6 +9,7 @@ use std::sync::*;
 lazy_static! {
     static ref CLOSURE_ATOM: u64 = get_id_for_atom_with_name("CLOSURE");
     static ref LAMBDA_ATOM: u64  = get_id_for_atom_with_name("LAMBDA");
+    static ref MONAD_ATOM: u64   = get_id_for_atom_with_name("MONAD");
 }
 
 ///
@@ -25,15 +26,15 @@ pub fn fun_keyword() -> SyntaxCompiler {
 
     // Compiling needs to call closures and just store lambdas
     let compile = |bound_value: CellRef| -> Result<_, BindError> {
-        // Our monad generates something like (CLOSURE <some_closure>)
-        let bound_value: ListTuple<(AtomId, CellRef)>   = bound_value.try_into()?;
-        let ListTuple((fun_type, fun))                  = bound_value;
+        // Our monad generates something like (MONAD CLOSURE <some_closure>)
+        let bound_value: ListTuple<(AtomId, AtomId, CellRef)>   = bound_value.try_into()?;
+        let ListTuple((_monad_type, fun_type, fun))             = bound_value;
 
         if fun_type == AtomId(*CLOSURE_ATOM) {
             // The closure needs to be called to bind its values
             Ok(smallvec![Action::Value(fun), Action::Call])
         } else if fun_type == AtomId(*LAMBDA_ATOM) {
-            // Lambdas can just 
+            // Lambdas can just be loaded directly
             Ok(smallvec![Action::Value(fun)])
         } else {
             // Unknown type of function (binder error/input from the wrong place)
@@ -172,19 +173,45 @@ impl BindingMonad for FunBinder {
 
             // Return the closure
             let closure         = Closure::new(actions, cell_imports, num_cells, num_args);
-            let closure: Box<dyn FrameMonad<Binding=RuntimeResult>> = if monadic_function { Box::new(ReturnsMonad(closure)) } else { Box::new(closure) };
-            let closure         = SafasCell::FrameMonad(closure);
+            if monadic_function {
+                let closure     = Box::new(ReturnsMonad(closure));
+                let closure     = SafasCell::FrameMonad(closure);
 
-            // Closure needs to be called to create the actual function
-            (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*CLOSURE_ATOM).into(), closure.into()])))
+                // Closure needs to be called to create the actual function
+                (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*MONAD_ATOM).into(), AtomId(*CLOSURE_ATOM).into(), closure.into()])))
+            } else {
+                let closure     = Box::new(closure);
+                let closure     = SafasCell::FrameMonad(closure);
+
+                // Closure needs to be called to create the actual function
+                (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*LAMBDA_ATOM).into(), AtomId(*CLOSURE_ATOM).into(), closure.into()])))
+            }
         } else {
             // No imports, so return a straight lambda
             let lambda          = Lambda::new(actions, num_cells, num_args);
-            let lambda: Box<dyn FrameMonad<Binding=RuntimeResult>> = if monadic_function { Box::new(ReturnsMonad(lambda)) } else { Box::new(lambda) };
-            let lambda          = SafasCell::FrameMonad(lambda);
+            if monadic_function {
+                let lambda      = Box::new(ReturnsMonad(lambda));
+                let lambda      = SafasCell::FrameMonad(lambda);
 
-            // Lambda can just be executed directly
-            (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*LAMBDA_ATOM).into(), lambda.into()])))
+                // Lambda can just be executed directly
+                (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*MONAD_ATOM).into(), AtomId(*LAMBDA_ATOM).into(), lambda.into()])))
+            } else {
+                let lambda      = Box::new(lambda);
+                let lambda      = SafasCell::FrameMonad(lambda);
+
+                // Lambda can just be executed directly
+                (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*LAMBDA_ATOM).into(), AtomId(*LAMBDA_ATOM).into(), lambda.into()])))
+            }
+        }
+    }
+
+    fn returns_monad(&self, bound_value: CellRef) -> bool {
+        // The first value of the bound value is an atom indicating whether or not the returned function is a monad
+        let bound_value: Option<ListTuple<(AtomId, AtomId, CellRef)>> = bound_value.try_into().ok();
+        if let Some(ListTuple((monad_type, _fun_type, _fun))) = bound_value {
+            monad_type == AtomId(*MONAD_ATOM)
+        } else {
+            false
         }
     }
 }
