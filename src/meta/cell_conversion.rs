@@ -163,6 +163,27 @@ where   A1:         TryFrom<CellRef>,
     }
 }
 
+impl<A1, A2, A3> TryFrom<CellRef> for ListTuple<(A1, A2, A3)>
+where   A1:         TryFrom<CellRef>,
+        A2:         TryFrom<CellRef>,
+        A3:         TryFrom<CellRef>,
+        RuntimeError:   From<A1::Error>,
+        RuntimeError:   From<A2::Error>,
+        RuntimeError:   From<A3::Error> {
+    type Error=RuntimeError;
+    fn try_from(cell: CellRef) -> Result<Self, Self::Error> {
+        // Read the list values
+        let (first, cdr)    = cell.list_value().ok_or(RuntimeError::BindingError(BindError::SyntaxExpectingList))?;
+        let (second, cdr)   = cdr.list_value().ok_or(RuntimeError::BindingError(BindError::MissingArgument))?;
+        let (third, cdr)    = cdr.list_value().ok_or(RuntimeError::BindingError(BindError::MissingArgument))?;
+
+        if !cdr.is_nil() { return Err(RuntimeError::BindingError(BindError::TooManyArguments)); }
+
+        // Convert them and generate the tuple
+        Ok(ListTuple((A1::try_from(first)?, A2::try_from(second)?, A3::try_from(third)?)))
+    }
+}
+
 ///
 /// Like ListTuple, except will try to parse the final CDR as the tail type (so the list can be as long as needed)
 /// rather than producing a fixed-size list
