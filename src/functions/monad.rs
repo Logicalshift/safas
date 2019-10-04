@@ -131,7 +131,27 @@ mod test {
     }
 
     #[test]
-    fn fun_monad() {
+    fn fun_monad_1() {
+        // A function that contains a monad should bind to a monad
+        let val = eval(
+                "(fun (x) (wrap x))"
+            ).unwrap().0;
+        assert!(val.is_monad());
+    }
+
+    #[test]
+    fn fun_monad_2() {
+        // Calling a function like this should work like a monad
+        let val = eval(
+                "(list ((fun () (wrap 1))) 2)"
+            ).unwrap().0;
+        println!("{}", val.to_string());
+        assert!(val.is_monad());
+        assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
+    }
+
+    #[test]
+    fn fun_monad_3() {
         // Calling a function that returns a monad should act like a monad in context
         let val = eval(
                 "(def my_wrap (fun (x) (wrap x)))
