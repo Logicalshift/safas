@@ -1,6 +1,8 @@
 use super::bind_error::*;
 use super::symbol_bindings::*;
+
 use crate::exec::*;
+use crate::meta::*;
 
 use smallvec::*;
 use std::marker::{PhantomData};
@@ -26,6 +28,11 @@ pub trait BindingMonad : Send+Sync {
     /// Resolves this monad
     ///
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
+
+    ///
+    /// Called with the results of binding using this monad, returns if the compiled value will be a monad
+    /// 
+    fn returns_monad(&self, _bound_value: CellRef) -> bool { false }
 
     ///
     /// Returns a string that describes what this monad does
