@@ -204,16 +204,6 @@ impl BindingMonad for FunBinder {
             }
         }
     }
-
-    fn returns_monad(&self, bound_value: CellRef) -> bool {
-        // The first value of the bound value is an atom indicating whether or not the returned function is a monad
-        let bound_value: Option<ListTuple<(AtomId, AtomId, CellRef)>> = bound_value.try_into().ok();
-        if let Some(ListTuple((monad_type, _fun_type, _fun))) = bound_value {
-            monad_type == AtomId(*MONAD_ATOM)
-        } else {
-            false
-        }
-    }
 }
 
 #[cfg(test)]
