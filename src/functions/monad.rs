@@ -133,15 +133,24 @@ mod test {
 
     #[test]
     fn fun_monad_1() {
-        // A function that contains a monad should bind to a monad
+        // A function that contains a monad should indicate it returns a monad
         let val = eval(
                 "(fun (x) (wrap x))"
+            ).unwrap().0;
+        assert!(val.reference_type() == ReferenceType::ReturnsMonad);
+    }
+
+    #[test]
+    fn fun_monad_2() {
+        // A function that contains a monad should indicate return a monad when called
+        let val = eval(
+                "((fun (x) (wrap x)))"
             ).unwrap().0;
         assert!(val.reference_type() == ReferenceType::Monad);
     }
 
     #[test]
-    fn fun_monad_2() {
+    fn fun_monad_3() {
         // Calling a function like this should work like a monad
         let val = eval(
                 "(list ((fun () (wrap 1))) 2)"
@@ -152,7 +161,7 @@ mod test {
     }
 
     #[test]
-    fn fun_monad_3() {
+    fn fun_monad_4() {
         // Calling a function that returns a monad should act like a monad in context
         let val = eval(
                 "(def my_wrap (fun (x) (wrap x)))
