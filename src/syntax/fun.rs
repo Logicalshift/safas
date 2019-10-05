@@ -204,6 +204,14 @@ impl BindingMonad for FunBinder {
             }
         }
     }
+
+    fn reference_type(&self, bound_value: CellRef) -> ReferenceType {
+        let bound_value: Result<ListTuple<(AtomId, AtomId, CellRef)>, _>   = bound_value.try_into();
+        match bound_value {
+            Ok(ListTuple((monad_type, _, _)))                   => { if monad_type == AtomId(*MONAD_ATOM) { ReferenceType::ReturnsMonad } else { ReferenceType::Value } },
+            Err(_)                                              => ReferenceType::Value
+        }
+    }
 }
 
 #[cfg(test)]
