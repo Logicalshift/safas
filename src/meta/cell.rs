@@ -124,7 +124,7 @@ impl SafasCell {
     pub fn reference_type(&self) -> ReferenceType {
         match self {
             SafasCell::Monad(_, _)                                  => ReferenceType::Monad,
-            SafasCell::FrameReference(_, _, ReferenceType::Monad)   => ReferenceType::Monad,
+            SafasCell::FrameReference(_, _, ref_type)               => *ref_type,
             SafasCell::FrameMonad(frame_monad)                      => if frame_monad.returns_monad() { ReferenceType::ReturnsMonad } else { ReferenceType::Value },
             SafasCell::List(car, cdr)                               => {
                 if let SafasCell::ActionMonad(syntax) = &**car {
