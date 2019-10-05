@@ -89,6 +89,8 @@ impl<Binding> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
         (**self).resolve(bindings)
     }
+
+    fn reference_type(&self, bound_value: CellRef) -> ReferenceType { (**self).reference_type(bound_value) }
 }
 
 ///
