@@ -119,31 +119,24 @@ impl SafasCell {
     }
 
     ///
-    /// Returns true if this cell is a monad
-    /// 
-    /// (A cell is a monad if it's directly a monad, or if it's a list beginning with a monad)
+    /// Returns the reference type for this cell
     ///
-    pub fn is_monad(&self) -> bool {
+    pub fn reference_type(&self) -> ReferenceType {
         match self {
-            SafasCell::Monad(_, _)                                  => true,
-            SafasCell::FrameReference(_, _, ReferenceType::Monad)   => true,
+            SafasCell::Monad(_, _)                                  => ReferenceType::Monad,
+            SafasCell::FrameReference(_, _, ReferenceType::Monad)   => ReferenceType::Monad,
+            SafasCell::FrameMonad(frame_monad)                      => if frame_monad.returns_monad() { ReferenceType::ReturnsMonad } else { ReferenceType::Value },
             SafasCell::List(car, cdr)                               => {
-                if let SafasCell::FrameMonad(frame_monad) = &**car {
-                    if frame_monad.returns_monad() {
-                        // Result of a function call should be treated as a monad if the frame returns a monad
-                        true
-                    } else {
-                        // Otherwise just determine the usual way
-                        car.is_monad()
-                    }
-                } else if let SafasCell::ActionMonad(syntax) = &**car {
-                    syntax.binding_monad.returns_monad(cdr.clone())
+                if let SafasCell::ActionMonad(syntax) = &**car {
+                    syntax.binding_monad.reference_type(cdr.clone())
                 } else {
-                    // Other lists should be treated as a monad if the head of the list is a monad
-                    car.is_monad()
+                    match car.reference_type() {
+                        ReferenceType::ReturnsMonad => ReferenceType::Monad,
+                        _                           => ReferenceType::Value
+                    }
                 }
             },
-            _                                                       => false
+            _                                                       => ReferenceType::Value
         }
     }
 

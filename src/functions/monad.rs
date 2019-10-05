@@ -20,6 +20,7 @@ pub fn wrap_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 
 #[cfg(test)]
 mod test {
+    use crate::meta::*;
     use crate::interactive::*;
 
     #[test]
@@ -27,7 +28,7 @@ mod test {
         let val = eval(
                 "(wrap 1)"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
     }
 
     #[test]
@@ -36,7 +37,7 @@ mod test {
                 "(def y (fun (y) y))
                 (y (wrap 1))"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
     }
 
     #[test]
@@ -45,7 +46,7 @@ mod test {
                 "(def y (fun (a b) (list a b) ))
                 (y (wrap 1) 2)"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
     }
 
     #[test]
@@ -54,7 +55,7 @@ mod test {
                 "(def y (fun (a b) (list a b) ))
                 (y 1 (wrap 2))"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
     }
 
     #[test]
@@ -63,7 +64,7 @@ mod test {
                 "(def y (fun (a b) (list a b) ))
                 (y (wrap 1) (wrap 2))"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
     }
 
     #[test]
@@ -72,7 +73,7 @@ mod test {
                 "(def y (fun (a b c) (list a b c) ))
                 (y (wrap 1) (wrap 2) (wrap 3))"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
     }
 
     #[test]
@@ -81,7 +82,7 @@ mod test {
                 "(def y (fun (a b) (list a b) ))
                 ((fun () (y 1 (wrap 2))))"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
     }
 
     #[test]
@@ -115,7 +116,7 @@ mod test {
                 "(def some_monad (wrap 2))
                 (list 1 some_monad)"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
         assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
 
@@ -126,7 +127,7 @@ mod test {
                 "(def some_monad (wrap 2))
                 ( (fun () (list 1 some_monad)) )"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
         assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
 
@@ -136,7 +137,7 @@ mod test {
         let val = eval(
                 "(fun (x) (wrap x))"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
     }
 
     #[test]
@@ -146,7 +147,7 @@ mod test {
                 "(list ((fun () (wrap 1))) 2)"
             ).unwrap().0;
         println!("{}", val.to_string());
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
         assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
 
@@ -157,7 +158,7 @@ mod test {
                 "(def my_wrap (fun (x) (wrap x)))
                 (list 1 (my_wrap 2))"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
         assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
 
@@ -169,7 +170,7 @@ mod test {
                 (def some_val 1)
                 (list some_val (my_wrap 2))"
             ).unwrap().0;
-        assert!(val.is_monad());
+        assert!(val.reference_type() == ReferenceType::Monad);
         assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
 }

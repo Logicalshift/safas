@@ -30,7 +30,7 @@ pub fn def_keyword() -> SyntaxCompiler {
             allocate_cell().and_then(move |cell_id| {
                 // Define the symbol to map to this cell
                 let value           = value.clone();
-                let cell_type       = if value.is_monad() { ReferenceType::Monad } else { ReferenceType::Value };
+                let cell_type       = value.reference_type();
                 let cell: CellRef   = SafasCell::FrameReference(cell_id, 0, cell_type).into();
 
                 define_symbol_value(name, cell.clone()).and_then_ok(move |_| {
@@ -85,7 +85,7 @@ impl BindingMonad for DefineSymbol {
         // Allocate a cell for this binding
         let mut bindings    = bindings;
         let cell_id         = bindings.alloc_cell();
-        let cell_type       = if self.value.is_monad() { ReferenceType::Monad } else { ReferenceType::Value };
+        let cell_type       = self.value.reference_type();
         bindings.symbols.insert(self.atom_id, SafasCell::FrameReference(cell_id, 0, cell_type).into());
 
         // Actions just load the binding into the cell

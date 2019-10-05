@@ -62,7 +62,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         BitCode(_)                                              |
         Monad(_, _)                                             |
         FrameMonad(_)                                           => {
-            if car.is_monad() {
+            if car.reference_type() == ReferenceType::Monad {
                 compile_monad_flat_map(smallvec![Action::Value(car)], cdr)
             } else {
                 compile_call(smallvec![Action::Value(car)], cdr) 
@@ -71,7 +71,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
 
         // Lists evaluate to their usual value before calling
         List(_, _)                                              => { 
-            if car.is_monad() {
+            if car.reference_type() == ReferenceType::Monad {
                 let actions = compile_statement_quick(car)?; compile_monad_flat_map(actions, cdr) 
             } else {
                 let actions = compile_statement_quick(car)?; compile_call(actions, cdr) 

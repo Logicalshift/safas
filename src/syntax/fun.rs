@@ -95,7 +95,7 @@ impl BindingMonad for FunBinder {
             // Bind the statement
             let bound_statement = bind_statement(statement, inner_bindings)
                 .and_then(|(bound, next_bindings)| {
-                    let is_monad = bound.is_monad();
+                    let is_monad = bound.reference_type() == ReferenceType::Monad;
                     match compile_statement(bound) {
                         Ok(actions) => Ok(((actions, is_monad), next_bindings)),
                         Err(err)    => Err((err.into(), next_bindings))

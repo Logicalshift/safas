@@ -30,9 +30,9 @@ pub trait BindingMonad : Send+Sync {
     fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
 
     ///
-    /// Called with the results of binding using this monad, returns if the compiled value will be a monad
+    /// Called with the results of binding using this monad, returns the reference type that this will generate
     /// 
-    fn returns_monad(&self, _bound_value: CellRef) -> bool { false }
+    fn reference_type(&self, _bound_value: CellRef) -> ReferenceType { ReferenceType::Value }
 
     ///
     /// Returns a string that describes what this monad does
