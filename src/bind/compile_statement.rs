@@ -79,8 +79,9 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         }
 
         // Frame references load the value from the frame and call that
-        FrameReference(_cell_num, _frame, ReferenceType::Value) => { let actions = compile_statement_quick(car)?; compile_call(actions, cdr) }
-        FrameReference(_cell_num, _frame, ReferenceType::Monad) => { let actions = compile_statement_quick(car)?; compile_monad_flat_map(actions, cdr) }
+        FrameReference(_cell_num, _frame, ReferenceType::ReturnsMonad)  |
+        FrameReference(_cell_num, _frame, ReferenceType::Value)         => { let actions = compile_statement_quick(car)?; compile_call(actions, cdr) }
+        FrameReference(_cell_num, _frame, ReferenceType::Monad)         => { let actions = compile_statement_quick(car)?; compile_monad_flat_map(actions, cdr) }
         
         // Action and macro monads resolve their respective syntaxes
         ActionMonad(syntax_compiler)                            => (syntax_compiler.generate_actions)(cdr),

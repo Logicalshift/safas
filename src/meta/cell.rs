@@ -20,7 +20,10 @@ pub enum ReferenceType {
     Value,
 
     /// Value that should be treated as a monad
-    Monad
+    Monad,
+
+    /// Value that returns a monad if called
+    ReturnsMonad
 }
 
 ///
@@ -211,19 +214,20 @@ impl SafasCell {
         use self::SafasCell::*;
 
         match self {
-            Nil                                                 => "()".to_string(),
-            Atom(atom_id)                                       => name_for_atom_with_id(*atom_id),
-            Number(number)                                      => number.to_string(),
-            BitCode(bitcode)                                    => format!("{}", bitcode.iter().map(|bitcode| bitcode.to_string()).collect::<Vec<_>>().join("")),
-            String(string_value)                                => format!("\"{}\"", string_value),         // TODO: character quoting
-            Char(chr_value)                                     => format!("'{}'", chr_value),              // TODO: character quoting,
-            FrameReference(cell, frame, ReferenceType::Value)   => format!("cell#({},{})", cell, frame),
-            FrameReference(cell, frame, ReferenceType::Monad)   => format!("monadcell#({},{})", cell, frame),
-            Monad(cell, monad)                                  => format!("monad#{}#{}", cell.to_string(), monad.to_string()),
-            FrameMonad(monad)                                   => monad.description(),
-            ActionMonad(syntax)                                 => format!("compile#{}", syntax.binding_monad.description()),
-            Any(val)                                            => format!("any#{:p}", val),
-            List(first, second)                                 => {
+            Nil                                                         => "()".to_string(),
+            Atom(atom_id)                                               => name_for_atom_with_id(*atom_id),
+            Number(number)                                              => number.to_string(),
+            BitCode(bitcode)                                            => format!("{}", bitcode.iter().map(|bitcode| bitcode.to_string()).collect::<Vec<_>>().join("")),
+            String(string_value)                                        => format!("\"{}\"", string_value),         // TODO: character quoting
+            Char(chr_value)                                             => format!("'{}'", chr_value),              // TODO: character quoting,
+            FrameReference(cell, frame, ReferenceType::Value)           => format!("cell#({},{})", cell, frame),
+            FrameReference(cell, frame, ReferenceType::Monad)           => format!("monadcell#({},{})", cell, frame),
+            FrameReference(cell, frame, ReferenceType::ReturnsMonad)    => format!("monadfncell#({},{})", cell, frame),
+            Monad(cell, monad)                                          => format!("monad#{}#{}", cell.to_string(), monad.to_string()),
+            FrameMonad(monad)                                           => monad.description(),
+            ActionMonad(syntax)                                         => format!("compile#{}", syntax.binding_monad.description()),
+            Any(val)                                                    => format!("any#{:p}", val),
+            List(first, second)                                         => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;
 
