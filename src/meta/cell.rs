@@ -272,6 +272,12 @@ impl SafasCell {
     }
 }
 
+impl Default for SafasCell {
+    fn default() -> SafasCell {
+        SafasCell::Nil
+    }
+}
+
 impl Debug for SafasCell {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(formatter, "{}", self.to_string())
