@@ -25,7 +25,7 @@ impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
 
     fn map<Out: 'static, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
         let result = BindingFn(move |bindings| {
-            let (bindings, val) = self.resolve(bindings);
+            let (bindings, val) = self.bind(bindings);
             let map_val         = action(val);
             (bindings, map_val)
         });

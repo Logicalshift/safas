@@ -25,9 +25,9 @@ pub trait BindingMonad : Send+Sync {
     fn rebind_from_outer_frame(&self, bindings: SymbolBindings, _frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) { (bindings, None) }
 
     ///
-    /// Resolves this monad
+    /// Binds the content of this monad to some symbol bindings (returning the new symbol bindings and the bound value)
     ///
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
 
     ///
     /// Called with the results of binding using this monad, returns the reference type that this will generate
@@ -44,7 +44,7 @@ impl BindingMonad for () {
     type Binding = ();
 
     fn description(&self) -> String { "##nop##".to_string() }
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, ()) { (bindings, ()) }
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, ()) { (bindings, ()) }
 }
 
 ///
@@ -56,7 +56,7 @@ impl<TFn, TBinding> BindingMonad for BindingFn<TFn, TBinding>
 where TFn: Fn(SymbolBindings) -> (SymbolBindings, TBinding)+Send+Sync {
     type Binding = TBinding;
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, TBinding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, TBinding) {
         let BindingFn(ref fun) = self;
         fun(bindings)
     }
@@ -72,7 +72,7 @@ struct ReturnValue<Binding: Clone> {
 impl<Binding: Send+Sync+Clone> BindingMonad for ReturnValue<Binding> {
     type Binding=Binding;
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
         (bindings, self.value.clone())
     }
 }
@@ -86,8 +86,8 @@ impl<Binding> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
 
     fn description(&self) -> String { (**self).description() }
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
-        (**self).resolve(bindings)
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
+        (**self).bind(bindings)
     }
 
     fn reference_type(&self, bound_value: CellRef) -> ReferenceType { (**self).reference_type(bound_value) }
@@ -112,10 +112,10 @@ where   InputMonad:     BindingMonad,
         NextFn:         Fn(InputMonad::Binding) -> OutputMonad+Send+Sync {
     type Binding = OutputMonad::Binding;
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputMonad::Binding) {
-        let (bindings, value)   = self.input.resolve(bindings);
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputMonad::Binding) {
+        let (bindings, value)   = self.input.bind(bindings);
         let next                = (self.next)(value);
-        next.resolve(bindings)
+        next.bind(bindings)
     }
 }
 

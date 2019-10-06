@@ -137,7 +137,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                         let mut bindings        = bindings.push_interior_frame();
                         bindings.args           = Some(cdr);
                         bindings.depth          = Some(symbol_level);
-                        let (bindings, bound)   = syntax_compiler.binding_monad.resolve(bindings);
+                        let (bindings, bound)   = syntax_compiler.binding_monad.bind(bindings);
                         let (bindings, imports) = bindings.pop();
 
                         if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
@@ -337,7 +337,7 @@ struct BindMonad {
 impl BindingMonad for BindMonad {
     type Binding=Result<Vec<CellRef>, BindError>;
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         let mut result      = vec![];
         let mut bindings    = bindings;
 

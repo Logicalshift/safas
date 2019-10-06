@@ -34,7 +34,7 @@ where   TArgs: TryFrom<CellRef>,
         <TArgs as TryFrom<CellRef>>::Error: Into<BindError> {
     type Binding = Result<TArgs, BindError>;
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         if let Some(args) = bindings.args.as_ref() {
             // Try to convert the arguments into the target type
             let args = args.clone();

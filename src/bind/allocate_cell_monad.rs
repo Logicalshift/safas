@@ -9,7 +9,7 @@ struct AllocateCellMonad;
 impl BindingMonad for AllocateCellMonad {
     type Binding = usize;
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, usize) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, usize) {
         let mut bindings    = bindings;
         let cell            = bindings.alloc_cell();
 

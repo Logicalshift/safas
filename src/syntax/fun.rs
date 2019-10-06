@@ -55,7 +55,7 @@ impl BindingMonad for FunBinder {
 
     fn description(&self) -> String { "##fun##".to_string() }
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Arguments are the argument list and the statements
         let args = bindings.args.clone();
         let args = args.and_then(|args| args.to_vec());

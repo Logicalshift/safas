@@ -21,8 +21,8 @@ pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
     // Apply the standard bindings
     let syntax                  = standard_syntax();
     let functions               = standard_functions();
-    let (bindings, actions)     = syntax.resolve(bindings);
-    let (bindings, fn_actions)  = functions.resolve(bindings);
+    let (bindings, actions)     = syntax.bind(bindings);
+    let (bindings, fn_actions)  = functions.bind(bindings);
     frame.allocate_for_bindings(&bindings);
     let (frame, _)              = actions.unwrap().execute(frame);
     let (frame, _)              = fn_actions.unwrap().execute(frame);
@@ -72,8 +72,8 @@ pub fn run_interactive() {
     // Apply the standard bindings
     let syntax                  = standard_syntax();
     let functions               = standard_functions();
-    let (bindings, actions)     = syntax.resolve(bindings);
-    let (bindings, fn_actions)  = functions.resolve(bindings);
+    let (bindings, actions)     = syntax.bind(bindings);
+    let (bindings, fn_actions)  = functions.bind(bindings);
     frame.allocate_for_bindings(&bindings);
     let (frame, _)              = actions.unwrap().execute(frame);
     let (frame, _)              = fn_actions.unwrap().execute(frame);

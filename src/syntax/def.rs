@@ -81,7 +81,7 @@ impl BindingMonad for DefineSymbol {
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Allocate a cell for this binding
         let mut bindings    = bindings;
         let cell_id         = bindings.alloc_cell();
@@ -122,7 +122,7 @@ impl BindingMonad for DefineSymbolValue {
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
 
-    fn resolve(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Store the value for this symbol
         let mut bindings    = bindings;
         bindings.symbols.insert(self.atom_id, self.value.clone());
