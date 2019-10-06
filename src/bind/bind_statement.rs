@@ -337,6 +337,10 @@ struct BindMonad {
 impl BindingMonad for BindMonad {
     type Binding=Result<Vec<CellRef>, BindError>;
 
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        (bindings, Ok(self.source.clone()))
+    }
+
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         let mut result      = vec![];
         let mut bindings    = bindings;

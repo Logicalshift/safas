@@ -49,6 +49,22 @@ where   TArgs: TryFrom<CellRef>,
             (bindings, Err(BindError::ArgumentsWereNotSupplied))
         }
     }
+
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) { 
+        if let Some(args) = bindings.args.as_ref() {
+            // Try to convert the arguments into the target type
+            let args = args.clone();
+            let args = TArgs::try_from(args);
+
+            match args {
+                Ok(args)    => (bindings, Ok(args)),
+                Err(err)    => (bindings, Err(err.into()))
+            }
+        } else {
+            // No arguments were supplied
+            (bindings, Err(BindError::ArgumentsWereNotSupplied))
+        }
+    }
 }
 
 ///

@@ -13,6 +13,10 @@ struct ExportSymbolMonad {
 impl BindingMonad for ExportSymbolMonad {
     type Binding=AtomId;
 
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        (bindings, AtomId(self.atom_id))
+    }
+
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, AtomId) {
         // Export the symbol
         let mut bindings = bindings;

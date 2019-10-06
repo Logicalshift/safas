@@ -81,6 +81,10 @@ impl BindingMonad for DefineSymbol {
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
 
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        (bindings, Ok(smallvec![]))
+    }
+
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Allocate a cell for this binding
         let mut bindings    = bindings;
@@ -121,6 +125,10 @@ impl BindingMonad for DefineSymbolValue {
     type Binding=Result<SmallVec<[Action; 8]>, BindError>;
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
+
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        (bindings, Ok(smallvec![]))
+    }
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Store the value for this symbol

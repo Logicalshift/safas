@@ -25,7 +25,21 @@ pub trait BindingMonad : Send+Sync {
     fn rebind_from_outer_frame(&self, bindings: SymbolBindings, _frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) { (bindings, None) }
 
     ///
+    /// Performs pre-binding steps
+    /// 
+    /// When compiling a multi-statement expression, this will be called for all syntax elements to give them an opportunity to
+    /// forward-declare any values they wish. No output value is generated during this stage: all that can be done is to
+    /// update the bindings for a particular statement.
+    /// 
+    /// The return value here is passed on to the next monad in the chain.
+    ///
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
+
+    ///
     /// Binds the content of this monad to some symbol bindings (returning the new symbol bindings and the bound value)
+    /// 
+    /// The bound value returned here is the value returned to the next monad in the chain, or the input to the
+    /// compiler stage.
     ///
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
 
@@ -45,6 +59,7 @@ impl BindingMonad for () {
 
     fn description(&self) -> String { "##nop##".to_string() }
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, ()) { (bindings, ()) }
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, ()) { (bindings, ()) }
 }
 
 ///
@@ -60,6 +75,8 @@ where TFn: Fn(SymbolBindings) -> (SymbolBindings, TBinding)+Send+Sync {
         let BindingFn(ref fun) = self;
         fun(bindings)
     }
+
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, TBinding) { unimplemented!("BindingFn pre_bind not implemented yet") /* TODO! */ }
 }
 
 ///
@@ -75,6 +92,10 @@ impl<Binding: Send+Sync+Clone> BindingMonad for ReturnValue<Binding> {
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
         (bindings, self.value.clone())
     }
+
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
+        (bindings, self.value.clone())
+    }
 }
 
 impl<Binding> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
@@ -88,6 +109,10 @@ impl<Binding> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
         (**self).bind(bindings)
+    }
+
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) { 
+        (**self).pre_bind(bindings)
     }
 
     fn reference_type(&self, bound_value: CellRef) -> ReferenceType { (**self).reference_type(bound_value) }
@@ -116,6 +141,12 @@ where   InputMonad:     BindingMonad,
         let (bindings, value)   = self.input.bind(bindings);
         let next                = (self.next)(value);
         next.bind(bindings)
+    }
+
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputMonad::Binding) { 
+        let (bindings, value)   = self.input.pre_bind(bindings);
+        let next                = (self.next)(value);
+        next.pre_bind(bindings)
     }
 }
 

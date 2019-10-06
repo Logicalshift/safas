@@ -233,6 +233,11 @@ impl BindingMonad for Arc<SyntaxSymbol> {
 
     fn description(&self) -> String { "##syntax_symbol##".to_string() }
 
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        let args = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
+        (bindings, Ok(args))
+    }
+
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Get the arguments for this symbol
         let args            = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
@@ -421,6 +426,11 @@ impl BindingMonad for SyntaxClosure {
     type Binding=Result<CellRef, BindError>;
 
     fn description(&self) -> String { "##syntax_closure##".to_string() }
+
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        let args = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
+        (bindings, Ok(args))
+    }
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // Get the arguments for this symbol

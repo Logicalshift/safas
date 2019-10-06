@@ -9,6 +9,11 @@ struct AllocateCellMonad;
 impl BindingMonad for AllocateCellMonad {
     type Binding = usize;
 
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        // Note that the cell is not allocated during pre-binding!
+        (bindings, 0)
+    }
+
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, usize) {
         let mut bindings    = bindings;
         let cell            = bindings.alloc_cell();
