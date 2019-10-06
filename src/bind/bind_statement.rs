@@ -17,7 +17,7 @@ lazy_static! {
 }
 
 ///
-/// Performs binding to generate the actions for a simple statement
+/// Binds a statement to the value used for compiling
 ///
 pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
     use self::SafasCell::*;
@@ -162,7 +162,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
 }
 
 ///
-/// Binds a call function, given the actions needed to load the function value
+/// Binds a call function, given the value that evaluates to the function
 ///
 fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
     let mut bindings = bindings;
