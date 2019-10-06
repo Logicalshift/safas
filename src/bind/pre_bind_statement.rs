@@ -38,12 +38,19 @@ pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResu
                     List(_, _)              |
                     Monad(_, _)             |
                     FrameMonad(_)           |
-                    ActionMonad(_)          => Ok((symbol_value, bindings)),
+                    ActionMonad(_)          |
                     FrameReference(_, _, _) => Ok((symbol_value, bindings)),
                 }
             } else {
-                // Not a valid symbol
-                Err((BindError::UnknownSymbol, bindings))
+                // Not a valid symbol, or not defined yet
+                // 
+                // Most definitions aren't actually added to bindings until they can be accessed, so any symbols defined in the
+                // current context won't yet be available at this point.
+                // 
+                // TODO: one issue here is that if there's a symbol that wants pre-binding but doesn't want to declare itself as
+                // a 'forward' declaration it can't currently get any pre-binding behaviour (to fix this we need a 'pre-bound' cell type
+                // that acts transparent in the main binding but is returned here)
+                Ok((source, bindings))
             }
         }
 
@@ -102,7 +109,13 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                     }
                 } 
             } else {
-                return Err((BindError::UnknownSymbol, bindings));
+                // Not a valid symbol, or not defined yet (pre-bind like a function call)
+                // 
+                // TODO: one issue here is that if there's a symbol that wants pre-binding but doesn't want to declare itself as
+                // a 'forward' declaration it can't currently get any pre-binding behaviour (to fix this we need a 'pre-bound' cell type
+                // that acts transparent in the main binding but is returned here)
+                let (value, bindings) = pre_bind_statement(car, bindings)?;
+                pre_bind_call(value, cdr, bindings)
             }
         },
 
