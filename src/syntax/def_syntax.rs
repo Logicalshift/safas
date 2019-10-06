@@ -107,6 +107,17 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
                     let macro_def               = macro_def.to_vec();
                     let macro_def               = match macro_def { Some(def) => def, None => return (macro_bindings.pop().0.pop().0, Err(BindError::SyntaxExpectingList)) };
 
+                    // Prebind each statement
+                    for macro_statement in macro_def.iter() {
+                        let prebound            = pre_bind_statement(Arc::clone(macro_statement), macro_bindings);
+                        let (new_bindings, _)   = match prebound { 
+                            Ok((result, macro_bindings))    => ((macro_bindings, result)), 
+                            Err((err, macro_bindings))      => { return (macro_bindings.pop().0.pop().0, Err(err)); }
+                        };
+                        macro_bindings          = new_bindings;
+                    }
+
+                    // Finish binding them
                     let mut bind_result         = vec![];
                     for macro_statement in macro_def.into_iter() {
                         // Bind this statement
