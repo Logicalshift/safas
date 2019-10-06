@@ -1,10 +1,10 @@
 use super::number::*;
 use super::atom::*;
-use super::bitcode::*;
 use super::monad_type::*;
 
 use crate::bind::*;
 use crate::exec::*;
+use crate::bitcode::*;
 
 use std::sync::*;
 use std::fmt;

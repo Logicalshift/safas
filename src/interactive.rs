@@ -3,6 +3,7 @@ use crate::parse::*;
 use crate::bind::*;
 use crate::exec::*;
 use crate::syntax::*;
+use crate::bitcode::*;
 use crate::functions::*;
 
 use std::io;

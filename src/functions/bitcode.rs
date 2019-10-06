@@ -1,5 +1,6 @@
 use crate::meta::*;
 use crate::exec::*;
+use crate::bitcode::*;
 
 ///
 /// Binding monad that implements a bitcode keyword

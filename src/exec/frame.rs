@@ -1,4 +1,4 @@
-use super::bitcode_buffer::*;
+use crate::bitcode::*;
 use crate::meta::*;
 use crate::bind::*;
 

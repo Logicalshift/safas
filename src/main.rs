@@ -5,6 +5,7 @@ mod bind;
 mod exec;
 mod parse;
 mod syntax;
+mod bitcode;
 mod functions;
 mod interactive;
 

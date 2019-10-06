@@ -3,7 +3,6 @@
 //! generating its final result
 //!
 
-mod bitcode_buffer;
 mod frame;
 mod frame_monad;
 mod action;
@@ -13,7 +12,6 @@ mod runtime_error;
 mod fn_monad;
 mod returns_monad;
 
-pub use self::bitcode_buffer::*;
 pub use self::frame::*;
 pub use self::frame_monad::*;
 pub use self::action::*;
