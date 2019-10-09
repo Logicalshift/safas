@@ -33,6 +33,8 @@ pub fn standard_functions() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> 
     let functions   = flat_map_binding_actions(move || define_function("m",         m_keyword()), functions);
     let functions   = flat_map_binding_actions(move || define_function("a",         a_keyword()), functions);
 
+    let functions: Box<dyn BindingMonad<Binding=_>> = Box::new(functions);
+
     // List functions
     let functions   = flat_map_binding_actions(move || define_function("list",      list_fn()), functions);
     let functions   = flat_map_binding_actions(move || define_function("cons",      cons_fn()), functions);
