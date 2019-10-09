@@ -24,6 +24,12 @@ impl TryFrom<CellRef> for SafasNumber {
     }
 }
 
+impl<T: Default> Default for CellValue<T> {
+    fn default() -> Self {
+        CellValue(T::default())
+    }
+}
+
 impl TryFrom<CellRef> for CellValue<u8> {
     type Error=RuntimeError;
     fn try_from(cell: CellRef) -> Result<Self, RuntimeError> { Ok(CellValue(u8::try_from(SafasNumber::try_from(cell)?)?)) }
@@ -80,6 +86,12 @@ impl TryFrom<CellRef> for CellValue<i128> {
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct AtomId(pub u64);
 
+impl Default for AtomId {
+    fn default() -> Self {
+        AtomId(get_id_for_atom_with_name("##default##"))
+    }
+}
+
 impl TryFrom<CellRef> for AtomId {
     type Error=RuntimeError;
 
@@ -114,6 +126,12 @@ impl From<u64> for AtomId {
 ///
 pub struct FrameReference(pub usize, pub u32, pub ReferenceType);
 
+impl Default for FrameReference {
+    fn default() -> Self {
+        FrameReference(0, 0, ReferenceType::Value)
+    }
+}
+
 impl TryFrom<CellRef> for FrameReference {
     type Error=RuntimeError;
 
@@ -129,6 +147,12 @@ impl TryFrom<CellRef> for FrameReference {
 /// Represents a tuple generated from a list, used for conversions
 ///
 pub struct ListTuple<T>(pub T);
+
+impl<T: Default> Default for ListTuple<T> {
+    fn default() -> Self {
+        ListTuple(T::default())
+    }
+}
 
 impl<A1> TryFrom<CellRef> for ListTuple<(A1, )>
 where   A1:             TryFrom<CellRef>,
@@ -189,6 +213,12 @@ where   A1:         TryFrom<CellRef>,
 /// rather than producing a fixed-size list
 ///
 pub struct ListWithTail<THead, TTail>(pub THead, pub TTail);
+
+impl<THead: Default, TTail: Default> Default for ListWithTail<THead, TTail> {
+    fn default() -> Self {
+        ListWithTail(THead::default(), TTail::default())
+    }
+}
 
 impl<A1, TTail> TryFrom<CellRef> for ListWithTail<(A1, ), TTail>
 where   A1:             TryFrom<CellRef>,

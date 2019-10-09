@@ -28,13 +28,13 @@ where   TArgs: TryFrom<CellRef>,
     }
 }
 
-impl<TArgs> BindingMonad for BindArgsMonad<TArgs> 
+impl<TArgs: Default> BindingMonad for BindArgsMonad<TArgs> 
 where   TArgs: TryFrom<CellRef>,
         TArgs: Send+Sync,
         <TArgs as TryFrom<CellRef>>::Error: Into<BindError> {
-    type Binding = Result<TArgs, BindError>;
+    type Binding = TArgs;
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         if let Some(args) = bindings.args.as_ref() {
             // Try to convert the arguments into the target type
             let args = args.clone();
@@ -57,12 +57,12 @@ where   TArgs: TryFrom<CellRef>,
             let args = TArgs::try_from(args);
 
             match args {
-                Ok(args)    => (bindings, Ok(args)),
-                Err(err)    => (bindings, Err(err.into()))
+                Ok(args)    => (bindings, args),
+                Err(err)    => (bindings, TArgs::default())
             }
         } else {
             // No arguments were supplied
-            (bindings, Err(BindError::ArgumentsWereNotSupplied))
+            (bindings, TArgs::default())
         }
     }
 }
@@ -70,7 +70,7 @@ where   TArgs: TryFrom<CellRef>,
 ///
 /// Returns a monad that gets the arguments for the expression that is being bound
 ///
-pub fn get_expression_arguments<TArgs>() -> impl BindingMonad<Binding=Result<TArgs, BindError>>
+pub fn get_expression_arguments<TArgs: Default>() -> impl BindingMonad<Binding=TArgs>
 where   TArgs: TryFrom<CellRef>,
         TArgs: Send+Sync,
         <TArgs as TryFrom<CellRef>>::Error: Into<BindError> {

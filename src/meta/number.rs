@@ -38,3 +38,9 @@ impl SafasNumber {
         }
     }
 }
+
+impl Default for SafasNumber {
+    fn default() -> Self {
+        SafasNumber::Plain(0)
+    }
+}
