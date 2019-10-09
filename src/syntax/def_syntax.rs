@@ -21,12 +21,12 @@ use std::convert::*;
 /// ```(<name> <statements>)```
 ///
 pub fn def_syntax_keyword() -> SyntaxCompiler {
-    let bind = get_expression_arguments().map(|args: Result<ListWithTail<(AtomId, CellRef), CellRef>, BindError>| {
+    let bind = get_expression_arguments().map_result(|args: ListWithTail<(AtomId, CellRef), CellRef>| {
 
         // First step: parse the arguments to the expression
 
         // Fetch the arguments
-        let ListWithTail((name, patterns), statements) = args?;
+        let ListWithTail((name, patterns), statements) = args;
 
         // Process the patterns (each is of the form <pattern> <macro>)
         let mut current_pattern = patterns;
@@ -240,16 +240,16 @@ impl SyntaxSymbol {
 }
 
 impl BindingMonad for Arc<SyntaxSymbol> {
-    type Binding=Result<CellRef, BindError>;
+    type Binding=CellRef;
 
     fn description(&self) -> String { "##syntax_symbol##".to_string() }
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         let args = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
-        (bindings, Ok(args))
+        (bindings, args)
     }
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         // Get the arguments for this symbol
         let args            = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
         let mut bindings    = bindings;
@@ -434,16 +434,16 @@ impl SyntaxClosure {
 }
 
 impl BindingMonad for SyntaxClosure {
-    type Binding=Result<CellRef, BindError>;
+    type Binding=CellRef;
 
     fn description(&self) -> String { "##syntax_closure##".to_string() }
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         let args = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
-        (bindings, Ok(args))
+        (bindings, args)
     }
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         // Get the arguments for this symbol
         let args                    = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
 

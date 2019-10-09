@@ -9,12 +9,11 @@ use crate::bind::*;
 use crate::syntax::*;
 
 use smallvec::*;
-use std::result::{Result};
 
 ///
 /// Defines a function to be a frame monad
 ///
-pub fn define_function<Monad>(atom: &str, monad: Monad) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>
+pub fn define_function<Monad>(atom: &str, monad: Monad) -> impl BindingMonad<Binding=SmallVec<[Action; 8]>>
 where Monad: 'static+FrameMonad<Binding=RuntimeResult> {
     let monad = Box::new(monad);
     let monad = SafasCell::FrameMonad(monad);
@@ -25,9 +24,9 @@ where Monad: 'static+FrameMonad<Binding=RuntimeResult> {
 ///
 /// Creates the standard function bindings for the SAFAS language
 ///
-pub fn standard_functions() -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
+pub fn standard_functions() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> {
     // Define the standard functions
-    let functions  = wrap_binding(Ok(smallvec![]));
+    let functions  = wrap_binding(smallvec![]);
 
     // Bitcode functions
     let functions   = flat_map_binding_actions(move || define_function("d",         d_keyword()), functions);
