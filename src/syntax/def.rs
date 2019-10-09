@@ -40,7 +40,7 @@ pub fn def_keyword() -> SyntaxCompiler {
                     // Export the atom into the environment
                     export_symbol(name).and_then(move |_| {
                         // Binding contains the frame reference cell and the bound value
-                        wrap_binding(Ok(SafasCell::list_with_cells(vec![cell.clone(), value.clone()])))
+                        wrap_binding(SafasCell::list_with_cells(vec![cell.clone(), value.clone()]))
                     })
                 })
             })
@@ -77,15 +77,15 @@ struct DefineSymbol {
 }
 
 impl BindingMonad for DefineSymbol {
-    type Binding=Result<SmallVec<[Action; 8]>, BindError>;
+    type Binding=SmallVec<[Action; 8]>;
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
 
-    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         (bindings, Ok(smallvec![]))
     }
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         // Allocate a cell for this binding
         let mut bindings    = bindings;
         let cell_id         = bindings.alloc_cell();
@@ -102,7 +102,7 @@ impl BindingMonad for DefineSymbol {
 ///
 /// Creates a binding monad that defines a symbol to evaluate a particular cell value
 ///
-pub fn define_symbol<Atom: Into<AtomId>, Cell: Into<CellRef>>(atom: Atom, value: Cell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
+pub fn define_symbol<Atom: Into<AtomId>, Cell: Into<CellRef>>(atom: Atom, value: Cell) -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> {
     // Retrieve the atom ID
     let atom_id         = atom.into();
     let AtomId(atom_id) = atom_id;
@@ -122,15 +122,15 @@ struct DefineSymbolValue {
 }
 
 impl BindingMonad for DefineSymbolValue {
-    type Binding=Result<SmallVec<[Action; 8]>, BindError>;
+    type Binding=SmallVec<[Action; 8]>;
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
 
-    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         (bindings, Ok(smallvec![]))
     }
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         // Store the value for this symbol
         let mut bindings    = bindings;
         bindings.symbols.insert(self.atom_id, self.value.clone());
@@ -138,14 +138,14 @@ impl BindingMonad for DefineSymbolValue {
         // No actions are performed for this: the symbol is just defined
         let actions         = smallvec![];
 
-        (bindings, Ok(actions))
+        (bindings, actions)
     }
 }
 
 ///
 /// Creates a binding monad that defines a symbol to evaluate a particular cell value
 ///
-pub fn define_symbol_value<Atom: Into<AtomId>, Cell: Into<CellRef>>(atom: Atom, value: Cell) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>> {
+pub fn define_symbol_value<Atom: Into<AtomId>, Cell: Into<CellRef>>(atom: Atom, value: Cell) -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> {
     // Retrieve the atom ID
     let atom_id         = atom.into();
     let AtomId(atom_id) = atom_id;

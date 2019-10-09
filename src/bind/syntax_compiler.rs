@@ -15,7 +15,7 @@ use std::sync::*;
 ///
 pub struct SyntaxCompiler {
     /// Generates the bound statement for this syntax
-    pub binding_monad: Box<dyn BindingMonad<Binding=Result<CellRef, BindError>>>,
+    pub binding_monad: Box<dyn BindingMonad<Binding=CellRef>>,
 
     /// Generates the actions for the bound syntax
     pub generate_actions: Arc<dyn Fn(CellRef) -> Result<SmallVec<[Action; 8]>, BindError>+Send+Sync>

@@ -335,13 +335,13 @@ struct BindMonad {
 }
 
 impl BindingMonad for BindMonad {
-    type Binding=Result<Vec<CellRef>, BindError>;
+    type Binding=Vec<CellRef>;
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
-        (bindings, Ok(self.source.clone()))
+        (bindings, self.source.clone())
     }
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         let mut result      = vec![];
         let mut bindings    = bindings;
 
@@ -359,13 +359,13 @@ impl BindingMonad for BindMonad {
 ///
 /// Creates a binding monad that will bind the specified source
 ///
-pub fn bind(source: CellRef) -> impl BindingMonad<Binding=Result<CellRef, BindError>> {
-    BindMonad { source: vec![source] }.and_then_ok(|mut results| wrap_binding(Ok(results.pop().unwrap())))
+pub fn bind(source: CellRef) -> impl BindingMonad<Binding=CellRef> {
+    BindMonad { source: vec![source] }.and_then_ok(|mut results| wrap_binding(results.pop().unwrap()))
 }
 
 ///
 /// Creates a binding monad that will bind many items from the specified source
 ///
-pub fn bind_all<Items: IntoIterator<Item=CellRef>>(source: Items) -> impl BindingMonad<Binding=Result<Vec<CellRef>, BindError>> {
+pub fn bind_all<Items: IntoIterator<Item=CellRef>>(source: Items) -> impl BindingMonad<Binding=Vec<CellRef>> {
     BindMonad { source: source.into_iter().collect() }
 }
