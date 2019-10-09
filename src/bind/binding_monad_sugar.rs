@@ -15,6 +15,11 @@ pub trait BindingMonadAndThen : BindingMonad {
     /// Maps the value contained by this monad to another value
     ///
     fn map<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>>;
+
+    ///
+    /// As for 'map' but allows for returning an error from the mapping function
+    ///
+    fn map_result<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Result<Out, BindError>+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>>;
 }
 
 impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
@@ -27,6 +32,20 @@ impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
         let result = BindingFn(move |bindings| {
             let (bindings, val) = self.bind(bindings);
             let map_val         = val.map(|val| action(val));
+            (bindings, map_val)
+        } /*,
+        move |bindings| {
+            let (bindings, val) = self.pre_bind(bindings);
+            let map_val         = Out::default();
+            (bindings, map_val)
+        } */);
+        Box::new(result)
+    }
+
+    fn map_result<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Result<Out, BindError>+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
+        let result = BindingFn(move |bindings| {
+            let (bindings, val) = self.bind(bindings);
+            let map_val         = val.and_then(|val| action(val));
             (bindings, map_val)
         } /*,
         move |bindings| {
