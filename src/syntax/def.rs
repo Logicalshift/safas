@@ -81,8 +81,8 @@ impl BindingMonad for DefineSymbol {
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
 
-    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
-        (bindings, Ok(smallvec![]))
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        (bindings, smallvec![])
     }
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
@@ -126,8 +126,8 @@ impl BindingMonad for DefineSymbolValue {
 
     fn description(&self) -> String { "##define_symbol##".to_string() }
 
-    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
-        (bindings, Ok(smallvec![]))
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+        (bindings, smallvec![])
     }
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
@@ -138,7 +138,7 @@ impl BindingMonad for DefineSymbolValue {
         // No actions are performed for this: the symbol is just defined
         let actions         = smallvec![];
 
-        (bindings, actions)
+        (bindings, Ok(actions))
     }
 }
 

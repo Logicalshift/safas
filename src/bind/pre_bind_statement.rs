@@ -102,10 +102,7 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
 
                         if imports.len() > 0 { panic!("Should be no imports when pre-binding"); }
 
-                        match bound {
-                            Ok(bound)       => Ok((SafasCell::List(symbol_value, bound).into(), bindings)),
-                            Err(error)      => Err((error, bindings))
-                        }
+                        Ok((SafasCell::List(symbol_value, bound).into(), bindings))
                     }
                 } 
             } else {

@@ -51,16 +51,16 @@ pub fn fun_keyword() -> SyntaxCompiler {
 struct FunBinder;
 
 impl BindingMonad for FunBinder {
-    type Binding=Result<CellRef, BindError>;
+    type Binding=CellRef;
 
     fn description(&self) -> String { "##fun##".to_string() }
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         let args = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
-        (bindings, Ok(args))
+        (bindings, args)
     }
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         // Arguments are the argument list and the statements
         let args = bindings.args.clone();
         let args = args.and_then(|args| args.to_vec());

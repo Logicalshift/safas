@@ -58,7 +58,7 @@ impl BindingMonad for () {
     type Binding = ();
 
     fn description(&self) -> String { "##nop##".to_string() }
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, ()) { (bindings, ()) }
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<(), BindError>) { (bindings, Ok(())) }
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, ()) { (bindings, ()) }
 }
 
@@ -179,7 +179,7 @@ where   InputMonad:     BindingMonad<Binding=SmallVec<[Action; 8]>>,
 
         flat_map_binding(move |next_actions| {
             // Combine the actions from both monads
-            let mut actions = actions;
+            let mut actions = actions.clone();
             actions.extend(next_actions);
 
             wrap_binding(actions)

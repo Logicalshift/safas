@@ -1,3 +1,4 @@
+use super::bind_error::*;
 use super::binding_monad::*;
 use super::symbol_bindings::*;
 
@@ -17,13 +18,13 @@ impl BindingMonad for ExportSymbolMonad {
         (bindings, AtomId(self.atom_id))
     }
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, AtomId) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<AtomId, BindError>) {
         // Export the symbol
         let mut bindings = bindings;
         bindings.export(self.atom_id);
 
-        // Result is the atom id
-        (bindings, AtomId(self.atom_id))
+        // Result is the atom id that was just exported
+        (bindings, Ok(AtomId(self.atom_id)))
     }
 }
 

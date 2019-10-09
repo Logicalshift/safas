@@ -14,7 +14,7 @@ pub fn quote_keyword() -> SyntaxCompiler {
     // The binding just extracts the literal from the expression
     let bind = get_expression_arguments().and_then_ok(|args: ListTuple<(CellRef, )>| {
         let ListTuple((literal, )) = args;
-        wrap_binding(Ok(literal))
+        wrap_binding(literal)
     });
 
     // The compiler just loads the literal

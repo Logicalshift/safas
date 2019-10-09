@@ -1,3 +1,4 @@
+use super::bind_error::*;
 use super::binding_monad::*;
 use super::symbol_bindings::*;
 
@@ -14,11 +15,11 @@ impl BindingMonad for AllocateCellMonad {
         (bindings, 0)
     }
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, usize) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<usize, BindError>) {
         let mut bindings    = bindings;
         let cell            = bindings.alloc_cell();
 
-        (bindings, cell)
+        (bindings, Ok(cell))
     }
 }
 
