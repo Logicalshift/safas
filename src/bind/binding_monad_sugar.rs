@@ -14,7 +14,7 @@ pub trait BindingMonadAndThen : BindingMonad {
     ///
     /// Maps the value contained by this monad to another value
     ///
-    fn map<Out: 'static, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>>;
+    fn map<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>>;
 }
 
 impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
@@ -23,12 +23,17 @@ impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
         Box::new(result)
     }
 
-    fn map<Out: 'static, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
+    fn map<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
         let result = BindingFn(move |bindings| {
             let (bindings, val) = self.bind(bindings);
-            let map_val         = action(val);
+            let map_val         = val.map(|val| action(val));
             (bindings, map_val)
-        });
+        } /*,
+        move |bindings| {
+            let (bindings, val) = self.pre_bind(bindings);
+            let map_val         = Out::default();
+            (bindings, map_val)
+        } */);
         Box::new(result)
     }
 }
@@ -36,17 +41,17 @@ impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
 ///
 /// Adds the `and_then_ok()` operation to a binding monad
 ///
-pub trait BindingMonadAndThenOk<Val> : BindingMonad<Binding=Result<Val, BindError>> {
+pub trait BindingMonadAndThenOk<Val: Default> : BindingMonad<Binding=Val> {
     ///
     /// `and_then_ok()` is syntactic sugar around the `flat_map_binding_error` operation, which adds continuations only on success,
     /// which makes for more easily read code
     ///
-    fn and_then_ok<Out: 'static+Clone+Send+Sync, OutputMonad: 'static+BindingMonad<Binding=Result<Out, BindError>>, NextFn: 'static+Fn(Val) -> OutputMonad+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=OutputMonad::Binding>>;
+    fn and_then_ok<Out: 'static+Default+Clone+Send+Sync, OutputMonad: 'static+BindingMonad<Binding=Out>, NextFn: 'static+Fn(Val) -> OutputMonad+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=OutputMonad::Binding>>;
 }
 
-impl<T: 'static+BindingMonad<Binding=Result<Val, BindError>>, Val: 'static> BindingMonadAndThenOk<Val> for T {
-    fn and_then_ok<Out: 'static+Clone+Send+Sync, OutputMonad: 'static+BindingMonad<Binding=Result<Out, BindError>>, NextFn: 'static+Fn(Val) -> OutputMonad+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=OutputMonad::Binding>> {
-        let result = flat_map_binding_error(action, self);
+impl<T: 'static+BindingMonad<Binding=Val>, Val: 'static+Default> BindingMonadAndThenOk<Val> for T {
+    fn and_then_ok<Out: 'static+Default+Clone+Send+Sync, OutputMonad: 'static+BindingMonad<Binding=Out>, NextFn: 'static+Fn(Val) -> OutputMonad+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=OutputMonad::Binding>> {
+        let result = flat_map_binding(action, self);
         Box::new(result)
     }
 }
