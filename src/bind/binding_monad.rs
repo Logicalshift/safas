@@ -11,7 +11,7 @@ use std::marker::{PhantomData};
 /// The binding monad describes how to bind a program against its symbols
 ///
 pub trait BindingMonad : Send+Sync {
-    type Binding;
+    type Binding: Default;
 
     ///
     /// Rebinds this monad to bind at a particular frame depth
@@ -41,7 +41,7 @@ pub trait BindingMonad : Send+Sync {
     /// The bound value returned here is the value returned to the next monad in the chain, or the input to the
     /// compiler stage.
     ///
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding);
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>);
 
     ///
     /// Called with the results of binding using this monad, returns the reference type that this will generate
@@ -65,18 +65,18 @@ impl BindingMonad for () {
 ///
 /// Binding monad generated from a resolve function
 ///
-pub struct BindingFn<TFn: Fn(SymbolBindings) -> (SymbolBindings, TBinding), TBinding>(pub TFn);
+pub struct BindingFn<TFn: Fn(SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>), TBinding>(pub TFn);
 
-impl<TFn, TBinding> BindingMonad for BindingFn<TFn, TBinding> 
-where TFn: Fn(SymbolBindings) -> (SymbolBindings, TBinding)+Send+Sync {
+impl<TFn, TBinding: Default> BindingMonad for BindingFn<TFn, TBinding> 
+where TFn: Fn(SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>)+Send+Sync {
     type Binding = TBinding;
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, TBinding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>) {
         let BindingFn(ref fun) = self;
         fun(bindings)
     }
 
-    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, TBinding) { unimplemented!("BindingFn pre_bind not implemented yet") /* TODO! */ }
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, TBinding) { (bindings, TBinding::default()) }
 }
 
 ///
@@ -86,11 +86,11 @@ struct ReturnValue<Binding: Clone> {
     value: Binding
 }
 
-impl<Binding: Send+Sync+Clone> BindingMonad for ReturnValue<Binding> {
+impl<Binding: Default+Send+Sync+Clone> BindingMonad for ReturnValue<Binding> {
     type Binding=Binding;
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
-        (bindings, self.value.clone())
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Binding, BindError>) {
+        (bindings, Ok(self.value.clone()))
     }
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
@@ -98,7 +98,7 @@ impl<Binding: Send+Sync+Clone> BindingMonad for ReturnValue<Binding> {
     }
 }
 
-impl<Binding> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
+impl<Binding: Default> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
     type Binding=Binding;
 
     fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) {
@@ -107,7 +107,7 @@ impl<Binding> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
 
     fn description(&self) -> String { (**self).description() }
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Binding, BindError>) {
         (**self).bind(bindings)
     }
 
@@ -121,7 +121,7 @@ impl<Binding> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
 ///
 /// Wraps a value in a binding monad
 ///
-pub fn wrap_binding<Binding: Send+Sync+Clone>(value: Binding) -> impl BindingMonad<Binding=Binding> {
+pub fn wrap_binding<Binding: Default+Send+Sync+Clone>(value: Binding) -> impl BindingMonad<Binding=Binding> {
     ReturnValue { value }
 }
 
@@ -137,10 +137,14 @@ where   InputMonad:     BindingMonad,
         NextFn:         Fn(InputMonad::Binding) -> OutputMonad+Send+Sync {
     type Binding = OutputMonad::Binding;
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputMonad::Binding) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<OutputMonad::Binding, BindError>) {
         let (bindings, value)   = self.input.bind(bindings);
-        let next                = (self.next)(value);
-        next.bind(bindings)
+        let next                = value.map(|value| (self.next)(value));
+
+        match next {
+            Ok(next)    => next.bind(bindings),
+            Err(err)    => (bindings, Err(err))
+        }
     }
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputMonad::Binding) { 
@@ -162,28 +166,11 @@ pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, Nex
 }
 
 ///
-/// A variant of flat_map that strips out errors from the result of the input monad
-///
-pub fn flat_map_binding_error<InputMonad, OutputMonad, Val, Out, NextFn: Fn(Val) -> OutputMonad+Send+Sync>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=Result<Out, BindError>> 
-where  InputMonad:  BindingMonad<Binding=Result<Val, BindError>>,
-       OutputMonad: 'static+BindingMonad<Binding=Result<Out, BindError>>,
-       Out:         'static+Clone+Send+Sync {
-    flat_map_binding(move |maybe_error| {
-        let result: Box<dyn BindingMonad<Binding=Result<Out, BindError>>> = match maybe_error {
-            Ok(val)     => Box::new(action(val)),
-            Err(err)    => Box::new(wrap_binding(Err(err)))
-        };
-
-        result
-    }, monad)
-}
-
-///
 /// As for flat_map but combines two monads that generate actions by concatenating the actions together
 ///
-pub fn flat_map_binding_actions<InputMonad, OutputMonad, NextFn>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>
-where   InputMonad:     BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>,
-        OutputMonad:    BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindError>>,
+pub fn flat_map_binding_actions<InputMonad, OutputMonad, NextFn>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=SmallVec<[Action; 8]>>
+where   InputMonad:     BindingMonad<Binding=SmallVec<[Action; 8]>>,
+        OutputMonad:    BindingMonad<Binding=SmallVec<[Action; 8]>>,
         NextFn:         Fn() -> OutputMonad+Send+Sync {
     // Perform the input monad
     flat_map_binding(move |actions| {
@@ -192,17 +179,10 @@ where   InputMonad:     BindingMonad<Binding=Result<SmallVec<[Action; 8]>, BindE
 
         flat_map_binding(move |next_actions| {
             // Combine the actions from both monads
-            match (actions.clone(), next_actions) {
-                (Ok(actions), Ok(next_actions)) => { 
-                    let mut actions = actions;
-                    actions.extend(next_actions);
+            let mut actions = actions;
+            actions.extend(next_actions);
 
-                    wrap_binding(Ok(actions))
-                },
-                
-                (Err(err), _) => wrap_binding(Err(err.clone())),
-                (_, Err(err)) => wrap_binding(Err(err))
-            }
+            wrap_binding(actions)
         }, next)
     }, monad)
 }
