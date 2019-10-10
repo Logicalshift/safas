@@ -92,6 +92,12 @@ impl BindingMonad for FunBinder {
             inner_bindings.bind_atom_to_new_cell(fun_arg_atom);
         }
 
+        // Pre-bind the statements
+        for statement in statements.iter() {
+            let (new_bindings, _) = pre_bind_statement(statement.clone(), inner_bindings);
+            inner_bindings = new_bindings;
+        }
+
         // Compile the statements
         let mut actions             = vec![];
         let mut monadic_function    = false;
