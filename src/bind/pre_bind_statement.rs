@@ -1,5 +1,4 @@
 use super::symbol_bindings::*;
-use super::bind_error::*;
 use super::binding_monad::*;
 
 use crate::meta::*;
@@ -12,7 +11,7 @@ use std::sync::*;
 /// The return value currently has no meaning other than to the pre-binding routines of other syntax elements. It's
 /// usually the same statement again.
 ///
-pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
+pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> (SymbolBindings, CellRef) {
     use self::SafasCell::*;
 
     match &*source {
@@ -39,7 +38,7 @@ pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResu
                     Monad(_, _)             |
                     FrameMonad(_)           |
                     ActionMonad(_)          |
-                    FrameReference(_, _, _) => Ok((symbol_value, bindings)),
+                    FrameReference(_, _, _) => (bindings, symbol_value),
                 }
             } else {
                 // Not a valid symbol, or not defined yet
@@ -50,19 +49,19 @@ pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResu
                 // TODO: one issue here is that if there's a symbol that wants pre-binding but doesn't want to declare itself as
                 // a 'forward' declaration it can't currently get any pre-binding behaviour (to fix this we need a 'pre-bound' cell type
                 // that acts transparent in the main binding but is returned here)
-                Ok((source, bindings))
+                (bindings, source)
             }
         }
 
         // Normal values just get loaded into cell 0
-        _other          => { Ok((source, bindings)) }
+        _other          => { (bindings, source) }
     }
 }
 
 ///
 /// Pre-binds a list statement, like `(cons 1 2)`
 ///
-fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
+fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> (SymbolBindings, CellRef) {
     use self::SafasCell::*;
 
     // Action depends on the type of car
@@ -86,10 +85,10 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                     FrameMonad(_)                               => { pre_bind_call(symbol_value, cdr, bindings) },
 
                     // Lists bind themselves before calling
-                    List(_, _)                                  => { let (bound_symbol, bindings) = pre_bind_statement(symbol_value, bindings)?; pre_bind_call(bound_symbol, cdr, bindings) }
+                    List(_, _)                                  => { let (bindings, bound_symbol) = pre_bind_statement(symbol_value, bindings); pre_bind_call(bound_symbol, cdr, bindings) }
 
                     // Frame references load the value from the frame and call that
-                    FrameReference(_cell_num, _frame, _type)    => { let (value, bindings) = pre_bind_statement(car, bindings)?; pre_bind_call(value, cdr, bindings) }
+                    FrameReference(_cell_num, _frame, _type)    => { let (bindings, value) = pre_bind_statement(car, bindings); pre_bind_call(value, cdr, bindings) }
                     
                     // Action and macro monads resolve their respective syntaxes
                     ActionMonad(syntax_compiler)                => {
@@ -102,7 +101,7 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
 
                         if imports.len() > 0 { panic!("Should be no imports when pre-binding"); }
 
-                        Ok((SafasCell::List(symbol_value, bound).into(), bindings))
+                        (bindings, SafasCell::List(symbol_value, bound).into())
                     }
                 } 
             } else {
@@ -111,14 +110,14 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                 // TODO: one issue here is that if there's a symbol that wants pre-binding but doesn't want to declare itself as
                 // a 'forward' declaration it can't currently get any pre-binding behaviour (to fix this we need a 'pre-bound' cell type
                 // that acts transparent in the main binding but is returned here)
-                let (value, bindings) = pre_bind_statement(car, bindings)?;
+                let (bindings, value) = pre_bind_statement(car, bindings);
                 pre_bind_call(value, cdr, bindings)
             }
         },
 
         // Default action is to evaluate the first item as a statement and call it
         _other          => {
-            let (value, bindings) = pre_bind_statement(car, bindings)?;
+            let (bindings, value) = pre_bind_statement(car, bindings);
             pre_bind_call(value, cdr, bindings)
         }
     }
@@ -127,7 +126,7 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
 ///
 /// Pre-binds a call operation given the value that will evaluate to the function
 ///
-fn pre_bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
+fn pre_bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> (SymbolBindings, CellRef) {
     let mut bindings = bindings;
 
     // Start by pushing the function value onto the stack (we'll pop it later on to call the function)
@@ -141,7 +140,7 @@ fn pre_bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> B
         match &*next_arg {
             SafasCell::List(car, cdr) => {
                 // Evaluate car and push it onto the stack
-                let (next_action, next_bindings) = pre_bind_statement(Arc::clone(car), bindings)?;
+                let (next_bindings, next_action) = pre_bind_statement(Arc::clone(car), bindings);
 
                 actions.push(next_action);
 
@@ -158,7 +157,7 @@ fn pre_bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> B
 
             _other => {
                 // Incomplete list: evaluate the CDR value
-                let (next_action, next_bindings) = pre_bind_statement(next_arg, bindings)?;
+                let (next_bindings, next_action) = pre_bind_statement(next_arg, bindings);
                 actions.push(next_action);
 
                 bindings    = next_bindings;
@@ -171,8 +170,8 @@ fn pre_bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> B
     // If there was a 'hanging' CDR, then generate a result with the same format, otherwise generate a well-formed list
     if hanging_cdr {
         let cdr = actions.pop();
-        Ok((SafasCell::list_with_cells_and_cdr(actions, cdr.unwrap()).into(), bindings))
+        (bindings, SafasCell::list_with_cells_and_cdr(actions, cdr.unwrap()).into())
     } else {
-        Ok((SafasCell::list_with_cells(actions).into(), bindings))
+        (bindings, SafasCell::list_with_cells(actions).into())
     }
 }

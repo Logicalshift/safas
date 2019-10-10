@@ -36,7 +36,7 @@ pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
     // Pre-bind the statements
     let mut statement   = Arc::clone(&expr);
     while let SafasCell::List(car, cdr) = &*statement {
-        let (_, new_bindings)   = match pre_bind_statement(Arc::clone(&car), bindings) { Ok((bound, new_bindings)) => (bound, new_bindings), Err((err, _new_bindings)) => return Err(err.into()) };
+        let (new_bindings, _)   = pre_bind_statement(Arc::clone(&car), bindings);
         bindings                = new_bindings;
         statement               = Arc::clone(&cdr);
     }
@@ -115,9 +115,9 @@ pub fn run_interactive() {
         // Pre-bind the statements
         let mut statement   = Arc::clone(&input);
         while let SafasCell::List(car, cdr) = &*statement {
-            let new_bindings    = match pre_bind_statement(Arc::clone(&car), bindings) { Ok((_, new_bindings)) => new_bindings, Err((_, new_bindings)) => new_bindings };
-            bindings            = new_bindings;
-            statement           = Arc::clone(&cdr);
+            let (new_bindings, _)   = pre_bind_statement(Arc::clone(&car), bindings);
+            bindings                = new_bindings;
+            statement               = Arc::clone(&cdr);
         }
 
         // Run the statements in the current frame

@@ -58,7 +58,7 @@ where   TArgs: TryFrom<CellRef>,
 
             match args {
                 Ok(args)    => (bindings, args),
-                Err(err)    => (bindings, TArgs::default())
+                Err(_err)   => (bindings, TArgs::default())
             }
         } else {
             // No arguments were supplied
