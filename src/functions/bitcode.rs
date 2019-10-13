@@ -131,16 +131,23 @@ mod test {
 
     #[test]
     fn write_three_bytes() {
-        let (_, bitcode) = eval("(d $9fu8) (d $1c42u16)").unwrap();
+        let (result, _) = eval("((fun () (d $9fu8) (d $1c42u16)))").unwrap();
+        let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
-        assert!(&*bitcode.code.borrow() == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
+        let bitcode     = assemble(monad).unwrap();
+
+        println!("{:?}", bitcode);
+        assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
     }
 
     #[test]
     fn write_three_bytes_in_one_operation() {
-        let (_, bitcode) = eval("(d $9fu8 $1c42u16)").unwrap();
+        let (result, _) = eval("((fun () (d $9fu8 $1c42u16)))").unwrap();
+        let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
-        assert!(&*bitcode.code.borrow() == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
+        let bitcode     = assemble(monad).unwrap();
+
+        assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
     }
 
     #[test]
