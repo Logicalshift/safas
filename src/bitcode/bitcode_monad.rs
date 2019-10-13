@@ -113,7 +113,7 @@ impl BitCodeMonad {
     ///
     /// Maps this monad by applying a function to the value it contains
     ///
-    pub fn flat_map<TFn: Fn(CellRef) -> BitCodeMonad>(self, fun: TFn) -> BitCodeMonad {
+    pub fn flat_map<TErr, TFn: Fn(CellRef) -> Result<BitCodeMonad, TErr>>(self, fun: TFn) -> Result<BitCodeMonad, TErr> {
         // Read the next value
         let value = self.value();
 
