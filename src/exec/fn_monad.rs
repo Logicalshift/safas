@@ -66,13 +66,6 @@ where   Fun:    Send+Sync+Fn(Args) -> CellRef,
     }
 }
 
-impl FnArgs for Vec<CellRef> {
-    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
-        let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
-        Ok(args)
-    }
-}
-
 impl FnArgs for () {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
         let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
@@ -150,6 +143,16 @@ where   A1: TryFrom<CellRef>,
 impl FnArgs for VarArgs {
     fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
         Ok(VarArgs(Arc::clone(&frame.cells[0])))
+    }
+}
+
+impl<T> FnArgs for Vec<T>
+where   T: TryFrom<CellRef>,
+        RuntimeError: From<T::Error> {
+    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
+        let args = frame.cells[0].to_vec().unwrap_or_else(|| vec![]);
+        let args = args.into_iter().map(|item| T::try_from(item).map_err(|err| RuntimeError::from(err)));
+        args.collect()
     }
 }
 

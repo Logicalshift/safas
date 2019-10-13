@@ -77,19 +77,19 @@ pub fn bitcode_flat_map_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 
 /// The 'D' data output function
 pub fn d_fn() -> impl FrameMonad<Binding=RuntimeResult> {
-    ReturnsMonad(FnMonad::from(|(num, ): (SafasNumber, )| {
+    ReturnsMonad(FnMonad::from(|numbers: Vec<SafasNumber>| {
         use self::SafasNumber::*;
         use self::BitCode::Bits;
 
         // Generate the bitcode
-        let bitcode = match num {
+        let bitcode = numbers.into_iter().map(|num| match num {
             Plain(val)                      => Bits(32, val),
             BitNumber(bit_count, val)       => Bits(bit_count, val),
             SignedBitNumber(bit_count, val) => Bits(bit_count, val as u128)
-        };
+        });
 
         // Create a bitcode monad cell
-        let bitcode_monad   = BitCodeMonad::write_bitcode(iter::once(bitcode));
+        let bitcode_monad   = BitCodeMonad::write_bitcode(bitcode);
         bitcode_monad.to_cell()
     }))
 }
