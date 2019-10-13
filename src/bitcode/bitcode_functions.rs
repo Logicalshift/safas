@@ -9,22 +9,10 @@ use std::convert::*;
 
 lazy_static! {
     /// The bitcode flat_map function
-    static ref BITCODE_FLAT_MAP: CellRef = CellRef::new(SafasCell::FrameMonad(Box::new(bitcode_flat_map_fn())));
+    pub static ref BITCODE_FLAT_MAP: CellRef = CellRef::new(SafasCell::FrameMonad(Box::new(bitcode_flat_map_fn())));
 }
 
 struct BitCodeFlatMap;
-
-///
-/// Retrieves the BitCodeMonad stored in a cell (or None if it doesn't store a bitcode monad)
-///
-fn get_bitcode_monad_from_cell(cell: &CellRef) -> Option<BitCodeMonad> {
-    match &**cell {
-        SafasCell::Monad(cell, _)   => get_bitcode_monad_from_cell(cell),
-        SafasCell::Any(any_val)     => any_val.downcast_ref::<BitCodeMonad>().cloned(),
-        SafasCell::Nil              => Some(BitCodeMonad::empty()),
-        _                           => None
-    }
-}
 
 impl FrameMonad for BitCodeFlatMap {
     type Binding = RuntimeResult;
@@ -36,7 +24,7 @@ impl FrameMonad for BitCodeFlatMap {
         let args = match FlatMapArgs::try_from(args) { Ok(args) => args, Err(err) => return (frame, Err(err)) };
 
         // The monad value should be a bitcode monad of some kind
-        let bitcode_monad = get_bitcode_monad_from_cell(&args.monad_value);
+        let bitcode_monad = BitCodeMonad::from_cell(&args.monad_value);
 
         // Replace the empty bitcode monad with a 'full' bitcode monad
         let bitcode_monad = bitcode_monad.unwrap_or_else(|| BitCodeMonad::empty());
@@ -57,7 +45,7 @@ impl FrameMonad for BitCodeFlatMap {
             let next                = match next { Ok(next) => next, Err(err) => return Err(err) };
 
             // Result of the map funciton should either be a bitcode monad or nil
-            let next_monad          = get_bitcode_monad_from_cell(&next);
+            let next_monad          = BitCodeMonad::from_cell(&next);
 
             let next_monad          = match next_monad {
                 Some(next_monad)    => next_monad,
@@ -102,10 +90,6 @@ pub fn d_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 
         // Create a bitcode monad cell
         let bitcode_monad   = BitCodeMonad::write_bitcode(iter::once(bitcode));
-        let bitcode_monad   = SafasCell::Any(Box::new(bitcode_monad));
-        let monad_type      = MonadType::new(BITCODE_FLAT_MAP.clone());
-        let bitcode_monad   = SafasCell::Monad(bitcode_monad.into(), monad_type);
-
-        bitcode_monad.into()
+        bitcode_monad.to_cell()
     }))
 }

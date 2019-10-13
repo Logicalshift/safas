@@ -1,4 +1,5 @@
 use super::code::*;
+use super::bitcode_functions::*;
 
 use crate::meta::*;
 
@@ -61,6 +62,30 @@ pub struct BitCodeMonad {
 }
 
 impl BitCodeMonad {
+    ///
+    /// Attempts to retrieve a bitcode monad from a cell
+    ///
+    pub fn from_cell(cell: &CellRef) -> Option<BitCodeMonad> {
+        match &**cell {
+            SafasCell::Monad(cell, _)   => BitCodeMonad::from_cell(cell),
+            SafasCell::Any(any_val)     => any_val.downcast_ref::<BitCodeMonad>().cloned(),
+            SafasCell::Nil              => Some(BitCodeMonad::empty()),
+            _                           => None
+        }
+    }
+
+    ///
+    /// Converts this bitcode monad to a cell reference
+    ///
+    pub fn to_cell(self) -> CellRef {
+        // Create a bitcode monad cell
+        let bitcode_monad   = SafasCell::Any(Box::new(self));
+        let monad_type      = MonadType::new(BITCODE_FLAT_MAP.clone());
+        let bitcode_monad   = SafasCell::Monad(bitcode_monad.into(), monad_type);
+
+        bitcode_monad.into()
+    }
+
     ///
     /// Creates an empty bitcode monad
     ///
