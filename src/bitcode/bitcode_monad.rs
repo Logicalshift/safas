@@ -136,6 +136,34 @@ impl BitCodeMonad {
     }
 
     ///
+    /// Updates the bit_pos in this monad with a new starting position
+    ///
+    pub fn update_bit_pos_starting_at(&mut self, initial_bit_pos: u64) {
+        match &*self.bitcode {
+            BitCodeContent::Empty           => { self.bit_pos = initial_bit_pos; }
+            BitCodeContent::Value(bitcode)  => { self.bit_pos = BitCode::position_after(initial_bit_pos, bitcode); }
+        }
+    }
+
+    ///
+    /// Prepends bitcode from the specified monad onto this one (stores the bitcode from the specified monad at the start of this monad)
+    ///
+    pub fn prepend_bitcode(&mut self, from_monad: &BitCodeMonad) {
+        match &*from_monad.bitcode {
+            BitCodeContent::Empty           => { self.bit_pos = from_monad.bit_pos }
+            BitCodeContent::Value(bitcode)  => {
+                self.update_bit_pos_starting_at(from_monad.bit_pos);
+                match &*self.bitcode {
+                    BitCodeContent::Empty               => { self.bitcode = from_monad.bitcode.clone(); }
+                    BitCodeContent::Value(our_bitcode)  => { 
+                        self.bitcode = Arc::new(BitCodeContent::Value(bitcode.iter().cloned().chain(our_bitcode.iter().cloned()).collect())); 
+                    }
+                }
+            }
+        }
+    }
+
+    ///
     /// Maps this monad by applying a function to the value it contains
     ///
     pub fn flat_map<TErr, TFn: Fn(CellRef) -> Result<BitCodeMonad, TErr>>(self, fun: TFn) -> Result<BitCodeMonad, TErr> {
@@ -148,8 +176,10 @@ impl BitCodeMonad {
             PossibleValue::Uncertain(value) => fun(value)
         };
 
+        // Prepend the bitcode from the previous monad to the new one
+        let next = next.map(|mut next| { next.prepend_bitcode(&self); next });
+
         // Result is the next monad
-        // TODO: need to combine bitcode values
         // TODO: need to return a monad that can be re-evaluated in the case where the value is uncertain
         next
     }

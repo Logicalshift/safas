@@ -136,7 +136,6 @@ mod test {
 
         let bitcode     = assemble(monad).unwrap();
 
-        println!("{:?}", bitcode);
         assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
     }
 

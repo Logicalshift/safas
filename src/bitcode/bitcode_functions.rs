@@ -4,12 +4,11 @@ use super::bitcode_monad::*;
 use crate::meta::*;
 use crate::exec::*;
 
-use std::iter;
 use std::convert::*;
 
 lazy_static! {
     /// The bitcode flat_map function
-    pub static ref BITCODE_FLAT_MAP: CellRef = CellRef::new(SafasCell::FrameMonad(Box::new(bitcode_flat_map_fn())));
+    pub (super) static ref BITCODE_FLAT_MAP: CellRef = CellRef::new(SafasCell::FrameMonad(Box::new(bitcode_flat_map_fn())));
 }
 
 struct BitCodeFlatMap;
