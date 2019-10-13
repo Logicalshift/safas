@@ -48,6 +48,7 @@ pub enum BitCodeContent {
 /// known: a bitcode monad can be resolved to a final description of the contents of a
 /// file by repeatedly resolving it until the labels values become stable.
 ///
+#[derive(Clone)]
 pub struct BitCodeMonad {
     /// The value wrapped by this monad
     value: BitCodeValue,
@@ -61,6 +62,17 @@ pub struct BitCodeMonad {
 
 impl BitCodeMonad {
     ///
+    /// Creates an empty bitcode monad
+    ///
+    pub fn empty() -> BitCodeMonad {
+        BitCodeMonad {
+            value:      BitCodeValue::Value(SafasCell::Nil.into()),
+            bitcode:    Arc::new(BitCodeContent::Empty),
+            bit_pos:    0
+        }
+    }
+
+    ///
     /// Creates a new bitcode monad that just means 'write this bitcode'
     ///
     pub fn write_bitcode<TBitCode: IntoIterator<Item=BitCode>>(bitcode: TBitCode) -> BitCodeMonad {
@@ -68,9 +80,9 @@ impl BitCodeMonad {
         let bit_pos = BitCode::position_after(0, &bitcode);
 
         BitCodeMonad {
-            value:              BitCodeValue::Value(SafasCell::Nil.into()),
-            bitcode:            Arc::new(BitCodeContent::Value(bitcode)),
-            bit_pos:            bit_pos
+            value:      BitCodeValue::Value(SafasCell::Nil.into()),
+            bitcode:    Arc::new(BitCodeContent::Value(bitcode)),
+            bit_pos:    bit_pos
         }
     }
 
@@ -79,9 +91,9 @@ impl BitCodeMonad {
     ///
     pub fn alloc_label() -> BitCodeMonad {
         BitCodeMonad {
-            value:              BitCodeValue::AllocLabel,
-            bitcode:            Arc::new(BitCodeContent::Empty),
-            bit_pos:            0
+            value:      BitCodeValue::AllocLabel,
+            bitcode:    Arc::new(BitCodeContent::Empty),
+            bit_pos:    0
         }
     }
 
