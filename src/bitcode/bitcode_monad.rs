@@ -89,13 +89,16 @@ impl BitCodeMonad {
     /// Creates a new bitcode monad that just means 'write this bitcode'
     ///
     pub fn write_bitcode<TBitCode: IntoIterator<Item=BitCode>>(bitcode: TBitCode) -> BitCodeMonad {
+        let bitcode = bitcode.into_iter().collect();
+        let bit_pos = BitCode::position_after(0, &bitcode);
+
         BitCodeMonad {
             value:              BitCodeValue::Value(SafasCell::Nil.into()),
-            bitcode:            Arc::new(BitCodeContent::Value(bitcode.into_iter().collect())),
+            bitcode:            Arc::new(BitCodeContent::Value(bitcode)),
             known_labels:       None,
             unknown_labels:     None,
             label_assignments:  None,
-            bit_pos:            0,      // TODO
+            bit_pos:            bit_pos
         }
     }
 
