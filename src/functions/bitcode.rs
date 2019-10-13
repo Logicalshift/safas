@@ -151,15 +151,21 @@ mod test {
 
     #[test]
     fn write_move() {
-        let (_, bitcode) = eval("(m $c001)").unwrap();
+        let (result, _) = eval("((fun () (m $c001)))").unwrap();
+        let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
-        assert!(&*bitcode.code.borrow() == &vec![BitCode::Move(0xc001)])
+        let bitcode     = assemble(monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Move(0xc001)])
     }
 
     #[test]
     fn write_align() {
-        let (_, bitcode) = eval("(a $beeff00du32 64)").unwrap();
+        let (result, _) = eval("((fun () (a $beeff00du32 64)))").unwrap();
+        let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
-        assert!(&*bitcode.code.borrow() == &vec![BitCode::Align(32, 0xbeeff00d, 64)])
+        let bitcode     = assemble(monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Align(32, 0xbeeff00d, 64)])
     }
 }
