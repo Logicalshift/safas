@@ -7,6 +7,7 @@ use crate::meta::*;
 use crate::exec::*;
 use crate::bind::*;
 use crate::syntax::*;
+use crate::bitcode::*;
 
 use smallvec::*;
 
@@ -29,7 +30,7 @@ pub fn standard_functions() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> 
     let functions  = wrap_binding(smallvec![]);
 
     // Bitcode functions
-    let functions   = flat_map_binding_actions(move || define_function("d",         d_keyword()), functions);
+    let functions   = flat_map_binding_actions(move || define_function("d",         d_fn()), functions);
     let functions   = flat_map_binding_actions(move || define_function("m",         m_keyword()), functions);
     let functions   = flat_map_binding_actions(move || define_function("a",         a_keyword()), functions);
 

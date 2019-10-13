@@ -1,8 +1,10 @@
+use super::code::*;
 use super::bitcode_monad::*;
 
 use crate::meta::*;
 use crate::exec::*;
 
+use std::iter;
 use std::convert::*;
 
 lazy_static! {
@@ -83,4 +85,27 @@ impl FrameMonad for BitCodeFlatMap {
 ///
 pub fn bitcode_flat_map_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     BitCodeFlatMap
+}
+
+/// The 'D' data output function
+pub fn d_fn() -> impl FrameMonad<Binding=RuntimeResult> {
+    ReturnsMonad(FnMonad::from(|(num, ): (SafasNumber, )| {
+        use self::SafasNumber::*;
+        use self::BitCode::Bits;
+
+        // Generate the bitcode
+        let bitcode = match num {
+            Plain(val)                      => Bits(32, val),
+            BitNumber(bit_count, val)       => Bits(bit_count, val),
+            SignedBitNumber(bit_count, val) => Bits(bit_count, val as u128)
+        };
+
+        // Create a bitcode monad cell
+        let bitcode_monad   = BitCodeMonad::write_bitcode(iter::once(bitcode));
+        let bitcode_monad   = SafasCell::Any(Box::new(bitcode_monad));
+        let monad_type      = MonadType::new(BITCODE_FLAT_MAP.clone());
+        let bitcode_monad   = SafasCell::Monad(bitcode_monad.into(), monad_type);
+
+        bitcode_monad.into()
+    }))
 }
