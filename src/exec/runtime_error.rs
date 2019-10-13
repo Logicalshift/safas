@@ -32,6 +32,9 @@ pub enum RuntimeError {
     /// Value cannot be treated as a monad
     NotAMonad(CellRef),
 
+    /// FlatMap function returned the wrong monad type
+    MismatchedMonad(CellRef),
+
     /// Not enough arguments were passed to a function
     TooManyArguments(CellRef),
 

@@ -12,6 +12,18 @@ lazy_static! {
 
 struct BitCodeFlatMap;
 
+///
+/// Retrieves the BitCodeMonad stored in a cell (or None if it doesn't store a bitcode monad)
+///
+fn get_bitcode_monad_from_cell(cell: &CellRef) -> Option<BitCodeMonad> {
+    match &**cell {
+        SafasCell::Monad(cell, _)   => get_bitcode_monad_from_cell(cell),
+        SafasCell::Any(any_val)     => any_val.downcast_ref::<BitCodeMonad>().cloned(),
+        SafasCell::Nil              => Some(BitCodeMonad::empty()),
+        _                           => None
+    }
+}
+
 impl FrameMonad for BitCodeFlatMap {
     type Binding = RuntimeResult;
 
@@ -22,14 +34,10 @@ impl FrameMonad for BitCodeFlatMap {
         let args = match FlatMapArgs::try_from(args) { Ok(args) => args, Err(err) => return (frame, Err(err)) };
 
         // The monad value should be a bitcode monad of some kind
-        let monad = match &*args.monad_value {
-            SafasCell::Any(any_val) => any_val.downcast_ref::<BitCodeMonad>().cloned(),
-            SafasCell::Nil          => Some(BitCodeMonad::empty()),
-            _                       => None
-        };
+        let bitcode_monad = get_bitcode_monad_from_cell(&args.monad_value);
 
         // Replace the empty bitcode monad with a 'full' bitcode monad
-        let monad = monad.unwrap_or_else(|| BitCodeMonad::empty());
+        let bitcode_monad = bitcode_monad.unwrap_or_else(|| BitCodeMonad::empty());
 
         // Fetch the map function
         let map_fn = match &*args.map_fn {
@@ -37,18 +45,29 @@ impl FrameMonad for BitCodeFlatMap {
             _                               => return (frame, Err(RuntimeError::NotAFunction(args.map_fn)))
         };
 
-        // Applying the map function should return the result
-        /*
-        let result = monad.flat_map(move |val| {
-            let frame = Frame::new(0, None);
+        // Applying the map function should return the updated monad
+        let monad_value         = args.monad_value.clone();
+        let next                = bitcode_monad.flat_map(move |val| {
+            let mut frame           = Frame::new(1, None);
+            frame.cells[0]          = SafasCell::List(monad_value.clone(), val).into();
+            let (_frame, next)      = map_fn.execute(frame);
 
-            monad_fn.execute(frame);
+            let next                = match next { Ok(next) => next, Err(err) => return Err(err) };
+
+            // Result of the map funciton should either be a bitcode monad or nil
+            let next_monad          = get_bitcode_monad_from_cell(&next);
+
+            let next_monad          = match next_monad {
+                Some(next_monad)    => next_monad,
+                None                => return Err(RuntimeError::MismatchedMonad(next))
+            };
+
+            Ok(next_monad)
         });
-        */
-        let result = BitCodeMonad::empty();     // TODO!
+        let next                = match next { Ok(next) => next, Err(err) => return (frame, Err(err)) };
 
         // Wrap the resulting monad to generate the return value
-        let result = SafasCell::Any(Box::new(result)).into();
+        let result = SafasCell::Any(Box::new(next)).into();
         (frame, Ok(SafasCell::Monad(result, MonadType::new(BITCODE_FLAT_MAP.clone())).into()))
     }
 

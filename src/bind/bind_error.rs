@@ -93,6 +93,7 @@ impl From<RuntimeError> for BindError {
             NotAFunction(_)             |
             TooManyArguments(_)         |
             NotAMonad(_)                |
+            MismatchedMonad(_)          |
             NotEnoughArguments(_)       => BindError::RuntimeError
         }
     }
