@@ -76,7 +76,7 @@ pub fn bitcode_flat_map_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 }
 
 ///
-/// The 'D' data output function
+/// The 'd' data output function
 /// 
 /// `(d $ffu8)` generates a bitcode monad that writes out a single byte
 /// 
@@ -99,7 +99,9 @@ pub fn d_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 }
 
 ///
-/// The 'M' move to address function
+/// The 'm' move to address function
+/// 
+/// `(m $10000)` restarts assembly at address 10000
 /// 
 pub fn m_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     ReturnsMonad(FnMonad::from(|(address, ): (SafasNumber, )| {
@@ -111,6 +113,35 @@ pub fn m_fn() -> impl FrameMonad<Binding=RuntimeResult> {
             Plain(val)                          => Move(val as u64),
             BitNumber(_bit_count, val)          => Move(val as u64),
             SignedBitNumber(_bit_count, val)    => Move(val as u64)
+        };
+
+        // Create a bitcode monad cell
+        let bitcode_monad   = BitCodeMonad::write_bitcode(iter::once(bitcode));
+        bitcode_monad.to_cell()
+    }))
+}
+
+///
+/// The 'a' align function
+/// 
+/// `(a $AEAEu16 32)` aligns to the next 32-bit boundary, filling the space with the 16-bit pattern $aeae
+/// 
+pub fn a_fn() -> impl FrameMonad<Binding=RuntimeResult> {
+    ReturnsMonad(FnMonad::from(|(pattern, alignment_bits): (SafasNumber, SafasNumber)| {
+        use self::SafasNumber::*;
+        use self::BitCode::Align;
+
+        // Generate the bitcode
+        let alignment_bits  = match alignment_bits {
+            Plain(val)              => val,
+            BitNumber(_, val)       => val,
+            SignedBitNumber(_, val) => (val.abs()) as u128
+        } as u32;
+
+        let bitcode         = match pattern {
+            Plain(val)                      => Align(32, val, alignment_bits),
+            BitNumber(bit_count, val)       => Align(bit_count, val, alignment_bits),
+            SignedBitNumber(bit_count, val) => Align(bit_count, val as u128, alignment_bits)
         };
 
         // Create a bitcode monad cell
