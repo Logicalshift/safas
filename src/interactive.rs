@@ -63,7 +63,7 @@ pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
         statement = Arc::clone(&cdr);
     }
 
-    Ok((result, frame.bitcode))
+    Ok((result, BitCodeBuffer::new()))
 }
 
 ///
