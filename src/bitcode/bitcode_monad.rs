@@ -52,13 +52,13 @@ pub enum BitCodeContent {
 #[derive(Clone)]
 pub struct BitCodeMonad {
     /// The value wrapped by this monad
-    value: BitCodeValue,
+    pub (super) value: BitCodeValue,
 
     /// The bitcode contained by this monad
-    bitcode: Arc<BitCodeContent>,
+    pub (super) bitcode: Arc<BitCodeContent>,
 
     /// The bit position represented by this monad (this should always match the content of the bitcode)
-    bit_pos: u64
+    pub (super) bit_pos: u64
 }
 
 impl BitCodeMonad {
