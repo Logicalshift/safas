@@ -7,8 +7,23 @@ use std::sync::*;
 use std::collections::{HashMap};
 
 ///
+///
+/// Some value may need to be recomputed in multiple passes to get their final 
+/// value (eg, label values or the current bit position)
+///
+#[derive(Clone)]
+pub enum PossibleValue {
+    /// Value was resolved to an absolute value
+    Certain(CellRef),
+
+    /// Value is not certain (could need to be revised in a future pass)
+    Uncertain(CellRef)
+}
+
+///
 /// Represents the possible ways a value can be wrapped by a bitcode monad
 ///
+#[derive(Clone, Debug)]
 pub enum BitCodeValue {
     /// An absolute value
     Value(CellRef),
@@ -30,6 +45,9 @@ pub enum BitCodeValue {
 /// Represents the bitcode content of a bitcode monad
 ///
 pub enum BitCodeContent {
+    /// No bitcode
+    Empty,
+
     /// A string of bitcode
     Value(SmallVec<[BitCode; 8]>),
 
@@ -64,4 +82,29 @@ pub struct BitCodeMonad {
 
     /// The bit position represented by this monad (this should always match the content of the bitcode)
     bit_pos: u64
+}
+
+impl BitCodeMonad {
+    ///
+    /// Retrieves the value attached to this monad
+    ///
+    pub fn value(&self) -> PossibleValue {
+        use self::BitCodeValue::*;
+        use self::PossibleValue::*;
+
+        match &self.value {
+            Value(value)                => Certain(value.clone()),
+            SetLabel(_label_num, value) => Certain(value.clone()),
+            CurrentBitPos               => Uncertain(SafasCell::Number(SafasNumber::BitNumber(64, self.bit_pos as u128)).into()),
+            LabelValue(label_num)       => if let Some(value) = self.known_labels.get(label_num) { Uncertain(value.clone()) } else { Uncertain(SafasCell::Number(SafasNumber::BitNumber(64, 0)).into()) },
+            AllocLabel                  => unimplemented!(),
+        }
+    }
+
+    ///
+    /// Maps this monad by applying a function to the value it contains
+    ///
+    pub fn flat_map<TFn: Fn(CellRef) -> BitCodeMonad>(self, fun: TFn) -> BitCodeMonad {
+        unimplemented!()
+    }
 }
