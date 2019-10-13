@@ -72,19 +72,47 @@ pub struct BitCodeMonad {
     bitcode: Arc<BitCodeContent>,
 
     /// Labels with known values
-    known_labels: Arc<HashMap<u64, CellRef>>,
+    known_labels: Option<Arc<HashMap<u64, CellRef>>>,
 
     /// Labels whose values were requested but had no value yet
-    unknown_labels: Arc<Vec<u64>>,
+    unknown_labels: Option<Arc<Vec<u64>>>,
 
     /// Label assignments generated so far (can be added to known_labels for the next pass)
-    label_assignments: Arc<Vec<(u64, CellRef)>>,
+    label_assignments: Option<Arc<Vec<(u64, CellRef)>>>,
 
     /// The bit position represented by this monad (this should always match the content of the bitcode)
     bit_pos: u64
 }
 
 impl BitCodeMonad {
+    ///
+    /// Creates a new bitcode monad that just means 'write this bitcode'
+    ///
+    pub fn write_bitcode<TBitCode: IntoIterator<Item=BitCode>>(bitcode: TBitCode) -> BitCodeMonad {
+        BitCodeMonad {
+            value:              BitCodeValue::Value(SafasCell::Nil.into()),
+            bitcode:            Arc::new(BitCodeContent::Value(bitcode.into_iter().collect())),
+            known_labels:       None,
+            unknown_labels:     None,
+            label_assignments:  None,
+            bit_pos:            0,      // TODO
+        }
+    }
+
+    ///
+    /// Creates a new bitcode monad that means 'allocate a new label'
+    ///
+    pub fn alloc_label() -> BitCodeMonad {
+        BitCodeMonad {
+            value:              BitCodeValue::AllocLabel,
+            bitcode:            Arc::new(BitCodeContent::Empty),
+            known_labels:       None,
+            unknown_labels:     None,
+            label_assignments:  None,
+            bit_pos:            0
+        }
+    }
+
     ///
     /// Retrieves the value attached to this monad
     ///
@@ -96,7 +124,7 @@ impl BitCodeMonad {
             Value(value)                => Certain(value.clone()),
             SetLabel(_label_num, value) => Certain(value.clone()),
             CurrentBitPos               => Uncertain(SafasCell::Number(SafasNumber::BitNumber(64, self.bit_pos as u128)).into()),
-            LabelValue(label_num)       => if let Some(value) = self.known_labels.get(label_num) { Uncertain(value.clone()) } else { Uncertain(SafasCell::Number(SafasNumber::BitNumber(64, 0)).into()) },
+            LabelValue(label_num)       => if let Some(value) = self.known_labels.as_ref().and_then(|labels| labels.get(label_num)) { Uncertain(value.clone()) } else { Uncertain(SafasCell::Number(SafasNumber::BitNumber(64, 0)).into()) },
             AllocLabel                  => unimplemented!(),
         }
     }
@@ -115,7 +143,7 @@ impl BitCodeMonad {
         };
 
         // Result is the next monad
-        // TODO: need to combine bitcode
+        // TODO: need to combine bitcode values
         // TODO: need to return a monad that can be re-evaluated in the case where the value is uncertain
         next
     }
