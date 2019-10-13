@@ -31,7 +31,7 @@ pub fn standard_functions() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> 
 
     // Bitcode functions
     let functions   = flat_map_binding_actions(move || define_function("d",         d_fn()), functions);
-    let functions   = flat_map_binding_actions(move || define_function("m",         m_keyword()), functions);
+    let functions   = flat_map_binding_actions(move || define_function("m",         m_fn()), functions);
     let functions   = flat_map_binding_actions(move || define_function("a",         a_keyword()), functions);
 
     let functions: Box<dyn BindingMonad<Binding=_>> = Box::new(functions);

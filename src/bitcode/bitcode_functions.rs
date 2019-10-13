@@ -4,6 +4,7 @@ use super::bitcode_monad::*;
 use crate::meta::*;
 use crate::exec::*;
 
+use std::iter;
 use std::convert::*;
 
 lazy_static! {
@@ -74,7 +75,11 @@ pub fn bitcode_flat_map_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     BitCodeFlatMap
 }
 
+///
 /// The 'D' data output function
+/// 
+/// `(d $ffu8)` generates a bitcode monad that writes out a single byte
+/// 
 pub fn d_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     ReturnsMonad(FnMonad::from(|numbers: Vec<SafasNumber>| {
         use self::SafasNumber::*;
@@ -89,6 +94,27 @@ pub fn d_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 
         // Create a bitcode monad cell
         let bitcode_monad   = BitCodeMonad::write_bitcode(bitcode);
+        bitcode_monad.to_cell()
+    }))
+}
+
+///
+/// The 'M' move to address function
+/// 
+pub fn m_fn() -> impl FrameMonad<Binding=RuntimeResult> {
+    ReturnsMonad(FnMonad::from(|(address, ): (SafasNumber, )| {
+        use self::SafasNumber::*;
+        use self::BitCode::Move;
+
+        // Generate the bitcode
+        let bitcode = match address {
+            Plain(val)                          => Move(val as u64),
+            BitNumber(_bit_count, val)          => Move(val as u64),
+            SignedBitNumber(_bit_count, val)    => Move(val as u64)
+        };
+
+        // Create a bitcode monad cell
+        let bitcode_monad   = BitCodeMonad::write_bitcode(iter::once(bitcode));
         bitcode_monad.to_cell()
     }))
 }
