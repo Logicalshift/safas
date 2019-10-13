@@ -105,6 +105,18 @@ impl BitCodeMonad {
     /// Maps this monad by applying a function to the value it contains
     ///
     pub fn flat_map<TFn: Fn(CellRef) -> BitCodeMonad>(self, fun: TFn) -> BitCodeMonad {
-        unimplemented!()
+        // Read the next value
+        let value = self.value();
+
+        // Retrieve the next monad based on the value
+        let next = match value {
+            PossibleValue::Certain(value)   => fun(value),
+            PossibleValue::Uncertain(value) => fun(value)
+        };
+
+        // Result is the next monad
+        // TODO: need to combine bitcode
+        // TODO: need to return a monad that can be re-evaluated in the case where the value is uncertain
+        next
     }
 }
