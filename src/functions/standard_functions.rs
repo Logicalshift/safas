@@ -1,4 +1,3 @@
-use super::bitcode::*;
 use super::list::*;
 use super::bits::*;
 use super::monad::*;

@@ -149,3 +149,59 @@ pub fn a_fn() -> impl FrameMonad<Binding=RuntimeResult> {
         bitcode_monad.to_cell()
     }))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::bitcode::*;
+    use crate::interactive::*;
+
+    #[test]
+    fn write_data_byte() {
+        let (result, _) = eval("((fun () (d $9fu8)))").unwrap();
+        let monad       = BitCodeMonad::from_cell(&result).unwrap();
+
+        let bitcode     = assemble(monad).unwrap();
+
+        assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f)])
+    }
+
+    #[test]
+    fn write_three_bytes() {
+        let (result, _) = eval("((fun () (d $9fu8) (d $1c42u16)))").unwrap();
+        let monad       = BitCodeMonad::from_cell(&result).unwrap();
+
+        let bitcode     = assemble(monad).unwrap();
+
+        assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
+    }
+
+    #[test]
+    fn write_three_bytes_in_one_operation() {
+        let (result, _) = eval("((fun () (d $9fu8 $1c42u16)))").unwrap();
+        let monad       = BitCodeMonad::from_cell(&result).unwrap();
+
+        let bitcode     = assemble(monad).unwrap();
+
+        assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
+    }
+
+    #[test]
+    fn write_move() {
+        let (result, _) = eval("((fun () (m $c001)))").unwrap();
+        let monad       = BitCodeMonad::from_cell(&result).unwrap();
+
+        let bitcode     = assemble(monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Move(0xc001)])
+    }
+
+    #[test]
+    fn write_align() {
+        let (result, _) = eval("((fun () (a $beeff00du32 64)))").unwrap();
+        let monad       = BitCodeMonad::from_cell(&result).unwrap();
+
+        let bitcode     = assemble(monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Align(32, 0xbeeff00d, 64)])
+    }
+}
