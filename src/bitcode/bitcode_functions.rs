@@ -157,7 +157,7 @@ mod test {
 
     #[test]
     fn write_data_byte() {
-        let (result, _) = eval("((fun () (d $9fu8)))").unwrap();
+        let result      = eval("((fun () (d $9fu8)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
         let bitcode     = assemble(monad).unwrap();
@@ -167,7 +167,7 @@ mod test {
 
     #[test]
     fn write_three_bytes() {
-        let (result, _) = eval("((fun () (d $9fu8) (d $1c42u16)))").unwrap();
+        let result      = eval("((fun () (d $9fu8) (d $1c42u16)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
         let bitcode     = assemble(monad).unwrap();
@@ -177,7 +177,7 @@ mod test {
 
     #[test]
     fn write_three_bytes_in_one_operation() {
-        let (result, _) = eval("((fun () (d $9fu8 $1c42u16)))").unwrap();
+        let result      = eval("((fun () (d $9fu8 $1c42u16)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
         let bitcode     = assemble(monad).unwrap();
@@ -187,7 +187,7 @@ mod test {
 
     #[test]
     fn write_move() {
-        let (result, _) = eval("((fun () (m $c001)))").unwrap();
+        let result      = eval("((fun () (m $c001)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
         let bitcode     = assemble(monad).unwrap();
@@ -197,7 +197,7 @@ mod test {
 
     #[test]
     fn write_align() {
-        let (result, _) = eval("((fun () (a $beeff00du32 64)))").unwrap();
+        let result      = eval("((fun () (a $beeff00du32 64)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
         let bitcode     = assemble(monad).unwrap();

@@ -3,7 +3,6 @@ use crate::parse::*;
 use crate::bind::*;
 use crate::exec::*;
 use crate::syntax::*;
-use crate::bitcode::*;
 use crate::functions::*;
 
 use std::io;
@@ -13,7 +12,7 @@ use std::sync::*;
 ///
 /// Evaluates a single line in an isolated SAFAS instance and returns the result
 ///
-pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
+pub fn eval(expr: &str) -> Result<CellRef, RuntimeError> {
     // Create the execution frame
     let mut frame               = Frame::new(1, None);
     let bindings                = SymbolBindings::new();
@@ -63,7 +62,7 @@ pub fn eval(expr: &str) -> Result<(CellRef, BitCodeBuffer), RuntimeError> {
         statement = Arc::clone(&cdr);
     }
 
-    Ok((result, BitCodeBuffer::new()))
+    Ok(result)
 }
 
 ///

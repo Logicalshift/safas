@@ -300,9 +300,9 @@ mod test {
 
     #[test]
     fn pattern_match_lda_example() {
-        let pattern         = eval("(quote (lda #<val>))").unwrap().0;
+        let pattern         = eval("(quote (lda #<val>))").unwrap();
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
-        let match_against   = eval("(quote (lda #10))").unwrap().0;
+        let match_against   = eval("(quote (lda #10))").unwrap();
 
         let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
@@ -317,9 +317,9 @@ mod test {
 
     #[test]
     fn pattern_match_with_list() {
-        let pattern         = eval("(quote (lda #<val>, (X)))").unwrap().0;
+        let pattern         = eval("(quote (lda #<val>, (X)))").unwrap();
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
-        let match_against   = eval("(quote (lda #10, (X)))").unwrap().0;
+        let match_against   = eval("(quote (lda #10, (X)))").unwrap();
 
         let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
@@ -334,9 +334,9 @@ mod test {
 
     #[test]
     fn pattern_match_binding_in_list() {
-        let pattern         = eval("(quote (lda (#<val>)))").unwrap().0;
+        let pattern         = eval("(quote (lda (#<val>)))").unwrap();
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
-        let match_against   = eval("(quote (lda (#10)))").unwrap().0;
+        let match_against   = eval("(quote (lda (#10)))").unwrap();
 
         let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
@@ -351,9 +351,9 @@ mod test {
 
     #[test]
     fn pattern_match_error_1() {
-        let pattern         = eval("(quote (lda <val>))").unwrap().0;
+        let pattern         = eval("(quote (lda <val>))").unwrap();
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
-        let match_against   = eval("(quote (lda #10))").unwrap().0;
+        let match_against   = eval("(quote (lda #10))").unwrap();
 
         let bindings        = matcher.match_against(&match_against);
         assert!(bindings.is_err());
@@ -362,9 +362,9 @@ mod test {
 
     #[test]
     fn pattern_match_error_2() {
-        let pattern         = eval("(quote (lda #<val>))").unwrap().0;
+        let pattern         = eval("(quote (lda #<val>))").unwrap();
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
-        let match_against   = eval("(quote (lda 10))").unwrap().0;
+        let match_against   = eval("(quote (lda 10))").unwrap();
 
         let bindings        = matcher.match_against(&match_against);
         assert!(bindings.is_err());

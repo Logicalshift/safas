@@ -162,16 +162,16 @@ mod test {
 
     #[test]
     fn define_and_read_atom() {
-        let val = eval("(def x 1) x").unwrap().0.to_string();
+        let val = eval("(def x 1) x").unwrap().to_string();
         assert!(val == "1".to_string());
     }
 
     #[test]
     fn define_multiple_atoms() {
-        let val = eval("(def x 1) (def y 2) x").unwrap().0.to_string();
+        let val = eval("(def x 1) (def y 2) x").unwrap().to_string();
         assert!(val == "1".to_string());
 
-        let val = eval("(def x 1) (def y 2) y").unwrap().0.to_string();
+        let val = eval("(def x 1) (def y 2) y").unwrap().to_string();
         assert!(val == "2".to_string());
     }
 }

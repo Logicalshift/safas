@@ -43,7 +43,7 @@ mod test {
     fn make_list() {
         let val = eval(
                 "(list 1 2 3)"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "(1 2 3)".to_string());
     }
 
@@ -51,7 +51,7 @@ mod test {
     fn evaluate_list_parameters() {
         let val = eval(
                 "(list ((fun (x) x) 1) 2 3)"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "(1 2 3)".to_string());
     }
 
@@ -59,7 +59,7 @@ mod test {
     fn cons() {
         let val = eval(
                 "(cons 1 (list 2 3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "(1 2 3)".to_string());
     }
 
@@ -67,7 +67,7 @@ mod test {
     fn cons_dotted() {
         let val = eval(
                 "(cons 1 2)"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "(1 . 2)".to_string());
     }
 
@@ -75,7 +75,7 @@ mod test {
     fn car() {
         let val = eval(
                 "(car (list 1 2 3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "1".to_string());
     }
 
@@ -83,7 +83,7 @@ mod test {
     fn cdr() {
         let val = eval(
                 "(cdr (list 1 2 3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "(2 3)".to_string());
     }
 }

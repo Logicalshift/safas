@@ -47,7 +47,7 @@ mod test {
     fn simple_bits() {
         let val = eval(
                 "(bits 8 $ae)"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "$aeu8".to_string());
     }
 
@@ -55,7 +55,7 @@ mod test {
     fn bits_truncate() {
         let val = eval(
                 "(bits 16 $fee7f00d)"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "$f00du16".to_string());
     }
 
@@ -63,7 +63,7 @@ mod test {
     fn sbits_positive() {
         let val = eval(
                 "(sbits 16 1000)"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "1000i16".to_string());
     }
 
@@ -71,7 +71,7 @@ mod test {
     fn sbits_negative() {
         let val = eval(
                 "(sbits 8 $ff)"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "-1i8".to_string());
     }
 
@@ -79,7 +79,7 @@ mod test {
     fn sbits_and_sbits() {
         let val = eval(
                 "(sbits 16 (sbits 8 $ff))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "-1i16".to_string());
     }
 
@@ -87,7 +87,7 @@ mod test {
     fn bits_and_sbits() {
         let val = eval(
                 "(bits 16 (sbits 8 $ff))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "$ffffu16".to_string());
     }
 }

@@ -552,7 +552,7 @@ mod test {
 
     #[test]
     fn evaluate_def_syntax() {
-        eval("(def_syntax x ((lda #<x>) (d x)))").unwrap().0.to_string();
+        eval("(def_syntax x ((lda #<x>) (d x)))").unwrap().to_string();
     }
 
     #[test]
@@ -560,7 +560,7 @@ mod test {
         let val = eval(
             "(def_syntax some_syntax ((lda #<x>) (x)))
             (some_syntax (lda #3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "3");
     }
@@ -570,7 +570,7 @@ mod test {
         let val = eval(
             "(def_syntax some_syntax ( (lda #<x>) ((list 1 x))   (lda <x>) ((list 2 x)) ))
             (some_syntax (lda #3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "(1 3)");
     }
@@ -580,7 +580,7 @@ mod test {
         let val = eval(
             "(def_syntax some_syntax ( (lda #<x>) ((list 1 x))   (lda <x>) ((list 2 x)) ))
             (some_syntax (lda 3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "(2 3)");
     }
@@ -590,7 +590,7 @@ mod test {
         let val = eval(
             "(def_syntax some_syntax ( (lda #<x>) ((list 1 x))   (ldx <x>) ((list 2 x)) ))
             (some_syntax (ldx 3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "(2 3)");
     }
@@ -601,7 +601,7 @@ mod test {
             "(def z 4)
             (def_syntax some_syntax ((lda #<x>) ((list x z))))
             (some_syntax (lda #3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "(3 4)");
     }
@@ -613,7 +613,7 @@ mod test {
             (def_syntax some_syntax ((lda #<x>) ((list x z))))
             (def_syntax other_syntax ((ld #<x>) ( (some_syntax (lda #x)) )))
             (other_syntax (ld #3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "(3 4)");
     }
@@ -623,7 +623,7 @@ mod test {
         let val = eval(
             "(def_syntax some_syntax ((lda #<x>) (x)))
             ((fun () (some_syntax (lda #3))))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "3");
     }
@@ -634,7 +634,7 @@ mod test {
             "(def z 4)
             (def_syntax some_syntax ((lda #<x>) ((list x z))))
             ((fun () (some_syntax (lda #3))))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "(3 4)");
     }
@@ -646,7 +646,7 @@ mod test {
             (def_syntax some_syntax ((lda #<x>) ((list x z))))
             (def_syntax other_syntax ((ld #<x>) ( (some_syntax (lda #x)) )))
             ((fun () (other_syntax (ld #3))))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "(3 4)");
     }
@@ -658,7 +658,7 @@ mod test {
             (def_syntax some_syntax ((lda #<x>) ((list x z))))
             (def z 5)
             (some_syntax (lda #3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "(3 4)");
     }
@@ -668,7 +668,7 @@ mod test {
         let val = eval(
             "(def_syntax some_syntax ((lda #<x>) ((def y x) y)))
             (some_syntax (lda #3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "3");
     }
@@ -678,7 +678,7 @@ mod test {
         let val = eval(
             "(def_syntax some_syntax ((lda #<x>) ((def y x) y)))
             (some_syntax (list (lda #3) (lda #4) (lda #5)))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
 
         assert!(val == "(3 4 5)");
     }

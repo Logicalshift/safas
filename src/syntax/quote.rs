@@ -36,7 +36,7 @@ mod test {
     fn simple_quote() {
         let val = eval(
                 "(quote (1 2 3))"
-            ).unwrap().0.to_string();
+            ).unwrap().to_string();
         assert!(val == "(1 2 3)".to_string());
     }
 }
