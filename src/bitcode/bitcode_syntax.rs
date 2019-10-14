@@ -32,6 +32,7 @@ pub fn label_keyword() -> SyntaxCompiler {
                 // Pre-binding function (bind the atom to a proto-label)
                 let label_cell = bindings.alloc_cell();
                 bindings.symbols.insert(atom_id, SafasCell::FrameReference(label_cell, 0, ReferenceType::Monad).into());
+                bindings.export(atom_id);
 
                 // Result is just the atom as for the main binding function
                 let result = SafasCell::list_with_cells(iter::once(SafasCell::Atom(atom_id).into()));
