@@ -65,18 +65,50 @@ impl BindingMonad for () {
 ///
 /// Binding monad generated from a resolve function
 ///
-pub struct BindingFn<TFn: Fn(SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>), TBinding>(pub TFn);
+pub struct BindingFn<TFn: Fn(SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>), TPreBind: Fn(SymbolBindings) -> (SymbolBindings, TBinding), TBinding>(pub TFn, pub TPreBind);
 
-impl<TFn, TBinding: Default> BindingMonad for BindingFn<TFn, TBinding> 
-where TFn: Fn(SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>)+Send+Sync {
+impl<TFn, TBinding: Default> BindingFn<TFn, fn(SymbolBindings) -> (SymbolBindings, TBinding), TBinding>
+where   TFn:        Fn(SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>)+Send+Sync {
+    ///
+    /// Creates a binding function with no pre-binding
+    ///
+    pub fn from_binding_fn(bind: TFn) -> BindingFn<TFn, fn(SymbolBindings) -> (SymbolBindings, TBinding), TBinding> {
+        BindingFn(bind, prebind_no_op)
+    }
+}
+
+impl<TFn, TPreBind, TBinding: Default> BindingFn<TFn, TPreBind, TBinding>
+where   TFn:        Fn(SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>)+Send+Sync,
+        TPreBind:   Fn(SymbolBindings) -> (SymbolBindings, TBinding)+Send+Sync {
+    ///
+    /// Creates a binding function with no pre-binding
+    ///
+    pub fn from_functions(bind: TFn, pre_bind: TPreBind) -> BindingFn<TFn, TPreBind, TBinding> {
+        BindingFn(bind, pre_bind)
+    }
+}
+
+///
+/// A pre-binding function that performs no operation
+///
+fn prebind_no_op<TBinding: Default>(bindings: SymbolBindings) -> (SymbolBindings, TBinding) {
+    (bindings, TBinding::default())
+}
+
+impl<TFn, TPreBind, TBinding: Default> BindingMonad for BindingFn<TFn, TPreBind, TBinding>
+where   TFn:        Fn(SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>)+Send+Sync,
+        TPreBind:   Fn(SymbolBindings) -> (SymbolBindings, TBinding)+Send+Sync {
     type Binding = TBinding;
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<TBinding, BindError>) {
-        let BindingFn(ref fun) = self;
+        let BindingFn(ref fun, ref _prebind) = self;
         fun(bindings)
     }
 
-    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, TBinding) { (bindings, TBinding::default()) }
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, TBinding) {
+        let BindingFn(ref _fun, ref prebind) = self;
+        prebind(bindings)
+    }
 }
 
 ///
