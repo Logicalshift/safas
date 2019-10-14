@@ -6,6 +6,7 @@ use super::quote::*;
 use crate::meta::*;
 use crate::exec::*;
 use crate::bind::*;
+use crate::bitcode::*;
 
 use smallvec::*;
 
@@ -19,6 +20,9 @@ pub fn standard_syntax() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> {
     let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::ActionMonad(def_syntax_keyword())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("fun",           SafasCell::ActionMonad(fun_keyword())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("quote",         SafasCell::ActionMonad(quote_keyword())), syntax);
+
+    // Define the bitcode syntax
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("label",         SafasCell::ActionMonad(label_keyword())), syntax);
 
     syntax
 }
