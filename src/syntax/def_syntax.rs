@@ -63,7 +63,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
 
         // Second step: bind each of the macros and generate the syntax item
 
-        BindingFn(move |bindings| {
+        BindingFn::from_binding_fn(move |bindings| {
 
             // Fetch the values computed by the previous step
             let (name, macros, statements)  = &args;
@@ -76,7 +76,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
             // Initially all symbols generate errors
             for (symbol_id, _) in macros.iter() {
                 // Symbols are intially bound to some syntax that generates an error
-                let error = SyntaxCompiler { binding_monad: Box::new(BindingFn(|bindings| (bindings, Err(BindError::ForwardReferencesNotAllowed)))), generate_actions: Arc::new(|_| Err(BindError::ForwardReferencesNotAllowed)) };
+                let error = SyntaxCompiler { binding_monad: Box::new(BindingFn::from_binding_fn(|bindings| (bindings, Err(BindError::ForwardReferencesNotAllowed)))), generate_actions: Arc::new(|_| Err(BindError::ForwardReferencesNotAllowed)) };
                 evaluation_bindings.symbols.insert(*symbol_id, SafasCell::ActionMonad(error).into());
             }
 

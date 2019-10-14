@@ -1,6 +1,8 @@
 use super::binding_monad::*;
 use super::bind_error::*;
 
+use std::sync::*;
+
 ///
 /// Adds the `and_then` operation to a binding monad
 ///
@@ -29,30 +31,36 @@ impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
     }
 
     fn map<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
-        let result = BindingFn(move |bindings| {
-            let (bindings, val) = self.bind(bindings);
+        let binding1    = Arc::new(self);
+        let binding2    = Arc::clone(&binding1);
+
+        let result = BindingFn::from_functions(move |bindings| {
+            let (bindings, val) = binding1.bind(bindings);
             let map_val         = val.map(|val| action(val));
             (bindings, map_val)
-        } /*,
+        },
         move |bindings| {
-            let (bindings, val) = self.pre_bind(bindings);
-            let map_val         = Out::default();
+            let (bindings, _val)    = binding2.pre_bind(bindings);
+            let map_val             = Out::default();
             (bindings, map_val)
-        } */);
+        });
         Box::new(result)
     }
 
     fn map_result<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Result<Out, BindError>+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
-        let result = BindingFn(move |bindings| {
-            let (bindings, val) = self.bind(bindings);
+        let binding1    = Arc::new(self);
+        let binding2    = Arc::clone(&binding1);
+
+        let result = BindingFn::from_functions(move |bindings| {
+            let (bindings, val) = binding1.bind(bindings);
             let map_val         = val.and_then(|val| action(val));
             (bindings, map_val)
-        } /*,
+        },
         move |bindings| {
-            let (bindings, val) = self.pre_bind(bindings);
-            let map_val         = Out::default();
+            let (bindings, _val)    = binding2.pre_bind(bindings);
+            let map_val             = Out::default();
             (bindings, map_val)
-        } */);
+        });
         Box::new(result)
     }
 }
