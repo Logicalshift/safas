@@ -6,6 +6,7 @@
 mod frame;
 mod frame_monad;
 mod action;
+mod compiled_actions;
 mod lambda;
 mod closure;
 mod runtime_error;
@@ -15,6 +16,7 @@ mod returns_monad;
 pub use self::frame::*;
 pub use self::frame_monad::*;
 pub use self::action::*;
+pub use self::compiled_actions::*;
 pub use self::lambda::*;
 pub use self::closure::*;
 pub use self::runtime_error::*;
