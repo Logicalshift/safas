@@ -1,7 +1,7 @@
 use crate::bind::*;
 use crate::meta::*;
+use crate::exec::*;
 
-use smallvec::*;
 use std::sync::*;
 use std::iter;
 
@@ -43,7 +43,7 @@ pub fn label_keyword() -> SyntaxCompiler {
     // Compiling function: labels bind themselves to a monad that allocates/retrieves the label value at the start of the code block and just bind to the label value later on 
     let compiler = |value: CellRef| -> Result<_, BindError> {
         // TODO
-        Ok(smallvec![])
+        Ok(CompiledActions::empty())
     };
 
     SyntaxCompiler {

@@ -315,6 +315,7 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
     other_arguments.reverse();
 
     // Bind to a closure
+    let monad_flat_map                      = monad_flat_map.to_actions().collect::<Vec<_>>();
     let monad_flat_map                      = StackClosure::new(monad_flat_map, other_arguments, interior_frame_size, 1);
 
     // Convert things to the final result

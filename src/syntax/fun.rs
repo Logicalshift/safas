@@ -32,10 +32,10 @@ pub fn fun_keyword() -> SyntaxCompiler {
 
         if fun_type == AtomId(*CLOSURE_ATOM) {
             // The closure needs to be called to bind its values
-            Ok(smallvec![Action::Value(fun), Action::Call])
+            Ok(smallvec![Action::Value(fun), Action::Call].into())
         } else if fun_type == AtomId(*LAMBDA_ATOM) {
             // Lambdas can just be loaded directly
-            Ok(smallvec![Action::Value(fun)])
+            Ok(smallvec![Action::Value(fun)].into())
         } else {
             // Unknown type of function (binder error/input from the wrong place)
             Err(BindError::UnknownSymbol)
@@ -146,11 +146,12 @@ impl BindingMonad for FunBinder {
             }
 
             // Final action is to return the monad value
-            actions.push((smallvec![Action::Pop], true));
+            actions.push((smallvec![Action::Pop].into(), true));
         }
 
         // Collapse the actions into a single set of actions
-        let actions             = actions.into_iter().flat_map(|(actions, _)| actions).collect::<SmallVec<[Action; 8]>>();
+        let actions             = actions.into_iter()
+            .fold(CompiledActions::empty(), |mut collected, (actions, _)| { collected.extend(actions); collected } );
 
         // Capture the number of cells required for the lambda
         let num_cells           = inner_bindings.num_cells;
@@ -183,7 +184,7 @@ impl BindingMonad for FunBinder {
             }
 
             // Return the closure
-            let closure         = Closure::new(actions, cell_imports, num_cells, num_args);
+            let closure         = Closure::new(actions.to_actions().collect::<Vec<_>>(), cell_imports, num_cells, num_args);
             if monadic_function {
                 let closure     = Box::new(ReturnsMonad(closure));
                 let closure     = SafasCell::FrameMonad(closure);
@@ -199,7 +200,7 @@ impl BindingMonad for FunBinder {
             }
         } else {
             // No imports, so return a straight lambda
-            let lambda          = Lambda::new(actions, num_cells, num_args);
+            let lambda          = Lambda::new(actions.to_actions().collect::<Vec<_>>(), num_cells, num_args);
             if monadic_function {
                 let lambda      = Box::new(ReturnsMonad(lambda));
                 let lambda      = SafasCell::FrameMonad(lambda);

@@ -19,7 +19,7 @@ pub fn quote_keyword() -> SyntaxCompiler {
 
     // The compiler just loads the literal
     let compiler = |literal: CellRef| {
-        Ok(smallvec![Action::Value(literal.clone())])
+        Ok(smallvec![Action::Value(literal.clone())].into())
     };
 
     SyntaxCompiler {

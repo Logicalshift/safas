@@ -13,3 +13,47 @@ pub struct CompiledActions {
     /// The actions to perform for this step (setting the result)
     pub actions: SmallVec<[Action; 8]>,
 }
+
+impl From<SmallVec<[Action; 8]>> for CompiledActions {
+    fn from(actions: SmallVec<[Action; 8]>) -> CompiledActions {
+        CompiledActions {
+            frame_setup:    smallvec![],
+            actions:        actions
+        }
+    }
+}
+
+impl CompiledActions {
+    ///
+    /// Creates an empty set of compiled actions
+    ///
+    pub fn empty() -> CompiledActions {
+        CompiledActions {
+            frame_setup:    smallvec![],
+            actions:        smallvec![]
+        }
+    }
+
+    ///
+    /// Returns the actions to perform in order to evaluate this compiled statement
+    ///
+    pub fn to_actions(self) -> impl Iterator<Item=Action> {
+        self.frame_setup.into_iter()
+            .chain(self.actions.into_iter())
+    }
+
+    ///
+    /// Adds a new action to the end of the current set of actions
+    ///
+    pub fn push(&mut self, action: Action) {
+        self.actions.push(action);
+    }
+
+    ///
+    /// Adds a series of actions to the end of the current set of actions
+    ///
+    pub fn extend(&mut self, actions: CompiledActions) {
+        self.frame_setup.extend(actions.frame_setup);
+        self.actions.extend(actions.actions);
+    }
+}

@@ -4,7 +4,6 @@ use super::binding_monad::*;
 use crate::meta::*;
 use crate::exec::*;
 
-use smallvec::*;
 use std::sync::*;
 
 ///
@@ -18,5 +17,5 @@ pub struct SyntaxCompiler {
     pub binding_monad: Box<dyn BindingMonad<Binding=CellRef>>,
 
     /// Generates the actions for the bound syntax
-    pub generate_actions: Arc<dyn Fn(CellRef) -> Result<SmallVec<[Action; 8]>, BindError>+Send+Sync>
+    pub generate_actions: Arc<dyn Fn(CellRef) -> Result<CompiledActions, BindError>+Send+Sync>
 }

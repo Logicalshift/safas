@@ -47,7 +47,7 @@ pub fn eval(expr: &str) -> Result<CellRef, RuntimeError> {
         // Bind this statement
         let (bound, new_bindings)   = match bind_statement(Arc::clone(&car), bindings) { Ok((bound, new_bindings)) => (bound, new_bindings), Err((err, _new_bindings)) => return Err(err.into()) };
         let actions                 = compile_statement(bound)?;
-        let monad                   = actions.into_iter().collect::<Vec<_>>();
+        let monad                   = actions.to_actions().collect::<Vec<_>>();
         bindings                    = new_bindings;
 
         // Evaluate the monad
@@ -129,7 +129,7 @@ pub fn run_interactive() {
                     Err(err)    => Err((err, new_bindings))
                 });
             let monad       = match bind_result {
-                Ok((actions, new_bindings))   => { bindings = new_bindings; actions.into_iter().collect::<Vec<_>>() },
+                Ok((actions, new_bindings))   => { bindings = new_bindings; actions.to_actions().collect::<Vec<_>>() },
                 Err((error, new_bindings))    => { 
                     bindings = new_bindings;
                     println!("!! Binding error: {:?}", error);

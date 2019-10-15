@@ -11,10 +11,13 @@ use std::result::{Result};
 ///
 /// Compiles a statement once it has been bound by bind_statement
 ///
-pub fn compile_statement(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
-    let actions = compile_statement_quick(source)?;
+pub fn compile_statement(source: CellRef) -> Result<CompiledActions, BindError> {
+    let mut actions = compile_statement_quick(source)?;
 
-    Ok(Action::peephole_optimise(actions))
+    actions.frame_setup = Action::peephole_optimise(actions.frame_setup);
+    actions.actions     = Action::peephole_optimise(actions.actions);
+
+    Ok(actions)
 }
 
 ///
@@ -23,7 +26,7 @@ pub fn compile_statement(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindE
 /// Calling the _quick variant is faster when building sequences of actions, as the peephole optimiser only
 /// needs to be run once all the actions are together
 ///
-pub fn compile_statement_quick(source: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
+pub fn compile_statement_quick(source: CellRef) -> Result<CompiledActions, BindError> {
     use self::SafasCell::*;
 
     match &*source {
@@ -35,19 +38,19 @@ pub fn compile_statement_quick(source: CellRef) -> Result<SmallVec<[Action; 8]>,
             if *frame != 0 {
                 Err(BindError::CannotLoadCellInOtherFrame)
             } else {
-                Ok(smallvec![Action::CellValue(*cell_id)])
+                Ok(smallvec![Action::CellValue(*cell_id)].into())
             }
         }
 
         // Normal values just get loaded into cell 0
-        _other          => { Ok(smallvec![Action::Value(Arc::clone(&source))]) }
+        _other          => { Ok(smallvec![Action::Value(Arc::clone(&source))].into()) }
     }
 }
 
 ///
 /// Compiles a list statement, like `(cons 1 2)`
 ///
-fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
+fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<CompiledActions, BindError> {
     use self::SafasCell::*;
 
     // Action depends on the type of car
@@ -63,9 +66,9 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
         Monad(_, _)                                             |
         FrameMonad(_)                                           => {
             if car.reference_type() == ReferenceType::Monad {
-                compile_monad_flat_map(smallvec![Action::Value(car)], cdr)
+                compile_monad_flat_map(smallvec![Action::Value(car)].into(), cdr)
             } else {
-                compile_call(smallvec![Action::Value(car)], cdr) 
+                compile_call(smallvec![Action::Value(car)].into(), cdr) 
             }
         },
 
@@ -91,7 +94,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<SmallVec<[Action
 ///
 /// Compiles a call function, given the actions needed to load the function value
 ///
-pub fn compile_call(load_fn: SmallVec<[Action; 8]>, args: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
+pub fn compile_call(load_fn: CompiledActions, args: CellRef) -> Result<CompiledActions, BindError> {
     // Start by pushing the function value onto the stack (we'll pop it later on to call the function)
     let mut actions = load_fn;
     actions.push(Action::Push);
@@ -150,7 +153,7 @@ pub fn compile_call(load_fn: SmallVec<[Action; 8]>, args: CellRef) -> Result<Sma
 /// args specifies the arguments of the monad. There are two of these: the bindings to compile and push on to the stack,
 /// and the closure to resolve with these bindings.
 ///
-pub fn compile_monad_flat_map(load_monad: SmallVec<[Action; 8]>, args: CellRef) -> Result<SmallVec<[Action; 8]>, BindError> {
+pub fn compile_monad_flat_map(load_monad: CompiledActions, args: CellRef) -> Result<CompiledActions, BindError> {
     // Start by pushing the monad onto the stack
     let mut actions = load_monad;
     actions.push(Action::Push);
