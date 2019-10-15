@@ -12,6 +12,9 @@ lazy_static! {
     pub (super) static ref BITCODE_FLAT_MAP: CellRef = CellRef::new(SafasCell::FrameMonad(Box::new(bitcode_flat_map_fn())));
 }
 
+///
+/// A frame monad that performs the flat_map operation on a bitcode monad
+///
 struct BitCodeFlatMap;
 
 impl FrameMonad for BitCodeFlatMap {

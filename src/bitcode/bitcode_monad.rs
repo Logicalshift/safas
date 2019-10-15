@@ -98,6 +98,17 @@ impl BitCodeMonad {
     }
 
     ///
+    /// Creates a bitcode monad that wraps a value
+    ///
+    pub fn with_value(value: CellRef) -> BitCodeMonad {
+        BitCodeMonad {
+            value:      BitCodeValue::Value(value),
+            bitcode:    Arc::new(BitCodeContent::Empty),
+            bit_pos:    0
+        }
+    }
+
+    ///
     /// Creates a new bitcode monad that just means 'write this bitcode'
     ///
     pub fn write_bitcode<TBitCode: IntoIterator<Item=BitCode>>(bitcode: TBitCode) -> BitCodeMonad {
@@ -131,7 +142,7 @@ impl BitCodeMonad {
 
         match &self.value {
             Value(value)                => Certain(value.clone()),
-            AllocLabel                  => unimplemented!(),
+            AllocLabel                  => Uncertain(SafasCell::Number(SafasNumber::Plain(0)).into())   // TODO
         }
     }
 
