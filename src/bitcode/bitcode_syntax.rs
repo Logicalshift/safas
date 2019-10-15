@@ -96,6 +96,7 @@ pub fn label_keyword() -> SyntaxCompiler {
         let mut actions = CompiledActions::empty();
 
         // Frame setup allocates the label
+        // TODO: and reads its value into the cell (we're just loading the label ID at the moment)
         actions.frame_setup.extend(vec![
             Action::Value(ALLOC_LABEL.clone()),
             Action::Push,
