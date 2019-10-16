@@ -6,7 +6,7 @@ use crate::meta::*;
 #[derive(Clone)]
 pub struct Label {
     /// The value of this label
-    value: CellRef
+    pub (super) value: CellRef
 }
 
 impl Label {

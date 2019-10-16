@@ -10,18 +10,18 @@ use std::sync::*;
 use std::iter;
 
 lazy_static! {
-    /// The label allocation monad
-    static ref ALLOC_LABEL: CellRef = alloc_label();
-
     /// The wrap_value function
     static ref WRAP_VALUE: CellRef = wrap_value();
+
+    /// The read_label_value function
+    static ref READ_LABEL_VALUE: CellRef = read_label_value();
 }
 
 ///
 /// Creates the 'alloc_label' bitcode monad as a cell
 ///
-fn alloc_label() -> CellRef {
-    let alloc_label = BitCodeMonad::alloc_label();
+fn alloc_label(label_id: usize) -> CellRef {
+    let alloc_label = BitCodeMonad::alloc_label(label_id);
     let alloc_label = SafasCell::Any(Box::new(alloc_label)).into();     
     let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
@@ -29,11 +29,31 @@ fn alloc_label() -> CellRef {
 }
 
 ///
+/// Creates a 'read label value' flat_map function
+///
+fn read_label_value() -> CellRef {
+    let read_label_value = FnMonad::from(|args: BitCodeFlatMapArgs<SafasNumber>| {
+        let label_id    = args.value;
+
+        let label_value = BitCodeMonad::read_label_value(label_id.to_usize());
+        let label_value = SafasCell::Any(Box::new(label_value)).into();     
+
+        let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
+
+        SafasCell::Monad(label_value, monad_type).into()
+    });
+    let read_label_value = ReturnsMonad(read_label_value);
+    let read_label_value = SafasCell::FrameMonad(Box::new(read_label_value));
+
+    read_label_value.into()
+}
+
+///
 /// Creates the 'wrap_value' function as a cell
 ///
 fn wrap_value() -> CellRef {
-    let wrap_value = FnMonad::from(|(value, ): (CellRef, )| {
-        let wrapped     = BitCodeMonad::with_value(value);
+    let wrap_value = FnMonad::from(|args: BitCodeFlatMapArgs<CellRef>| {
+        let wrapped     = BitCodeMonad::with_value(args.value);
         let wrapped     = SafasCell::Any(Box::new(wrapped)).into();
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
@@ -95,12 +115,12 @@ pub fn label_keyword() -> SyntaxCompiler {
         // Start generating the actions
         let mut actions = CompiledActions::empty();
 
-        // Frame setup allocates the label
+        // Frame setup allocates the label. We use the cell ID as the label ID for updating it later
         // TODO: and reads its value into the cell (we're just loading the label ID at the moment)
         actions.frame_setup.extend(vec![
-            Action::Value(ALLOC_LABEL.clone()),
+            Action::Value(alloc_label(cell_id)),
             Action::Push,
-            Action::Value(WRAP_VALUE.clone()),
+            Action::Value(READ_LABEL_VALUE.clone()),
             Action::FlatMap,
             Action::StoreCell(cell_id)
         ]);

@@ -37,6 +37,19 @@ impl SafasNumber {
             }
         }
     }
+
+    ///
+    /// Returns this number as a usize
+    ///
+    pub fn to_usize(&self) -> usize {
+        use self::SafasNumber::*;
+
+        match self {
+            Plain(num)                  => *num as usize,
+            BitNumber(_bits, num)       => *num as usize,
+            SignedBitNumber(_bits, num) => *num as usize
+        }
+    }
 }
 
 impl Default for SafasNumber {

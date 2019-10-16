@@ -1,4 +1,5 @@
 use super::code::*;
+use super::label::*;
 use super::bitcode_functions::*;
 
 use crate::meta::*;
@@ -17,7 +18,10 @@ pub enum PossibleValue {
     Certain(CellRef),
 
     /// Value is not certain (could need to be revised in a future pass)
-    Uncertain(CellRef)
+    Uncertain(CellRef),
+
+    /// Value is invalid
+    Invalid
 }
 
 ///
@@ -28,8 +32,11 @@ pub enum BitCodeValue {
     /// An absolute value
     Value(CellRef),
 
-    /// The ID of a new label
-    AllocLabel,
+    /// Allocates a label with the specified ID (replacing any previous label with this ID)
+    AllocLabel(usize),
+
+    /// Reads the label with the specified ID's value
+    LabelValue(usize)
 }
 
 ///
@@ -58,7 +65,10 @@ pub struct BitCodeMonad {
     pub (super) bitcode: Arc<BitCodeContent>,
 
     /// The bit position represented by this monad (this should always match the content of the bitcode)
-    pub (super) bit_pos: u64
+    pub (super) bit_pos: u64,
+
+    /// The labels that are currently defined in this monad
+    pub (super) labels: Arc<Vec<Label>>
 }
 
 impl BitCodeMonad {
@@ -93,7 +103,8 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::Value(SafasCell::Nil.into()),
             bitcode:    Arc::new(BitCodeContent::Empty),
-            bit_pos:    0
+            bit_pos:    0,
+            labels:     Arc::new(vec![])
         }
     }
 
@@ -104,7 +115,8 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::Value(value),
             bitcode:    Arc::new(BitCodeContent::Empty),
-            bit_pos:    0
+            bit_pos:    0,
+            labels:     Arc::new(vec![])
         }
     }
 
@@ -118,18 +130,32 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::Value(SafasCell::Nil.into()),
             bitcode:    Arc::new(BitCodeContent::Value(bitcode)),
-            bit_pos:    bit_pos
+            bit_pos:    bit_pos,
+            labels:     Arc::new(vec![])
         }
     }
 
     ///
     /// Creates a new bitcode monad that means 'allocate a new label'
     ///
-    pub fn alloc_label() -> BitCodeMonad {
+    pub fn alloc_label(id: usize) -> BitCodeMonad {
         BitCodeMonad {
-            value:      BitCodeValue::AllocLabel,
+            value:      BitCodeValue::AllocLabel(id),
             bitcode:    Arc::new(BitCodeContent::Empty),
-            bit_pos:    0
+            bit_pos:    0,
+            labels:     Arc::new(vec![Label::new()])
+        }
+    }
+
+    ///
+    /// Creates a new bitcode monad that means 'read the value of the label passed in as the argument'
+    ///
+    pub fn read_label_value(label_id: usize) -> BitCodeMonad {
+        BitCodeMonad {
+            value:      BitCodeValue::LabelValue(label_id),
+            bitcode:    Arc::new(BitCodeContent::Empty),
+            bit_pos:    0,
+            labels:     Arc::new(vec![])
         }
     }
 
@@ -142,7 +168,10 @@ impl BitCodeMonad {
 
         match &self.value {
             Value(value)                => Certain(value.clone()),
-            AllocLabel                  => Uncertain(SafasCell::Number(SafasNumber::Plain(0)).into())   // TODO
+            AllocLabel(label_id)        => Certain(SafasCell::Number(SafasNumber::Plain(*label_id as u128)).into()),
+            LabelValue(label_id)        => {
+                Uncertain(self.labels[*label_id].value.clone())
+            }
         }
     }
 
@@ -175,6 +204,23 @@ impl BitCodeMonad {
     }
 
     ///
+    /// Prepends labels from the specified monad onto this one
+    ///
+    pub fn prepend_labels(&mut self, from_monad: &BitCodeMonad) {
+        // Add the labels to the start of this item
+        if self.labels.len() == 0 {
+            // Just re-use the labels from the previous monad if there are none in this one
+            self.labels = Arc::clone(&from_monad.labels);
+        } else {
+            // Add the labels from this monad to the previous one (note that this will change label IDs, so some caution has to be taken with using the result of AllocLabel)
+            // TODO: right now, we always use the result of AllocLabel immediately and don't store it: perhaps we should combine it into a single operation
+            let mut new_labels = (*from_monad.labels).clone();
+            new_labels.extend(self.labels.iter().cloned());
+            self.labels = Arc::new(new_labels);
+        }
+    }
+
+    ///
     /// Maps this monad by applying a function to the value it contains
     ///
     pub fn flat_map<TErr, TFn: Fn(CellRef) -> Result<BitCodeMonad, TErr>>(self, fun: TFn) -> Result<BitCodeMonad, TErr> {
@@ -184,11 +230,13 @@ impl BitCodeMonad {
         // Retrieve the next monad based on the value
         let next = match value {
             PossibleValue::Certain(value)   => fun(value),
-            PossibleValue::Uncertain(value) => fun(value)
+            PossibleValue::Uncertain(value) => fun(value),
+            PossibleValue::Invalid          => fun(SafasCell::Nil.into())
         };
 
         // Prepend the bitcode from the previous monad to the new one
         let next = next.map(|mut next| { next.prepend_bitcode(&self); next });
+        let next = next.map(|mut next| { next.prepend_labels(&self); next });
 
         // Result is the next monad
         // TODO: need to return a monad that can be re-evaluated in the case where the value is uncertain
