@@ -123,7 +123,7 @@ pub fn label_keyword() -> SyntaxCompiler {
         actions.frame_setup.extend(vec![
             Action::Value(ALLOC_LABEL.clone()),
             Action::Push,
-            Action::Value(READ_LABEL_VALUE.clone()),
+            Action::Value(WRAP_VALUE.clone()),
             Action::FlatMap,
             Action::StoreCell(cell_id)
         ]);
