@@ -196,8 +196,12 @@ pub fn label_keyword() -> SyntaxCompiler {
     // Compiling function: labels bind themselves to a monad that allocates/retrieves the label value at the start of the code block and just bind to the label value later on 
     let compiler = |value: CellRef| -> Result<_, BindError> {
         // Results of the bindings is the cell reference
-        let ListTuple((cell_reference, )): ListTuple<(CellRef, )> = value.try_into()?;
+        let ListTuple((label_action, )): ListTuple<(CellRef, )> = value.try_into()?;
 
+        // The label should be bound to an action monad, with the frame cell as the parameter
+        let cell_reference = match &*label_action { SafasCell::ActionMonad(_, cell_reference) => Ok(cell_reference.clone()), _ => Err(BindError::MissingArgument) }?;
+
+        // Fetch out the frame reference
         let (cell_id, frame_num, _) = cell_reference.frame_reference().ok_or(BindError::MissingArgument)?;
         if frame_num != 0 { return Err(BindError::CannotLoadCellInOtherFrame); }
 
