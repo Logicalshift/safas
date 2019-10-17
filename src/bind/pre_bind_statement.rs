@@ -37,7 +37,7 @@ pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> (SymbolB
                     List(_, _)              |
                     Monad(_, _)             |
                     FrameMonad(_)           |
-                    ActionMonad(_)          |
+                    ActionMonad(_, _)       |
                     FrameReference(_, _, _) => (bindings, symbol_value),
                 }
             } else {
@@ -91,7 +91,7 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                     FrameReference(_cell_num, _frame, _type)    => { let (bindings, value) = pre_bind_statement(car, bindings); pre_bind_call(value, cdr, bindings) }
                     
                     // Action and macro monads resolve their respective syntaxes
-                    ActionMonad(syntax_compiler)                => {
+                    ActionMonad(syntax_compiler, _)             => {
                         // During pre-binding, we don't perform any imports
                         let mut bindings        = bindings.push_interior_frame();
                         bindings.args           = Some(cdr);

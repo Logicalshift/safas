@@ -182,8 +182,9 @@ pub fn label_keyword() -> SyntaxCompiler {
 
                 // Labels are bound to their own syntax item, which reads the label value when used
                 let label_cell      = bindings.alloc_cell();
-                let label_action    = label_binding(FrameReference(label_cell, 0, ReferenceType::Monad));
-                bindings.symbols.insert(atom_id, SafasCell::ActionMonad(label_action).into());
+                let label_reference = FrameReference(label_cell, 0, ReferenceType::Monad);
+                let label_action    = label_binding(label_reference);
+                bindings.symbols.insert(atom_id, SafasCell::ActionMonad(label_action, label_reference.into()).into());
                 bindings.export(atom_id);
 
                 // Result is just the atom as for the main binding function

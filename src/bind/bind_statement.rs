@@ -13,7 +13,7 @@ use std::sync::*;
 use std::result::{Result};
 
 lazy_static! {
-    static ref WRAP_KEYWORD: CellRef = SafasCell::ActionMonad(wrap_keyword()).into();
+    static ref WRAP_KEYWORD: CellRef = SafasCell::ActionMonad(wrap_keyword(), NIL.clone()).into();
 }
 
 ///
@@ -61,7 +61,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                         }
                     },
 
-                    ActionMonad(syntax_compiler)                => {
+                    ActionMonad(syntax_compiler, parameter)     => {
                         // If we're on a different syntax level, try rebinding the monad (the syntax might need to import symbols from an outer frame, for example)
                         let mut bindings = bindings;
 
@@ -78,7 +78,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                                 };
 
                                 // Add to the symbols in the current bindings so we don't need to rebind the syntax multiple times
-                                let new_syntax = ActionMonad(new_syntax).into();
+                                let new_syntax = ActionMonad(new_syntax, parameter.clone()).into();
                                 new_bindings.symbols.insert(*atom_id, new_syntax);
                                 new_bindings.export(*atom_id);
 
@@ -148,7 +148,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     FrameReference(_cell_num, _frame, _type)    => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
                     
                     // Action and macro monads resolve their respective syntaxes
-                    ActionMonad(syntax_compiler)                => {
+                    ActionMonad(syntax_compiler, parameter)     => {
                         // If we're on a different syntax level, try rebinding the monad (the syntax might need to import symbols from an outer frame, for example)
                         let mut bindings = bindings;
 
@@ -165,7 +165,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                                 };
 
                                 // Add to the symbols in the current bindings so we don't need to rebind the syntax multiple times
-                                let new_syntax = ActionMonad(new_syntax).into();
+                                let new_syntax = ActionMonad(new_syntax, parameter.clone()).into();
                                 new_bindings.symbols.insert(*atom_id, new_syntax);
                                 new_bindings.export(*atom_id);
 

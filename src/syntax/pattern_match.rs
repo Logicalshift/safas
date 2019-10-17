@@ -210,7 +210,7 @@ impl PatternMatch {
                 SafasCell::String(string)   => { symbols.push(MatchSymbol::String(string.clone())); }
                 SafasCell::Char(chr)        => { symbols.push(MatchSymbol::Char(*chr)); }
 
-                SafasCell::Any(_) | SafasCell::BitCode(_) | SafasCell::Monad(_, _) | SafasCell::FrameMonad(_) | SafasCell::ActionMonad(_) | SafasCell::FrameReference(_, _, _) => { return Err(BindError::NotValidInSyntax) }
+                SafasCell::Any(_) | SafasCell::BitCode(_) | SafasCell::Monad(_, _) | SafasCell::FrameMonad(_) | SafasCell::ActionMonad(_, _) | SafasCell::FrameReference(_, _, _) => { return Err(BindError::NotValidInSyntax) }
             }
 
             // Move to the next cell
