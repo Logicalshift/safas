@@ -209,7 +209,6 @@ pub fn label_keyword() -> SyntaxCompiler {
         let mut actions = CompiledActions::empty();
 
         // Frame setup allocates the label. We use the cell ID as the label ID for updating it later
-        // TODO: and reads its value into the cell (we're just loading the label ID at the moment)
         actions.frame_setup.extend(vec![
             Action::Value(ALLOC_LABEL.clone()),
             Action::Push,
@@ -218,7 +217,7 @@ pub fn label_keyword() -> SyntaxCompiler {
             Action::StoreCell(cell_id)
         ]);
 
-        // Loading the value just loads from the label
+        // TODO: to evaluate the 'label' syntax itself, we need to read the bitcode value and set it to the label value
         actions.actions.extend(vec![
             Action::CellValue(cell_id)
         ]);
