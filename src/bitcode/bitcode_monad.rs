@@ -7,6 +7,7 @@ use crate::exec::*;
 
 use smallvec::*;
 use std::sync::*;
+use std::mem;
 
 ///
 ///
@@ -55,6 +56,17 @@ pub enum BitCodeContent {
     Value(SmallVec<[BitCode; 8]>),
 }
 
+impl BitCodeContent {
+    ///
+    /// Takes the content and replaces it with 'empty'
+    ///
+    pub fn take(&mut self) -> BitCodeContent {
+        let mut result = BitCodeContent::Empty;
+        mem::swap(self, &mut result);
+        result
+    }
+}
+
 ///
 /// The bitcode monad wraps a bitcode file in the process of being built up, along with 
 /// any labels it might have. It's possible to reference labels whose values are not yet
@@ -67,7 +79,7 @@ pub struct BitCodeMonad {
     pub (super) value: BitCodeValue,
 
     /// The bitcode contained by this monad (this follows on from any bitcode generated due to the value)
-    pub (super) bitcode: Arc<BitCodeContent>,
+    pub (super) bitcode: BitCodeContent,
 
     /// The bit position represented by this monad (this should always match the content of the bitcode)
     pub (super) bit_pos: u64,
@@ -104,7 +116,7 @@ impl BitCodeMonad {
     pub fn empty() -> BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::Value(SafasCell::Nil.into()),
-            bitcode:    Arc::new(BitCodeContent::Empty),
+            bitcode:    BitCodeContent::Empty,
             bit_pos:    0
         }
     }
@@ -115,7 +127,7 @@ impl BitCodeMonad {
     pub fn with_value(value: CellRef) -> BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::Value(value),
-            bitcode:    Arc::new(BitCodeContent::Empty),
+            bitcode:    BitCodeContent::Empty,
             bit_pos:    0
         }
     }
@@ -129,7 +141,7 @@ impl BitCodeMonad {
 
         BitCodeMonad {
             value:      BitCodeValue::Value(SafasCell::Nil.into()),
-            bitcode:    Arc::new(BitCodeContent::Value(bitcode)),
+            bitcode:    BitCodeContent::Value(bitcode),
             bit_pos:    bit_pos
         }
     }
@@ -140,7 +152,7 @@ impl BitCodeMonad {
     pub fn alloc_label(id: usize) -> BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::AllocLabel(id),
-            bitcode:    Arc::new(BitCodeContent::Empty),
+            bitcode:    BitCodeContent::Empty,
             bit_pos:    0
         }
     }
@@ -151,7 +163,7 @@ impl BitCodeMonad {
     pub fn read_label_value(label_id: usize) -> BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::LabelValue(label_id),
-            bitcode:    Arc::new(BitCodeContent::Empty),
+            bitcode:    BitCodeContent::Empty,
             bit_pos:    0
         }
     }
@@ -175,7 +187,7 @@ impl BitCodeMonad {
     /// Updates the bit_pos in this monad with a new starting position
     ///
     pub fn update_bit_pos_starting_at(&mut self, initial_bit_pos: u64) {
-        match &*self.bitcode {
+        match &self.bitcode {
             BitCodeContent::Empty           => { self.bit_pos = initial_bit_pos; }
             BitCodeContent::Value(bitcode)  => { self.bit_pos = BitCode::position_after(initial_bit_pos, bitcode); }
         }
@@ -184,15 +196,17 @@ impl BitCodeMonad {
     ///
     /// Prepends bitcode from the specified monad onto this one (stores the bitcode from the specified monad at the start of this monad)
     ///
-    pub fn prepend_bitcode(&mut self, from_monad: &BitCodeMonad) {
-        match &*from_monad.bitcode {
-            BitCodeContent::Empty           => { self.bit_pos = from_monad.bit_pos }
+    pub fn prepend_bitcode(&mut self, from_bit_pos: u64, bitcode: BitCodeContent) {
+        match bitcode {
+            BitCodeContent::Empty           => { self.update_bit_pos_starting_at(from_bit_pos); }
             BitCodeContent::Value(bitcode)  => {
-                self.update_bit_pos_starting_at(from_monad.bit_pos);
-                match &*self.bitcode {
-                    BitCodeContent::Empty               => { self.bitcode = from_monad.bitcode.clone(); }
-                    BitCodeContent::Value(our_bitcode)  => { 
-                        self.bitcode = Arc::new(BitCodeContent::Value(bitcode.iter().cloned().chain(our_bitcode.iter().cloned()).collect())); 
+                self.update_bit_pos_starting_at(from_bit_pos);
+                match self.bitcode.take() {
+                    BitCodeContent::Empty               => { self.bitcode = BitCodeContent::Value(bitcode); }
+                    BitCodeContent::Value(our_bitcode)  => {
+                        let mut bitcode = bitcode;
+                        bitcode.extend(our_bitcode);
+                        self.bitcode = BitCodeContent::Value(bitcode);
                     }
                 }
             }
@@ -206,7 +220,7 @@ impl BitCodeMonad {
         // Return a flatmapped bitcode monad
         Ok(BitCodeMonad {
             value:      BitCodeValue::FlatMap(Arc::new((self, Box::new(fun)))),
-            bitcode:    Arc::new(BitCodeContent::Empty),
+            bitcode:    BitCodeContent::Empty,
             bit_pos:    0
         })
     }
