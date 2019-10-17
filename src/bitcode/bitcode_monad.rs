@@ -1,5 +1,4 @@
 use super::code::*;
-use super::label::*;
 use super::bitcode_functions::*;
 
 use crate::meta::*;
@@ -10,23 +9,6 @@ use std::sync::*;
 use std::mem;
 
 ///
-///
-/// Some value may need to be recomputed in multiple passes to get their final 
-/// value (eg, label values or the current bit position)
-///
-#[derive(Clone)]
-pub enum PossibleValue {
-    /// Value was resolved to an absolute value
-    Certain(CellRef),
-
-    /// Value is not certain (could need to be revised in a future pass)
-    Uncertain(CellRef),
-
-    /// Value is invalid
-    Invalid
-}
-
-///
 /// Represents the possible ways a value can be wrapped by a bitcode monad
 ///
 #[derive(Clone)]
@@ -35,10 +17,16 @@ pub enum BitCodeValue {
     Value(CellRef),
 
     /// Allocates a label with the specified ID (replacing any previous label with this ID)
-    AllocLabel(usize),
+    AllocLabel,
 
-    /// Reads the label with the specified ID's value
-    LabelValue(usize),
+    /// Reads the label (cell returned by AllocLabel)
+    LabelValue(CellRef),
+
+    /// Sets a label value (cell returned by AllocLabel)
+    SetLabelValue(CellRef),
+
+    /// Reads the current assembly position
+    BitPos,
 
     /// Value is the result of a flat_map operation on a bitcode monad
     FlatMap(Arc<(BitCodeMonad, Box<dyn Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>)>)
@@ -155,9 +143,9 @@ impl BitCodeMonad {
     ///
     /// Creates a new bitcode monad that means 'allocate a new label'
     ///
-    pub fn alloc_label(id: usize) -> BitCodeMonad {
+    pub fn alloc_label() -> BitCodeMonad {
         BitCodeMonad {
-            value:              BitCodeValue::AllocLabel(id),
+            value:              BitCodeValue::AllocLabel,
             bitcode:            BitCodeContent::Empty,
             following_bitcode:  BitCodeContent::Empty,
             bit_pos:            0
@@ -167,27 +155,12 @@ impl BitCodeMonad {
     ///
     /// Creates a new bitcode monad that means 'read the value of the label passed in as the argument'
     ///
-    pub fn read_label_value(label_id: usize) -> BitCodeMonad {
+    pub fn read_label_value(label: CellRef) -> BitCodeMonad {
         BitCodeMonad {
-            value:              BitCodeValue::LabelValue(label_id),
+            value:              BitCodeValue::LabelValue(label),
             bitcode:            BitCodeContent::Empty,
             following_bitcode:  BitCodeContent::Empty,
             bit_pos:            0
-        }
-    }
-
-    ///
-    /// Retrieves the value attached to this monad
-    ///
-    pub fn value(&self) -> PossibleValue {
-        use self::BitCodeValue::*;
-        use self::PossibleValue::*;
-
-        match &self.value {
-            Value(value)                => Certain(value.clone()),
-            AllocLabel(label_id)        => unimplemented!("Labels should be tracked outside of the bitcode monad"),
-            LabelValue(label_id)        => unimplemented!("Labels should be tracked outside of the bitcode monad"),
-            FlatMap(flat_map)           => unimplemented!("value() won't work with a FlatMap bitcode monad (needs to be assembled)")
         }
     }
 
@@ -245,29 +218,4 @@ impl BitCodeMonad {
             }
         }
     }
-
-    /*
-    ///
-    /// Maps this monad by applying a function to the value it contains
-    ///
-    pub fn flat_map<TFn: Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>>(self, fun: TFn) -> Result<BitCodeMonad, RuntimeError> {
-        // Read the next value
-        let value = self.value();
-
-        // Retrieve the next monad based on the value
-        let next = match value {
-            PossibleValue::Certain(value)   => fun(value),
-            PossibleValue::Uncertain(value) => fun(value),
-            PossibleValue::Invalid          => fun(SafasCell::Nil.into())
-        };
-
-        // Prepend the bitcode from the previous monad to the new one
-        let next = next.map(|mut next| { next.prepend_bitcode(&self); next });
-        let next = next.map(|mut next| { next.prepend_labels(&self); next });
-
-        // Result is the next monad
-        // TODO: need to return a monad that can be re-evaluated in the case where the value is uncertain
-        next
-    }
-    */
 }

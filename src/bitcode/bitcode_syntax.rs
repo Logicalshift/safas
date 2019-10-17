@@ -14,14 +14,17 @@ lazy_static! {
     static ref WRAP_VALUE: CellRef = wrap_value();
 
     /// The read_label_value function
+    static ref ALLOC_LABEL: CellRef = alloc_label();
+
+    /// The read_label_value function
     static ref READ_LABEL_VALUE: CellRef = read_label_value();
 }
 
 ///
 /// Creates the 'alloc_label' bitcode monad as a cell
 ///
-fn alloc_label(label_id: usize) -> CellRef {
-    let alloc_label = BitCodeMonad::alloc_label(label_id);
+fn alloc_label() -> CellRef {
+    let alloc_label = BitCodeMonad::alloc_label();
     let alloc_label = SafasCell::Any(Box::new(alloc_label)).into();     
     let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
@@ -32,10 +35,10 @@ fn alloc_label(label_id: usize) -> CellRef {
 /// Creates a 'read label value' flat_map function
 ///
 fn read_label_value() -> CellRef {
-    let read_label_value = FnMonad::from(|args: BitCodeFlatMapArgs<SafasNumber>| {
+    let read_label_value = FnMonad::from(|args: BitCodeFlatMapArgs<CellRef>| {
         let label_id    = args.value;
 
-        let label_value = BitCodeMonad::read_label_value(label_id.to_usize());
+        let label_value = BitCodeMonad::read_label_value(label_id);
         let label_value = SafasCell::Any(Box::new(label_value)).into();     
 
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
@@ -118,7 +121,7 @@ pub fn label_keyword() -> SyntaxCompiler {
         // Frame setup allocates the label. We use the cell ID as the label ID for updating it later
         // TODO: and reads its value into the cell (we're just loading the label ID at the moment)
         actions.frame_setup.extend(vec![
-            Action::Value(alloc_label(cell_id)),
+            Action::Value(ALLOC_LABEL.clone()),
             Action::Push,
             Action::Value(READ_LABEL_VALUE.clone()),
             Action::FlatMap,

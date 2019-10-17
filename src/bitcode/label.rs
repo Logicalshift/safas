@@ -23,6 +23,7 @@ impl Label {
         let id          = *next_id;
         (*next_id)      += 1;
 
+        // Label is just the ID; we assign it while assembling the bitcode
         Label {
             id: id
         }
