@@ -3,6 +3,7 @@ use super::label::*;
 use super::bitcode_functions::*;
 
 use crate::meta::*;
+use crate::exec::*;
 
 use smallvec::*;
 use std::sync::*;
@@ -223,7 +224,7 @@ impl BitCodeMonad {
     ///
     /// Maps this monad by applying a function to the value it contains
     ///
-    pub fn flat_map<TErr, TFn: Fn(CellRef) -> Result<BitCodeMonad, TErr>>(self, fun: TFn) -> Result<BitCodeMonad, TErr> {
+    pub fn flat_map<TFn: Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>>(self, fun: TFn) -> Result<BitCodeMonad, RuntimeError> {
         // Read the next value
         let value = self.value();
 
