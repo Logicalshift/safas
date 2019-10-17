@@ -313,7 +313,7 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
 
     let bound_monad_fn                      = if is_inner_expression {
         // The inner result of a monadic expression needs to be wrapped so the return value is itself a monad (note we don't bind the bound monad fn itself here)
-        let bound_monad_fn                  = SafasCell::List(bound_monad_fn, SafasCell::Nil.into()).into();
+        let bound_monad_fn                  = SafasCell::List(bound_monad_fn, NIL.clone()).into();
         let bound_monad_fn                  = SafasCell::List(WRAP_KEYWORD.clone(), bound_monad_fn).into();
         bound_monad_fn
     } else {

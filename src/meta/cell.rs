@@ -11,6 +11,11 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::any::*;
 
+lazy_static! {
+    /// A cellref representing the general 'nil' value
+    pub static ref NIL: CellRef = SafasCell::Nil.into();
+}
+
 ///
 /// The type of value stored in a frame reference
 ///
@@ -81,7 +86,7 @@ impl SafasCell {
         let cells       = cells.into_iter().rev();
 
         // We build the list by adding to the end
-        let mut cell    = SafasCell::Nil.into();
+        let mut cell    = NIL.clone();
         for current_cell in cells {
             cell = SafasCell::List(current_cell, cell).into();
         }

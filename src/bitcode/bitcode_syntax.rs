@@ -83,7 +83,7 @@ impl BindingMonad for LabelBinding {
     type Binding = CellRef;
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, CellRef) {
-        (bindings, SafasCell::Nil.into())
+        (bindings, NIL.clone())
     }
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<CellRef, BindError>) {

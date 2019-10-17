@@ -9,7 +9,7 @@ pub fn wrap_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     let wrap_fn     = FnMonad::from(|(val, ): (CellRef, )| {
         let wrap_monad  = WrapFlatMap(val.clone());
         let wrap_monad  = SafasCell::FrameMonad(Box::new(wrap_monad)).into();
-        let wrap_monad  = SafasCell::Monad(SafasCell::Nil.into(), MonadType::new(wrap_monad)).into();
+        let wrap_monad  = SafasCell::Monad(NIL.clone(), MonadType::new(wrap_monad)).into();
 
         wrap_monad
     });

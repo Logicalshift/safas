@@ -106,7 +106,7 @@ impl BitCodeMonad {
     ///
     pub fn empty() -> BitCodeMonad {
         BitCodeMonad {
-            value:              BitCodeValue::Value(SafasCell::Nil.into()),
+            value:              BitCodeValue::Value(NIL.clone()),
             bitcode:            BitCodeContent::Empty,
             following_bitcode:  BitCodeContent::Empty,
             bit_pos:            0
@@ -133,7 +133,7 @@ impl BitCodeMonad {
         let bit_pos = BitCode::position_after(0, &bitcode);
 
         BitCodeMonad {
-            value:              BitCodeValue::Value(SafasCell::Nil.into()),
+            value:              BitCodeValue::Value(NIL.clone()),
             bitcode:            BitCodeContent::Value(bitcode),
             following_bitcode:  BitCodeContent::Empty,
             bit_pos:            bit_pos

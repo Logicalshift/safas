@@ -56,7 +56,7 @@ impl BindingMonad for FunBinder {
     fn description(&self) -> String { "##fun##".to_string() }
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
-        let args = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
+        let args = bindings.args.clone().unwrap_or_else(|| NIL.clone());
         (bindings, args)
     }
 

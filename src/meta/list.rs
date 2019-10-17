@@ -10,15 +10,6 @@ use std::result::{Result};
 ///
 pub struct SafasList(pub CellRef, pub CellRef);
 
-impl SafasList {
-    ///
-    /// A list containing just the 'nil' value
-    ///
-    pub fn nil() -> SafasList {
-        SafasList(SafasCell::Nil.into(), SafasCell::Nil.into())
-    }
-}
-
 impl TryFrom<CellRef> for SafasList {
     type Error = RuntimeError;
 

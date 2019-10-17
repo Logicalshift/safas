@@ -179,7 +179,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
             bindings.symbols.insert(*name_id, syntax.into());
             bindings.export(*name_id);
 
-            (bindings, Ok(SafasCell::Nil.into()))
+            (bindings, Ok(NIL.clone()))
 
         })
     });
@@ -242,13 +242,13 @@ impl BindingMonad for Arc<SyntaxSymbol> {
     fn description(&self) -> String { "##syntax_symbol##".to_string() }
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
-        let args = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
+        let args = bindings.args.clone().unwrap_or_else(|| NIL.clone());
         (bindings, args)
     }
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         // Get the arguments for this symbol
-        let args            = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
+        let args            = bindings.args.clone().unwrap_or_else(|| NIL.clone());
         let mut bindings    = bindings;
 
         // Try to match them against each pattern
@@ -436,13 +436,13 @@ impl BindingMonad for SyntaxClosure {
     fn description(&self) -> String { "##syntax_closure##".to_string() }
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
-        let args = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
+        let args = bindings.args.clone().unwrap_or_else(|| NIL.clone());
         (bindings, args)
     }
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         // Get the arguments for this symbol
-        let args                    = bindings.args.clone().unwrap_or_else(|| SafasCell::Nil.into());
+        let args                    = bindings.args.clone().unwrap_or_else(|| NIL.clone());
 
         // Push an interior frame
         let mut interior_bindings   = bindings.push_interior_frame();

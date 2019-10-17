@@ -42,7 +42,7 @@ pub fn eval(expr: &str) -> Result<CellRef, RuntimeError> {
 
     // Run the statements in the current frame
     let mut statement   = Arc::clone(&expr);
-    let mut result      = SafasCell::Nil.into();
+    let mut result      = NIL.clone();
     while let SafasCell::List(car, cdr) = &*statement {
         // Bind this statement
         let (bound, new_bindings)   = match bind_statement(Arc::clone(&car), bindings) { Ok((bound, new_bindings)) => (bound, new_bindings), Err((err, _new_bindings)) => return Err(err.into()) };

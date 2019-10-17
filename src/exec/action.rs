@@ -131,7 +131,7 @@ impl FrameMonad for Vec<Action> {
     fn execute(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // Initial state
         let mut frame   = frame;
-        let mut result  = SafasCell::Nil.into();
+        let mut result  = NIL.clone();
 
         // Perform each action in turn
         for action in self.iter() {
@@ -153,7 +153,7 @@ impl FrameMonad for Vec<Action> {
                 }
 
                 PopList(num_cells)          => { 
-                    result = SafasCell::Nil.into();
+                    result = NIL.clone();
                     for _ in 0..*num_cells {
                         let val = if let Some(val) = frame.stack.pop() {
                             val
@@ -198,7 +198,7 @@ impl FrameMonad for Vec<Action> {
 
                 PopCall(num_cells)          => {
                     // Pop cells
-                    result = SafasCell::Nil.into();
+                    result = NIL.clone();
                     for _ in 0..*num_cells {
                         let val = if let Some(val) = frame.stack.pop() {
                             val
@@ -262,7 +262,7 @@ impl FrameMonad for Vec<Action> {
                     let wrap_flat_map   = SafasCell::FrameMonad(Box::new(wrap));
                     let monad_type      = MonadType::new(wrap_flat_map.into());
 
-                    result              = SafasCell::Monad(SafasCell::Nil.into(), monad_type).into();
+                    result              = SafasCell::Monad(NIL.clone(), monad_type).into();
                 }
 
                 Next => {
