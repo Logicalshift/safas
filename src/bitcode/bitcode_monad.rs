@@ -46,6 +46,7 @@ pub enum BitCodeValue {
 ///
 /// Represents the bitcode content of a bitcode monad
 ///
+#[derive(Clone)]
 pub enum BitCodeContent {
     /// No bitcode
     Empty,
@@ -65,14 +66,11 @@ pub struct BitCodeMonad {
     /// The value wrapped by this monad
     pub (super) value: BitCodeValue,
 
-    /// The bitcode contained by this monad
+    /// The bitcode contained by this monad (this follows on from any bitcode generated due to the value)
     pub (super) bitcode: Arc<BitCodeContent>,
 
     /// The bit position represented by this monad (this should always match the content of the bitcode)
     pub (super) bit_pos: u64,
-
-    /// The labels that are currently defined in this monad
-    pub (super) labels: Arc<Vec<Label>>
 }
 
 impl BitCodeMonad {
@@ -107,8 +105,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::Value(SafasCell::Nil.into()),
             bitcode:    Arc::new(BitCodeContent::Empty),
-            bit_pos:    0,
-            labels:     Arc::new(vec![])
+            bit_pos:    0
         }
     }
 
@@ -119,8 +116,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::Value(value),
             bitcode:    Arc::new(BitCodeContent::Empty),
-            bit_pos:    0,
-            labels:     Arc::new(vec![])
+            bit_pos:    0
         }
     }
 
@@ -134,8 +130,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::Value(SafasCell::Nil.into()),
             bitcode:    Arc::new(BitCodeContent::Value(bitcode)),
-            bit_pos:    bit_pos,
-            labels:     Arc::new(vec![])
+            bit_pos:    bit_pos
         }
     }
 
@@ -146,8 +141,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::AllocLabel(id),
             bitcode:    Arc::new(BitCodeContent::Empty),
-            bit_pos:    0,
-            labels:     Arc::new(vec![Label::new()])
+            bit_pos:    0
         }
     }
 
@@ -158,8 +152,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:      BitCodeValue::LabelValue(label_id),
             bitcode:    Arc::new(BitCodeContent::Empty),
-            bit_pos:    0,
-            labels:     Arc::new(vec![])
+            bit_pos:    0
         }
     }
 
@@ -172,10 +165,8 @@ impl BitCodeMonad {
 
         match &self.value {
             Value(value)                => Certain(value.clone()),
-            AllocLabel(label_id)        => Certain(SafasCell::Number(SafasNumber::Plain(*label_id as u128)).into()),
-            LabelValue(label_id)        => {
-                Uncertain(self.labels[*label_id].value.clone())
-            }
+            AllocLabel(label_id)        => unimplemented!("Labels should be tracked outside of the bitcode monad"),
+            LabelValue(label_id)        => unimplemented!("Labels should be tracked outside of the bitcode monad"),
             FlatMap(flat_map)           => unimplemented!("value() won't work with a FlatMap bitcode monad (needs to be assembled)")
         }
     }
@@ -209,23 +200,6 @@ impl BitCodeMonad {
     }
 
     ///
-    /// Prepends labels from the specified monad onto this one
-    ///
-    pub fn prepend_labels(&mut self, from_monad: &BitCodeMonad) {
-        // Add the labels to the start of this item
-        if self.labels.len() == 0 {
-            // Just re-use the labels from the previous monad if there are none in this one
-            self.labels = Arc::clone(&from_monad.labels);
-        } else {
-            // Add the labels from this monad to the previous one (note that this will change label IDs, so some caution has to be taken with using the result of AllocLabel)
-            // TODO: right now, we always use the result of AllocLabel immediately and don't store it: perhaps we should combine it into a single operation
-            let mut new_labels = (*from_monad.labels).clone();
-            new_labels.extend(self.labels.iter().cloned());
-            self.labels = Arc::new(new_labels);
-        }
-    }
-
-    ///
     /// Maps this monad by applying a function to the value it contains
     ///
     pub fn flat_map<TFn: 'static+Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>(self, fun: TFn) -> Result<BitCodeMonad, RuntimeError> {
@@ -233,8 +207,7 @@ impl BitCodeMonad {
         Ok(BitCodeMonad {
             value:      BitCodeValue::FlatMap(Arc::new((self, Box::new(fun)))),
             bitcode:    Arc::new(BitCodeContent::Empty),
-            bit_pos:    0,
-            labels:     Arc::new(vec![])
+            bit_pos:    0
         })
     }
 
