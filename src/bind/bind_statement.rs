@@ -31,7 +31,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
             // Look up the value for this symbol
             let symbol_value = bindings.look_up(*atom_id);
 
-            if let Some((symbol_value, _symbol_level)) = symbol_value {
+            if let Some((symbol_value, symbol_level)) = symbol_value {
                 use self::SafasCell::*;
 
                 match &*symbol_value {
@@ -44,8 +44,8 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                     Char(_)                                     |
                     List(_, _)                                  |
                     Monad(_, _)                                 |
-                    FrameMonad(_)                               |
-                    ActionMonad(_)                              => Ok((symbol_value, bindings)),
+                    FrameMonad(_)                               => Ok((symbol_value, bindings)),
+
                     FrameReference(cell_num, frame, cell_type)  => {
                         let (cell_num, frame) = (*cell_num, *frame);
                         if frame == 0 {
@@ -60,6 +60,49 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                             Ok((SafasCell::FrameReference(local_cell_id, 0, *cell_type).into(), bindings))
                         }
                     },
+
+                    ActionMonad(syntax_compiler)                => {
+                        // If we're on a different syntax level, try rebinding the monad (the syntax might need to import symbols from an outer frame, for example)
+                        let mut bindings = bindings;
+
+                        if symbol_level != 0 {
+                            // Try to rebind the syntax from an outer frame
+                            let (mut new_bindings, rebound_monad) = syntax_compiler.binding_monad.rebind_from_outer_frame(bindings, symbol_level);
+
+                            // If the compiler rebinds itself...
+                            if let Some(rebound_monad) = rebound_monad {
+                                // ... create a new syntax using the rebound binding monad
+                                let new_syntax = SyntaxCompiler {
+                                    binding_monad:      rebound_monad,
+                                    generate_actions:   Arc::clone(&syntax_compiler.generate_actions)
+                                };
+
+                                // Add to the symbols in the current bindings so we don't need to rebind the syntax multiple times
+                                let new_syntax = ActionMonad(new_syntax).into();
+                                new_bindings.symbols.insert(*atom_id, new_syntax);
+                                new_bindings.export(*atom_id);
+
+                                // Re-evaluate this binding (as we insert the binding at the current level we won't rebind the next time through)
+                                return bind_statement(source, new_bindings);
+                            }
+
+                            // Update the bindings to apply the effects of the rebinding
+                            bindings = new_bindings
+                        }
+
+                        let mut bindings        = bindings.push_interior_frame();
+                        bindings.args           = None;
+                        bindings.depth          = Some(symbol_level);
+                        let (bindings, bound)   = syntax_compiler.binding_monad.bind(bindings);
+                        let (bindings, imports) = bindings.pop();
+
+                        if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
+
+                        match bound {
+                            Ok(bound)       => Ok((SafasCell::List(symbol_value, bound).into(), bindings)),
+                            Err(error)      => Err((error, bindings))
+                        }
+                    }
                 }
             } else {
                 // Not a valid symbol

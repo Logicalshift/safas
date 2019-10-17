@@ -31,19 +31,22 @@ pub fn compile_statement_quick(source: CellRef) -> Result<CompiledActions, BindE
 
     match &*source {
         // Lists are processed according to their first value
-        List(car, cdr)  => { compile_list_statement(Arc::clone(car), Arc::clone(cdr)) }
+        List(car, cdr)                          => { compile_list_statement(Arc::clone(car), Arc::clone(cdr)) }
 
         // Frame references load their respective references
-        FrameReference(cell_id, frame, _type) => {
+        FrameReference(cell_id, frame, _type)   => {
             if *frame != 0 {
                 Err(BindError::CannotLoadCellInOtherFrame)
             } else {
                 Ok(smallvec![Action::CellValue(*cell_id)].into())
             }
         }
+        
+        // Action and macro monads resolve their respective syntaxes
+        ActionMonad(syntax_compiler)            => (syntax_compiler.generate_actions)(Arc::clone(&source)),
 
         // Normal values just get loaded into cell 0
-        _other          => { Ok(smallvec![Action::Value(Arc::clone(&source))].into()) }
+        _other                                  => { Ok(smallvec![Action::Value(Arc::clone(&source))].into()) }
     }
 }
 
