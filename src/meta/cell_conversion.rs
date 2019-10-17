@@ -124,6 +124,7 @@ impl From<u64> for AtomId {
 ///
 /// Represents a frame reference, used for conversions
 ///
+#[derive(Clone, Copy, Debug)]
 pub struct FrameReference(pub usize, pub u32, pub ReferenceType);
 
 impl Default for FrameReference {
@@ -140,6 +141,13 @@ impl TryFrom<CellRef> for FrameReference {
             SafasCell::FrameReference(cell, frame, cell_type)   => Ok(FrameReference(*cell, *frame, *cell_type)),
             _                                                   => Err(RuntimeError::BindingError(BindError::SyntaxExpectingAtom))
         }
+    }
+}
+
+impl Into<CellRef> for FrameReference {
+    fn into(self) -> CellRef {
+        let FrameReference(cell_id, frame, reference_type) = self;
+        SafasCell::FrameReference(cell_id, frame, reference_type).into()
     }
 }
 
