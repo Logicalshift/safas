@@ -28,7 +28,7 @@ pub enum PossibleValue {
 ///
 /// Represents the possible ways a value can be wrapped by a bitcode monad
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum BitCodeValue {
     /// An absolute value
     Value(CellRef),
@@ -37,7 +37,10 @@ pub enum BitCodeValue {
     AllocLabel(usize),
 
     /// Reads the label with the specified ID's value
-    LabelValue(usize)
+    LabelValue(usize),
+
+    /// Value is the result of a flat_map operation on a bitcode monad
+    FlatMap(Arc<(BitCodeMonad, Box<dyn Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>)>)
 }
 
 ///
@@ -173,6 +176,7 @@ impl BitCodeMonad {
             LabelValue(label_id)        => {
                 Uncertain(self.labels[*label_id].value.clone())
             }
+            FlatMap(flat_map)           => unimplemented!("value() won't work with a FlatMap bitcode monad (needs to be assembled)")
         }
     }
 
@@ -224,6 +228,20 @@ impl BitCodeMonad {
     ///
     /// Maps this monad by applying a function to the value it contains
     ///
+    pub fn flat_map<TFn: 'static+Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>(self, fun: TFn) -> Result<BitCodeMonad, RuntimeError> {
+        // Return a flatmapped bitcode monad
+        Ok(BitCodeMonad {
+            value:      BitCodeValue::FlatMap(Arc::new((self, Box::new(fun)))),
+            bitcode:    Arc::new(BitCodeContent::Empty),
+            bit_pos:    0,
+            labels:     Arc::new(vec![])
+        })
+    }
+
+    /*
+    ///
+    /// Maps this monad by applying a function to the value it contains
+    ///
     pub fn flat_map<TFn: Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>>(self, fun: TFn) -> Result<BitCodeMonad, RuntimeError> {
         // Read the next value
         let value = self.value();
@@ -243,4 +261,5 @@ impl BitCodeMonad {
         // TODO: need to return a monad that can be re-evaluated in the case where the value is uncertain
         next
     }
+    */
 }

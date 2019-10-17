@@ -54,15 +54,18 @@ impl FrameMonad for BitCodeFlatMap {
         // Replace the empty bitcode monad with a 'full' bitcode monad
         let bitcode_monad = bitcode_monad.unwrap_or_else(|| BitCodeMonad::empty());
 
-        // Fetch the map function
-        let map_fn = match &*args.map_fn {
-            SafasCell::FrameMonad(monad_fn) => monad_fn,
-            _                               => return (frame, Err(RuntimeError::NotAFunction(args.map_fn)))
-        };
+        let map_fn = args.map_fn;
 
         // Applying the map function should return the updated monad
         let monad_value         = args.monad_value.clone();
         let next                = bitcode_monad.flat_map(move |val| {
+            // Fetch the map function
+            let map_fn = match &*map_fn {
+                SafasCell::FrameMonad(monad_fn) => monad_fn,
+                _                               => return Err(RuntimeError::NotAFunction(map_fn.clone()))
+            };
+
+            // Create a new frame to execute the map function on and execute it
             let mut frame           = Frame::new(1, None);
             frame.cells[0]          = SafasCell::List(monad_value.clone(), val).into();
             let (_frame, next)      = map_fn.execute(frame);
