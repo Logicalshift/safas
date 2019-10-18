@@ -12,7 +12,7 @@ use std::sync::*;
 ///
 pub fn quote_keyword() -> SyntaxCompiler {
     // The binding just extracts the literal from the expression
-    let bind = get_expression_arguments().and_then_ok(|args: ListTuple<(CellRef, )>| {
+    let bind = get_expression_arguments().and_then(|args: ListTuple<(CellRef, )>| {
         let ListTuple((literal, )) = args;
         wrap_binding(literal)
     });

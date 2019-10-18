@@ -12,7 +12,7 @@ use std::convert::*;
 /// wrap function most places)
 ///
 pub fn wrap_keyword() -> SyntaxCompiler {
-    let bind = get_expression_arguments().and_then_ok(|args: ListTuple<(CellRef, )>| {
+    let bind = get_expression_arguments().and_then(|args: ListTuple<(CellRef, )>| {
         let ListTuple((wrap_statement, )) = args;
         bind(wrap_statement)
     });

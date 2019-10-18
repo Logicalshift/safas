@@ -404,7 +404,7 @@ impl BindingMonad for BindMonad {
 /// Creates a binding monad that will bind the specified source
 ///
 pub fn bind(source: CellRef) -> impl BindingMonad<Binding=CellRef> {
-    BindMonad { source: vec![source] }.and_then_ok(|mut results| wrap_binding(results.pop().unwrap()))
+    BindMonad { source: vec![source] }.and_then(|mut results| wrap_binding(results.pop().unwrap()))
 }
 
 ///

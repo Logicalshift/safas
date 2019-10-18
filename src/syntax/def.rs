@@ -20,12 +20,12 @@ pub fn def_keyword() -> SyntaxCompiler {
     //   This retrieves the arguments, binds the value, allocates a cell and associates the name with 
     //   the cell and generates a list containing (cell_binding, value_binding) to pass to the compiler
     //   
-    let bind = get_expression_arguments().and_then_ok(|args: ListTuple<(AtomId, CellRef)>| {
+    let bind = get_expression_arguments().and_then(|args: ListTuple<(AtomId, CellRef)>| {
         // The arguments are just the name and the value
         let ListTuple((name, value)) = args;
 
         // Bind the value
-        bind(value).and_then_ok(move |value| {
+        bind(value).and_then(move |value| {
             // Allocate the cell to store the value in
             allocate_cell().and_then(move |cell_id| {
                 // Define the symbol to map to this cell
@@ -33,7 +33,7 @@ pub fn def_keyword() -> SyntaxCompiler {
                 let cell_type       = value.reference_type();
                 let cell: CellRef   = SafasCell::FrameReference(cell_id, 0, cell_type).into();
 
-                define_symbol_value(name, cell.clone()).and_then_ok(move |_| {
+                define_symbol_value(name, cell.clone()).and_then(move |_| {
                     let value   = value.clone();
                     let cell    = cell.clone();
 

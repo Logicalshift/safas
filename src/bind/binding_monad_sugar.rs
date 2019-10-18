@@ -64,21 +64,3 @@ impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
         Box::new(result)
     }
 }
-
-///
-/// Adds the `and_then_ok()` operation to a binding monad
-///
-pub trait BindingMonadAndThenOk<Val: Default> : BindingMonad<Binding=Val> {
-    ///
-    /// `and_then_ok()` is syntactic sugar around the `flat_map_binding_error` operation, which adds continuations only on success,
-    /// which makes for more easily read code
-    ///
-    fn and_then_ok<Out: 'static+Default+Clone+Send+Sync, OutputMonad: 'static+BindingMonad<Binding=Out>, NextFn: 'static+Fn(Val) -> OutputMonad+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=OutputMonad::Binding>>;
-}
-
-impl<T: 'static+BindingMonad<Binding=Val>, Val: 'static+Default> BindingMonadAndThenOk<Val> for T {
-    fn and_then_ok<Out: 'static+Default+Clone+Send+Sync, OutputMonad: 'static+BindingMonad<Binding=Out>, NextFn: 'static+Fn(Val) -> OutputMonad+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=OutputMonad::Binding>> {
-        let result = flat_map_binding(action, self);
-        Box::new(result)
-    }
-}

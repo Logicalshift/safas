@@ -162,7 +162,7 @@ fn label_binding(label_cell: FrameReference) -> SyntaxCompiler {
 pub fn label_keyword() -> SyntaxCompiler {
     // Binding function. Labels are pre-bound so they're available throughout the current context
     let bind = get_expression_arguments()
-        .and_then_ok(|args: ListTuple<(AtomId, )>| {
+        .and_then(|args: ListTuple<(AtomId, )>| {
             // Parse out the arguments
             let ListTuple((AtomId(atom_id), )) = args;
 
@@ -217,7 +217,7 @@ pub fn label_keyword() -> SyntaxCompiler {
             Action::StoreCell(cell_id)
         ]);
 
-        // TODO: to evaluate the 'label' syntax itself, we need to read the bitcode value and set it to the label value
+        // TODO: to evaluate the 'label' syntax itself, we need to read the bitcode value and set it to the label value (the return value is a monad too...)
         actions.actions.extend(vec![
             Action::CellValue(cell_id)
         ]);

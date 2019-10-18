@@ -60,7 +60,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
         // Result of the first stage is the list of patterns
         Ok((name, Arc::new(macros), statements))
 
-    }).and_then_ok(|args| {
+    }).and_then(|args| {
 
         // Second step: bind each of the macros and generate the syntax item
 
