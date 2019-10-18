@@ -1,6 +1,7 @@
 mod symbol_bindings;
 mod binding_monad;
 mod binding_monad_sugar;
+mod with_reference_type;
 mod bind_args_monad;
 mod allocate_cell_monad;
 mod export_symbol_monad;
@@ -13,6 +14,7 @@ mod syntax_compiler;
 pub use self::symbol_bindings::*;
 pub use self::binding_monad::*;
 pub use self::binding_monad_sugar::*;
+pub use self::with_reference_type::*;
 pub use self::bind_args_monad::*;
 pub use self::pre_bind_statement::*;
 pub use self::bind_statement::*;
