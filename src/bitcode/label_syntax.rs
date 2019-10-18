@@ -192,6 +192,7 @@ pub fn label_keyword() -> SyntaxCompiler {
                 (bindings, result)
             })
         });
+    let bind = WithReferenceType(bind, ReferenceType::Monad);
 
     // Compiling function: labels bind themselves to a monad that allocates/retrieves the label value at the start of the code block and just bind to the label value later on 
     let compiler = |value: CellRef| -> Result<_, BindError> {
@@ -217,7 +218,7 @@ pub fn label_keyword() -> SyntaxCompiler {
             Action::StoreCell(cell_id)
         ]);
 
-        // TODO: to evaluate the 'label' syntax itself, we need to read the bitcode value and set it to the label value (the return value is a monad too...)
+        // TODO: to evaluate the 'label' syntax itself, we need to read the bitcode value and set it to the label value
         actions.actions.extend(vec![
             Action::CellValue(cell_id)
         ]);
