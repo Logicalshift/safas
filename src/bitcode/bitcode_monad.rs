@@ -23,7 +23,7 @@ pub enum BitCodeValue {
     LabelValue(CellRef),
 
     /// Sets a label value (cell returned by AllocLabel)
-    SetLabelValue(CellRef),
+    SetLabelValue(CellRef, CellRef),
 
     /// Reads the current assembly position
     BitPos,
@@ -158,6 +158,30 @@ impl BitCodeMonad {
     pub fn read_label_value(label: CellRef) -> BitCodeMonad {
         BitCodeMonad {
             value:              BitCodeValue::LabelValue(label),
+            bitcode:            BitCodeContent::Empty,
+            following_bitcode:  BitCodeContent::Empty,
+            bit_pos:            0
+        }
+    }
+
+    ///
+    /// Creates a new bitcode monad that means 'get the current bit position'
+    ///
+    pub fn read_bit_pos() -> BitCodeMonad {
+        BitCodeMonad {
+            value:              BitCodeValue::BitPos,
+            bitcode:            BitCodeContent::Empty,
+            following_bitcode:  BitCodeContent::Empty,
+            bit_pos:            0
+        }
+    }
+
+    ///
+    /// Creates a new bitcode monad that means 'set the value of the specified label to the value of the argument'
+    ///
+    pub fn set_label_value(label: CellRef, value: CellRef) -> BitCodeMonad {
+        BitCodeMonad {
+            value:              BitCodeValue::SetLabelValue(label, value),
             bitcode:            BitCodeContent::Empty,
             following_bitcode:  BitCodeContent::Empty,
             bit_pos:            0

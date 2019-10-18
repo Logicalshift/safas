@@ -19,6 +19,9 @@ lazy_static! {
 
     /// The read_label_value function
     static ref READ_LABEL_VALUE: CellRef = read_label_value();
+
+    /// The read_label_value function
+    static ref SET_LABEL_VALUE: CellRef = set_label_value();
 }
 
 ///
@@ -50,6 +53,27 @@ fn read_label_value() -> CellRef {
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
         SafasCell::Monad(label_value, monad_type).into()
+    });
+    let read_label_value = ReturnsMonad(read_label_value);
+    let read_label_value = SafasCell::FrameMonad(Box::new(read_label_value));
+
+    read_label_value.into()
+}
+
+///
+/// Creates a 'set label value' flat_map function
+///
+fn set_label_value() -> CellRef {
+    let read_label_value = FnMonad::from(|args: BitCodeFlatMapArgs<CellRef>| {
+        let label_id    = args.value;
+
+        let bit_pos         = BitCodeMonad::read_bit_pos();
+        let read_and_set    = bit_pos.flat_map(move |bit_pos| Ok(BitCodeMonad::set_label_value(label_id.clone(), bit_pos)));
+        let read_and_set    = SafasCell::Any(Box::new(read_and_set)).into();
+
+        let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
+
+        SafasCell::Monad(read_and_set, monad_type).into()
     });
     let read_label_value = ReturnsMonad(read_label_value);
     let read_label_value = SafasCell::FrameMonad(Box::new(read_label_value));
@@ -218,9 +242,12 @@ pub fn label_keyword() -> SyntaxCompiler {
             Action::StoreCell(cell_id)
         ]);
 
-        // TODO: to evaluate the 'label' syntax itself, we need to read the bitcode value and set it to the label value
+        // To evaluate the label syntax itself, we fetch the label and flat_map via SET_LABEL_VALUE
         actions.actions.extend(vec![
-            Action::CellValue(cell_id)
+            Action::CellValue(cell_id),
+            Action::Push,
+            Action::Value(SET_LABEL_VALUE.clone()),
+            Action::FlatMap
         ]);
 
         Ok(actions)
