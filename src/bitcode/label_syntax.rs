@@ -68,7 +68,7 @@ fn set_label_value() -> CellRef {
         let label_id    = args.value;
 
         let bit_pos         = BitCodeMonad::read_bit_pos();
-        let read_and_set    = bit_pos.flat_map(move |bit_pos| Ok(BitCodeMonad::set_label_value(label_id.clone(), bit_pos)));
+        let read_and_set    = bit_pos.flat_map(move |bit_pos| Ok(BitCodeMonad::set_label_value(label_id.clone(), bit_pos))).unwrap();
         let read_and_set    = SafasCell::Any(Box::new(read_and_set)).into();
 
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
@@ -269,7 +269,8 @@ mod test {
         let result          = eval("((fun () (label foo) foo))").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
-        let (val, bitcode)  = assemble(&monad).unwrap();
+        let (val, _bitcode) = assemble(&monad).unwrap();
+        println!("{}", val.to_string());
 
         assert!(val.to_string() == "0u64".to_string());
     }
