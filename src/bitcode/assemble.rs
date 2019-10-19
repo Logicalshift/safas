@@ -163,3 +163,20 @@ pub fn assemble(monad: &BitCodeMonad) -> Result<(CellRef, Vec<BitCode>), Runtime
 
     Ok((value, assembler.bitcode))
 }
+
+#[cfg(test)]
+mod test {
+    use crate::interactive::*;
+    use crate::bitcode::*;
+
+    #[test]
+    fn return_value_from_assembler() {
+        let result          = eval("((fun () (d 0u64) 1u64))").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (val, _bitcode) = assemble(&monad).unwrap();
+        println!("{}", val.to_string());
+
+        assert!(val.to_string() == "1u64".to_string());
+    }
+}
