@@ -44,6 +44,9 @@ pub enum RuntimeError {
     /// Too many arguments were passed to a function
     NotEnoughArguments(CellRef),
 
+    /// A value that was expected to be a label wasn't
+    NotALabel(CellRef),
+
     /// The number is too large to fit into the correct format
     NumberTooLarge
 }

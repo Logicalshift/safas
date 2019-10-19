@@ -98,6 +98,7 @@ impl From<RuntimeError> for BindError {
             TooManyArguments(_)         |
             NotAMonad(_)                |
             MismatchedMonad(_)          |
+            NotALabel(_)                |
             NotEnoughArguments(_)       => BindError::RuntimeError
         }
     }
