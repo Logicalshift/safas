@@ -188,7 +188,7 @@ mod test {
         let result      = eval("((fun () (d $9fu8)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
-        let bitcode     = assemble(monad).unwrap();
+        let bitcode     = assemble(&monad).unwrap();
 
         assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f)])
     }
@@ -198,7 +198,7 @@ mod test {
         let result      = eval("((fun () (d $9fu8) (d $1c42u16)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
-        let bitcode     = assemble(monad).unwrap();
+        let bitcode     = assemble(&monad).unwrap();
 
         assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
     }
@@ -208,7 +208,7 @@ mod test {
         let result      = eval("((fun () (d $9fu8 $1c42u16)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
-        let bitcode     = assemble(monad).unwrap();
+        let bitcode     = assemble(&monad).unwrap();
 
         assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f), BitCode::Bits(16, 0x1c42)])
     }
@@ -218,7 +218,7 @@ mod test {
         let result      = eval("((fun () (m $c001)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
-        let bitcode     = assemble(monad).unwrap();
+        let bitcode     = assemble(&monad).unwrap();
 
         assert!(&bitcode ==  &vec![BitCode::Move(0xc001)])
     }
@@ -228,7 +228,7 @@ mod test {
         let result      = eval("((fun () (a $beeff00du32 64)))").unwrap();
         let monad       = BitCodeMonad::from_cell(&result).unwrap();
 
-        let bitcode     = assemble(monad).unwrap();
+        let bitcode     = assemble(&monad).unwrap();
 
         assert!(&bitcode ==  &vec![BitCode::Align(32, 0xbeeff00d, 64)])
     }

@@ -13,6 +13,9 @@ pub enum BindError {
     /// Something that was meant to be infallible failed
     NotInfallible,
 
+    /// A feature is not yet implemented
+    NotImplemented,
+
     /// A symbol has no known value
     UnknownSymbol,
 
@@ -86,6 +89,7 @@ impl From<RuntimeError> for BindError {
         match err {
             NotInfallible               => BindError::NotInfallible,
             NumberTooLarge              => BindError::NumberTooLarge,
+            NotImplemented              => BindError::NotImplemented,
             BindingError(err)           => err,
             ParseError(_)               |
             StackIsEmpty                |

@@ -14,6 +14,9 @@ pub enum RuntimeError {
     /// An operation marked as infallible managed to fail
     NotInfallible,
 
+    /// A function is not yet implemented
+    NotImplemented,
+
     /// An error occurred while parsing code
     ParseError(ParseError),
 
