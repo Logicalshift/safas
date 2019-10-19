@@ -28,8 +28,8 @@ pub enum BitCodeValue {
     /// Reads the current assembly position
     BitPos,
 
-    /// Value is the result of a flat_map operation on a bitcode monad
-    FlatMap(Arc<(BitCodeMonad, Box<dyn Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>)>)
+    /// Value is the result of a chain of flat_map operations on a bitcode monad
+    FlatMap(Arc<BitCodeMonad>, Vec<Arc<dyn Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>>)
 }
 
 ///
@@ -221,7 +221,7 @@ impl BitCodeMonad {
     ///
     /// Maps this monad by applying a function to the value it contains
     ///
-    pub fn flat_map<TFn: 'static+Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>(self, fun: TFn) -> Result<BitCodeMonad, RuntimeError> {
+    pub fn flat_map<TFn: 'static+Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>(mut self, fun: TFn) -> Result<BitCodeMonad, RuntimeError> {
         match self.value {
             BitCodeValue::Value(const_value) => {
                 // If this just has a constant value, we can map the bitcode immediately and combine the bitcode to get the result
@@ -231,10 +231,16 @@ impl BitCodeMonad {
                 Ok(next)
             },
 
+            BitCodeValue::FlatMap(initial, mut mappings) => {
+                mappings.push(Arc::new(fun));
+                self.value = BitCodeValue::FlatMap(initial, mappings);
+                Ok(self)
+            },
+
             _ => {
                 // Return a flatmapped bitcode monad
                 Ok(BitCodeMonad {
-                    value:              BitCodeValue::FlatMap(Arc::new((self, Box::new(fun)))),
+                    value:              BitCodeValue::FlatMap(Arc::new(self), vec![Arc::new(fun)]),
                     bitcode:            BitCodeContent::Empty,
                     following_bitcode:  BitCodeContent::Empty,
                     bit_pos:            0
