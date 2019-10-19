@@ -262,9 +262,15 @@ pub fn label_keyword() -> SyntaxCompiler {
 #[cfg(test)]
 mod test {
     use crate::interactive::*;
+    use crate::bitcode::*;
 
     #[test]
     fn define_basic_label() {
-        let val = eval("((fun () (label foo) foo))").unwrap();
+        let result          = eval("((fun () (label foo) foo))").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (val, bitcode)  = assemble(&monad).unwrap();
+
+        assert!(val.to_string() == "0u64".to_string());
     }
 }
