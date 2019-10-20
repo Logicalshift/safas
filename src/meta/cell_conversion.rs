@@ -19,6 +19,7 @@ impl TryFrom<CellRef> for SafasNumber {
     fn try_from(cell: CellRef) -> Result<SafasNumber, RuntimeError> {
         match &*cell {
             SafasCell::Number(num)  => Ok(num.clone()),
+            SafasCell::Nil          => Ok(SafasNumber::Plain(0)),
             _                       => Err(RuntimeError::TypeMismatch(cell))
         }
     }
