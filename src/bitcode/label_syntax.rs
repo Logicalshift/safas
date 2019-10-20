@@ -263,6 +263,71 @@ pub fn label_keyword() -> SyntaxCompiler {
 mod test {
     use crate::interactive::*;
     use crate::bitcode::*;
+    use crate::meta::*;
+    use crate::bind::*;
+    use crate::exec::*;
+    use crate::syntax::*;
+    use crate::parse::*;
+    use crate::functions::*;
+
+    use std::sync::*;
+
+    fn bind_expr(expr: &str) -> Result<CellRef, RuntimeError> {
+        // Create the execution frame
+        let bindings                = SymbolBindings::new();
+
+        // Apply the standard bindings
+        let syntax                  = standard_syntax();
+        let functions               = standard_functions();
+        let (bindings, _actions)    = syntax.bind(bindings);
+        let (bindings, _fn_actions) = functions.bind(bindings);
+
+        let mut bindings            = bindings;
+
+        // Parse the expression
+        let expr = parse_safas(&mut TokenReadBuffer::new(expr.chars()), FileLocation::new("<expr>"))?;
+
+        // Pre-bind the statements
+        let mut statement   = Arc::clone(&expr);
+        while let SafasCell::List(car, cdr) = &*statement {
+            let (new_bindings, _)   = pre_bind_statement(Arc::clone(&car), bindings);
+            bindings                = new_bindings;
+            statement               = Arc::clone(&cdr);
+        }
+
+        // Bind the statements (last one is the result)
+        let mut statement   = Arc::clone(&expr);
+        let mut result      = NIL.clone();
+
+        while let SafasCell::List(car, cdr) = &*statement {
+            let (bound, new_bindings)   = match bind_statement(Arc::clone(&car), bindings) { Ok((bound, new_bindings)) => (bound, new_bindings), Err((err, _new_bindings)) => return Err(err.into()) };
+
+            result                      = bound;
+            bindings                    = new_bindings;
+
+            statement                   = Arc::clone(&cdr);
+        }
+        
+        Ok(result)
+    }
+
+    #[test]
+    fn data_expr_is_a_monad() {
+        let data_expr = bind_expr("(d 1)").unwrap();
+        assert!(data_expr.reference_type() == ReferenceType::Monad);
+    }
+
+    #[test]
+    fn label_is_a_monad() {
+        let label_expr = bind_expr("(label foo)").unwrap();
+        assert!(label_expr.reference_type() == ReferenceType::Monad);
+    }
+
+    #[test]
+    fn label_value_is_a_monad() {
+        let label_expr = bind_expr("(label foo) foo").unwrap();
+        assert!(label_expr.reference_type() == ReferenceType::Monad);
+    }
 
     #[test]
     fn define_basic_label() {
@@ -290,6 +355,7 @@ mod test {
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
+        println!("{:?}", val.to_string());
 
         // Labels are 64-bits so we should end up with a label position of 64 here
         assert!(val.to_string() == "$64u64".to_string());
@@ -301,6 +367,7 @@ mod test {
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
+        println!("{:?}", val.to_string());
 
         // Cut down to 32 bits, so we end up with a label position of 32
         assert!(val.to_string() == "$32u64".to_string());
