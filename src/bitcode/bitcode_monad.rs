@@ -8,6 +8,8 @@ use crate::exec::*;
 use smallvec::*;
 use std::sync::*;
 use std::mem;
+use std::fmt;
+use std::fmt::{Debug};
 
 ///
 /// Represents the possible ways a value can be wrapped by a bitcode monad
@@ -33,10 +35,25 @@ pub enum BitCodeValue {
     FlatMap(Arc<BitCodeMonad>, Vec<Arc<dyn Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>>)
 }
 
+impl Debug for BitCodeValue {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        use self::BitCodeValue::*;
+
+        match self {
+            Value(value)                => write!(fmt, "Value({})", value.to_string()),
+            AllocLabel                  => write!(fmt, "AllocLabel"),
+            LabelValue(value)           => write!(fmt, "LabelValue({})", value.to_string()),
+            SetLabelValue(label, value) => write!(fmt, "SetLabelValue({}, {})", label.to_string(), value.to_string()),
+            BitPos                      => write!(fmt, "BitPos"),
+            FlatMap(monad, flat_map)    => write!(fmt, "FlatMap({:?}, [{}])", monad, flat_map.len())
+        }
+    }
+}
+
 ///
 /// Represents the bitcode content of a bitcode monad
 ///
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum BitCodeContent {
     /// No bitcode
     Empty,
@@ -72,6 +89,12 @@ pub struct BitCodeMonad {
 
     /// Bitcode to generate after this monad (this follows any bitcode generated as a result of this monad's value)
     pub (super) following_bitcode: BitCodeContent,
+}
+
+impl Debug for BitCodeMonad {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "BitCodeMonad({:?}, {:?}, {:?})", self.value, self.bitcode, self.following_bitcode)
+    }
 }
 
 impl BitCodeMonad {
