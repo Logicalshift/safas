@@ -283,4 +283,14 @@ mod test {
 
         assert!(val.to_string() == "$8u64".to_string());
     }
+
+    #[test]
+    fn label_requiring_multiple_passes() {
+        let result          = eval("((fun () (d (bits 32 foo)) (label foo) foo))").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (val, _bitcode) = assemble(&monad).unwrap();
+
+        assert!(val.to_string() == "$32u64".to_string());
+    }
 }
