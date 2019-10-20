@@ -340,6 +340,16 @@ mod test {
     }
 
     #[test]
+    fn define_basic_label_in_list() {
+        let result          = eval("((fun () (label foo) (list foo)))").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (val, _bitcode) = assemble(&monad).unwrap();
+
+        assert!(val.to_string() == "($0u64)".to_string());
+    }
+
+    #[test]
     fn label_reads_bit_position() {
         let result          = eval("((fun () (d 5u8) (label foo) foo))").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
