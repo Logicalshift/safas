@@ -11,16 +11,16 @@ use std::sync::*;
 use std::iter;
 
 lazy_static! {
-    /// The wrap_value function
-    static ref WRAP_VALUE: CellRef = wrap_value();
-
-    /// The read_label_value function
+    /// The alloc_label bitcode monad
     static ref ALLOC_LABEL: CellRef = alloc_label();
 
-    /// The read_label_value function
+    /// The wrap_value flat_map function (reads a value from a monad and stores it)
+    static ref WRAP_VALUE: CellRef = wrap_value();
+
+    /// The read_label_value flat_map function
     static ref READ_LABEL_VALUE: CellRef = read_label_value();
 
-    /// The read_label_value function
+    /// The set_label_value flat_map function
     static ref SET_LABEL_VALUE: CellRef = set_label_value();
 }
 
@@ -234,7 +234,6 @@ pub fn label_keyword() -> SyntaxCompiler {
         let mut actions = CompiledActions::empty();
 
         // Frame setup allocates the label. We use the cell ID as the label ID for updating it later
-        // TODO: this just reallocates the label every time which isn't really what we want
         actions.frame_setup.extend(vec![
             Action::Value(ALLOC_LABEL.clone()),
             Action::Push,

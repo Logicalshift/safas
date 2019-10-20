@@ -1,4 +1,5 @@
 use super::code::*;
+use super::label::*;
 use super::bitcode_functions::*;
 
 use crate::meta::*;
@@ -251,6 +252,15 @@ impl BitCodeMonad {
     ///
     pub fn flat_map<TFn: 'static+Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>(mut self, fun: TFn) -> Result<BitCodeMonad, RuntimeError> {
         match self.value {
+            BitCodeValue::AllocLabel => {
+                // Labels are given a fixed value as soon as flat_map is called
+                let label       = SafasCell::Any(Box::new(Label::new()));
+                let mut next    = fun(label.into())?;
+                next.prepend_bitcode(self.bit_pos, self.bitcode);
+
+                Ok(next)
+            },
+
             BitCodeValue::Value(const_value) => {
                 // If this just has a constant value, we can map the bitcode immediately and combine the bitcode to get the result
                 let mut next = fun(const_value)?;
