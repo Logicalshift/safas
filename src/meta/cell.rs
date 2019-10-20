@@ -138,7 +138,7 @@ impl SafasCell {
                 } else {
                     match car.reference_type() {
                         ReferenceType::ReturnsMonad => ReferenceType::Monad,            // Calling something that returns a monad, so evaluates to a monad
-                        ReferenceType::Monad        => ReferenceType::ReturnsMonad,     // See compile_statement: 'calling' a monad returns a monad
+                        ReferenceType::Monad        => ReferenceType::Monad,            // See compile_statement: 'calling' a monad returns a monad
                         _                           => ReferenceType::Value
                     }
                 }
