@@ -216,7 +216,7 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
     }
 
     // Start by pushing the function value onto the stack (we'll pop it later on to call the function)
-    let mut actions = vec![load_fn];
+    let mut bound       = vec![load_fn];
 
     // Push the arguments
     let mut next_arg    = args;
@@ -230,10 +230,10 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
 
                 if next_action.reference_type() == ReferenceType::Monad {
                     // Convert to a monad
-                    return bind_monad(actions, next_action, Arc::clone(cdr), next_bindings);
+                    return bind_monad(bound, next_action, Arc::clone(cdr), next_bindings);
                 }
 
-                actions.push(next_action);
+                bound.push(next_action);
 
                 bindings    = next_bindings;
 
@@ -249,7 +249,7 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
             _other => {
                 // Incomplete list: evaluate the CDR value
                 let (next_action, next_bindings) = bind_statement(next_arg, bindings)?;
-                actions.push(next_action);
+                bound.push(next_action);
 
                 bindings    = next_bindings;
                 hanging_cdr = true;
@@ -260,10 +260,10 @@ fn bind_call(load_fn: CellRef, args: CellRef, bindings: SymbolBindings) -> BindR
 
     // If there was a 'hanging' CDR, then generate a result with the same format, otherwise generate a well-formed list
     if hanging_cdr {
-        let cdr = actions.pop();
-        Ok((SafasCell::list_with_cells_and_cdr(actions, cdr.unwrap()).into(), bindings))
+        let cdr = bound.pop();
+        Ok((SafasCell::list_with_cells_and_cdr(bound, cdr.unwrap()).into(), bindings))
     } else {
-        Ok((SafasCell::list_with_cells(actions).into(), bindings))
+        Ok((SafasCell::list_with_cells(bound).into(), bindings))
     }
 }
 
