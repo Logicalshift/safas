@@ -28,9 +28,4 @@ impl Label {
             id: id
         }
     }
-
-    ///
-    /// Creates a new label
-    ///
-    pub fn with_id(id: u64) -> Label { Label { id } }
 }

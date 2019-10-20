@@ -19,9 +19,6 @@ struct Assembler {
 
     /// The current bitcode position
     bit_pos: u64,
-
-    /// The next label ID to allocate for this assembler
-    next_label_id: u64
 }
 
 impl Assembler {
@@ -32,8 +29,7 @@ impl Assembler {
         Assembler {
             label_values:   HashMap::new(),
             bitcode:        vec![],
-            bit_pos:        0,
-            next_label_id:  0
+            bit_pos:        0
         }
     }
 
@@ -113,12 +109,7 @@ impl Assembler {
             BitCodeValue::Value(value)                      => Ok(value.clone()),
 
             // Allocates a new label
-            BitCodeValue::AllocLabel                        => {
-                let label_id        = self.next_label_id;
-                self.next_label_id  += 1;
-
-                Ok(SafasCell::Any(Box::new(Label::with_id(label_id))).into())
-            },
+            BitCodeValue::AllocLabel                        => Err(RuntimeError::CannotAllocateLabelsDuringAssembly),
 
             // Looks up a label value (or prepares a second pass if the label has no value yet)
             BitCodeValue::LabelValue(value)                 => self.get_label_value(value),

@@ -47,6 +47,9 @@ pub enum RuntimeError {
     /// A value that was expected to be a label wasn't
     NotALabel(CellRef),
 
+    /// Labels should be allocated prior to assembly
+    CannotAllocateLabelsDuringAssembly,
+
     /// The number is too large to fit into the correct format
     NumberTooLarge
 }

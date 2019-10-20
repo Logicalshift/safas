@@ -87,19 +87,20 @@ impl From<RuntimeError> for BindError {
     fn from(err: RuntimeError) -> BindError {
         use self::RuntimeError::*;
         match err {
-            NotInfallible               => BindError::NotInfallible,
-            NumberTooLarge              => BindError::NumberTooLarge,
-            NotImplemented              => BindError::NotImplemented,
-            BindingError(err)           => err,
-            ParseError(_)               |
-            StackIsEmpty                |
-            TypeMismatch(_)             |
-            NotAFunction(_)             |
-            TooManyArguments(_)         |
-            NotAMonad(_)                |
-            MismatchedMonad(_)          |
-            NotALabel(_)                |
-            NotEnoughArguments(_)       => BindError::RuntimeError
+            NotInfallible                       => BindError::NotInfallible,
+            NumberTooLarge                      => BindError::NumberTooLarge,
+            NotImplemented                      => BindError::NotImplemented,
+            BindingError(err)                   => err,
+            ParseError(_)                       |
+            StackIsEmpty                        |
+            TypeMismatch(_)                     |
+            NotAFunction(_)                     |
+            TooManyArguments(_)                 |
+            NotAMonad(_)                        |
+            MismatchedMonad(_)                  |
+            NotALabel(_)                        |
+            CannotAllocateLabelsDuringAssembly  |
+            NotEnoughArguments(_)               => BindError::RuntimeError
         }
     }
 }
