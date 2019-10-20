@@ -5,7 +5,8 @@ use super::bitcode_monad::*;
 use crate::meta::*;
 use crate::exec::*;
 
-use std::collections::{HashMap};
+use std::mem;
+use std::collections::{HashMap, HashSet};
 
 ///
 /// Represents an assembler that is running
@@ -13,6 +14,9 @@ use std::collections::{HashMap};
 struct Assembler {
     /// Known values for the labels
     label_values: HashMap<Label, CellRef>,
+
+    /// Labels that have changed this pass
+    changed_labels: HashSet<Label>,
 
     /// Bitcode that has been generated
     bitcode: Vec<BitCode>,
@@ -28,6 +32,7 @@ impl Assembler {
     fn new() -> Assembler {
         Assembler {
             label_values:   HashMap::new(),
+            changed_labels: HashSet::new(),
             bitcode:        vec![],
             bit_pos:        0
         }
@@ -64,7 +69,8 @@ impl Assembler {
             // Already know the value of this label
             Ok(label_value.clone())
         } else {
-            // Will need more passes to evaluate this label - TODO, flag this up
+            // Will need more passes to evaluate this label
+            self.changed_labels.insert(label);
             Ok(NIL.clone())
         }
     }
@@ -76,7 +82,12 @@ impl Assembler {
         // Get the label from the cell
         let label = self.get_label(label_cell)?;
 
-        // Set/update the label value (TODO: when updating, indicate that another pass is needed if the value is different to before)
+        // If the label already has a value, check if it's the same as the existing value
+        if let Some(last_value) = self.label_values.get(&label) {
+            // TODO!
+        }
+
+        // Update the label value
         self.label_values.insert(label, value.clone());
 
         // Result is the value
@@ -122,6 +133,10 @@ impl Assembler {
 
             // Value is the result of applying the mapping function to the specified monad, and then trying again with the current monad
             BitCodeValue::FlatMap(monad, mappings)          => {
+                // About to call assemble recursively: create a new set of changed labels
+                let mut our_labels  = HashSet::new();
+                mem::swap(&mut our_labels, &mut self.changed_labels);
+
                 // The initial value comes from the initial monad
                 let mut value       = self.assemble(monad)?;
 
@@ -130,6 +145,9 @@ impl Assembler {
                     let next_monad  = mapping(value)?;
                     value           = self.assemble(&next_monad)?;
                 }
+
+                // Reset with the labels from this level of recursion
+                mem::swap(&mut our_labels, &mut self.changed_labels);
 
                 // Final value from the final monad
                 Ok(value)
