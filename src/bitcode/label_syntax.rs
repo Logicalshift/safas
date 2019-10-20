@@ -234,6 +234,7 @@ pub fn label_keyword() -> SyntaxCompiler {
         let mut actions = CompiledActions::empty();
 
         // Frame setup allocates the label. We use the cell ID as the label ID for updating it later
+        // TODO: this just reallocates the label every time which isn't really what we want
         actions.frame_setup.extend(vec![
             Action::Value(ALLOC_LABEL.clone()),
             Action::Push,
@@ -270,8 +271,8 @@ mod test {
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
-        //println!("{}", val.to_string());
+        println!("{}", val.to_string());
 
-        //assert!(val.to_string() == "0u64".to_string());
+        assert!(val.to_string() == "$0u64".to_string());
     }
 }
