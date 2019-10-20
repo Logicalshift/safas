@@ -285,12 +285,24 @@ mod test {
     }
 
     #[test]
-    fn label_requiring_multiple_passes() {
+    fn label_requiring_multiple_passes_1() {
+        let result          = eval("((fun () (d foo) (label foo) foo))").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (val, _bitcode) = assemble(&monad).unwrap();
+
+        // Labels are 64-bits so we should end up with a label position of 64 here
+        assert!(val.to_string() == "$64u64".to_string());
+    }
+
+    #[test]
+    fn label_requiring_multiple_passes_2() {
         let result          = eval("((fun () (d (bits 32 foo)) (label foo) foo))").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
 
+        // Cut down to 32 bits, so we end up with a label position of 32
         assert!(val.to_string() == "$32u64".to_string());
     }
 }
