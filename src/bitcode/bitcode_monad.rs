@@ -72,9 +72,6 @@ pub struct BitCodeMonad {
 
     /// Bitcode to generate after this monad (this follows any bitcode generated as a result of this monad's value)
     pub (super) following_bitcode: BitCodeContent,
-
-    /// The bit position represented by this monad (this should always match the content of the bitcode)
-    pub (super) bit_pos: u64,
 }
 
 impl BitCodeMonad {
@@ -137,8 +134,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:              BitCodeValue::Value(NIL.clone()),
             bitcode:            BitCodeContent::Empty,
-            following_bitcode:  BitCodeContent::Empty,
-            bit_pos:            0
+            following_bitcode:  BitCodeContent::Empty
         }
     }
 
@@ -149,8 +145,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:              BitCodeValue::Value(value),
             bitcode:            BitCodeContent::Empty,
-            following_bitcode:  BitCodeContent::Empty,
-            bit_pos:            0
+            following_bitcode:  BitCodeContent::Empty
         }
     }
 
@@ -159,13 +154,11 @@ impl BitCodeMonad {
     ///
     pub fn write_bitcode<TBitCode: IntoIterator<Item=BitCode>>(bitcode: TBitCode) -> BitCodeMonad {
         let bitcode = bitcode.into_iter().collect();
-        let bit_pos = BitCode::position_after(0, &bitcode);
 
         BitCodeMonad {
             value:              BitCodeValue::Value(NIL.clone()),
             bitcode:            BitCodeContent::Value(bitcode),
-            following_bitcode:  BitCodeContent::Empty,
-            bit_pos:            bit_pos
+            following_bitcode:  BitCodeContent::Empty
         }
     }
 
@@ -176,8 +169,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:              BitCodeValue::AllocLabel,
             bitcode:            BitCodeContent::Empty,
-            following_bitcode:  BitCodeContent::Empty,
-            bit_pos:            0
+            following_bitcode:  BitCodeContent::Empty
         }
     }
 
@@ -188,8 +180,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:              BitCodeValue::LabelValue(label),
             bitcode:            BitCodeContent::Empty,
-            following_bitcode:  BitCodeContent::Empty,
-            bit_pos:            0
+            following_bitcode:  BitCodeContent::Empty
         }
     }
 
@@ -200,8 +191,7 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:              BitCodeValue::BitPos,
             bitcode:            BitCodeContent::Empty,
-            following_bitcode:  BitCodeContent::Empty,
-            bit_pos:            0
+            following_bitcode:  BitCodeContent::Empty
         }
     }
 
@@ -212,29 +202,17 @@ impl BitCodeMonad {
         BitCodeMonad {
             value:              BitCodeValue::SetLabelValue(label, value),
             bitcode:            BitCodeContent::Empty,
-            following_bitcode:  BitCodeContent::Empty,
-            bit_pos:            0
-        }
-    }
-
-    ///
-    /// Updates the bit_pos in this monad with a new starting position
-    ///
-    pub fn update_bit_pos_starting_at(&mut self, initial_bit_pos: u64) {
-        match &self.bitcode {
-            BitCodeContent::Empty           => { self.bit_pos = initial_bit_pos; }
-            BitCodeContent::Value(bitcode)  => { self.bit_pos = BitCode::position_after(initial_bit_pos, bitcode); }
+            following_bitcode:  BitCodeContent::Empty
         }
     }
 
     ///
     /// Prepends bitcode from the specified monad onto this one (stores the bitcode from the specified monad at the start of this monad)
     ///
-    pub fn prepend_bitcode(&mut self, from_bit_pos: u64, bitcode: BitCodeContent) {
+    pub fn prepend_bitcode(&mut self, bitcode: BitCodeContent) {
         match bitcode {
-            BitCodeContent::Empty           => { self.update_bit_pos_starting_at(from_bit_pos); }
+            BitCodeContent::Empty           => { }
             BitCodeContent::Value(bitcode)  => {
-                self.update_bit_pos_starting_at(from_bit_pos);
                 match self.bitcode.take() {
                     BitCodeContent::Empty               => { self.bitcode = BitCodeContent::Value(bitcode); }
                     BitCodeContent::Value(our_bitcode)  => {
@@ -256,7 +234,7 @@ impl BitCodeMonad {
                 // Labels are given a fixed value as soon as flat_map is called
                 let label       = SafasCell::Any(Box::new(Label::new()));
                 let mut next    = fun(label.into())?;
-                next.prepend_bitcode(self.bit_pos, self.bitcode);
+                next.prepend_bitcode(self.bitcode);
 
                 Ok(next)
             },
@@ -264,7 +242,7 @@ impl BitCodeMonad {
             BitCodeValue::Value(const_value) => {
                 // If this just has a constant value, we can map the bitcode immediately and combine the bitcode to get the result
                 let mut next = fun(const_value)?;
-                next.prepend_bitcode(self.bit_pos, self.bitcode);
+                next.prepend_bitcode(self.bitcode);
 
                 Ok(next)
             },
@@ -280,8 +258,7 @@ impl BitCodeMonad {
                 Ok(BitCodeMonad {
                     value:              BitCodeValue::FlatMap(Arc::new(self), vec![Arc::new(fun)]),
                     bitcode:            BitCodeContent::Empty,
-                    following_bitcode:  BitCodeContent::Empty,
-                    bit_pos:            0
+                    following_bitcode:  BitCodeContent::Empty
                 })
             }
         }
