@@ -286,13 +286,13 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
     let monad_value_cell    = interior_frame.alloc_cell();
 
     // Next parameters are bound from the closure and are the arguments so far (including the function, if present)
-    let other_arguments     = args_so_far.iter().map(|_| interior_frame.alloc_cell()).collect::<Vec<_>>();
+    let other_arguments     = args_so_far.iter().map(|arg| (interior_frame.alloc_cell(), arg.reference_type())).collect::<Vec<_>>();
 
     // Generate a partially-bound statement using these arguments (remaining_args are still unbound and go on the end)
     let monad_fn            = SafasCell::List(SafasCell::FrameReference(monad_value_cell, 0, ReferenceType::Value).into(), remaining_args);
     let mut monad_fn        = Arc::new(monad_fn);
-    for cell_id in other_arguments.iter().rev() {
-        monad_fn = SafasCell::List(SafasCell::FrameReference(*cell_id, 0, ReferenceType::Value).into(), monad_fn).into();
+    for (cell_id, reference_type) in other_arguments.iter().rev() {
+        monad_fn = SafasCell::List(SafasCell::FrameReference(*cell_id, 0, *reference_type).into(), monad_fn).into();
     }
 
     // Bind this function
@@ -301,13 +301,7 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
     let (bound_monad_fn, interior_frame)    = match bound_monad_fn { Ok(fun) => fun, Err((err, interior_frame)) => return Err((err, interior_frame.pop().0)) };
 
     // If the result is not bound to a monad expression, we need to wrap the result
-    let is_inner_expression                 = if let SafasCell::List(car, _cdr) = &*bound_monad_fn {
-        // Monads are bound to lists starting with a monad
-        car.reference_type() != ReferenceType::Monad
-    } else {
-        // Not a monad
-        true
-    };
+    let is_inner_expression                 = bound_monad_fn.reference_type() != ReferenceType::Monad;
 
     let bound_monad_fn                      = if is_inner_expression {
         // The inner result of a monadic expression needs to be wrapped so the return value is itself a monad (note we don't bind the bound monad fn itself here)
@@ -327,7 +321,7 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
     let (bindings, imports)                 = interior_frame.pop();
 
     // Add any imports to the list of arguments (all the arguments get imported into our closure)
-    let mut other_arguments                 = other_arguments;
+    let mut other_arguments                 = other_arguments.into_iter().map(|(cell_id, _ref_type)| cell_id).collect::<Vec<_>>();
     let mut args_so_far                     = args_so_far;
     let mut bindings                        = bindings;
 
