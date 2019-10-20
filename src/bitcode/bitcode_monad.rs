@@ -82,10 +82,24 @@ impl BitCodeMonad {
     ///
     pub fn from_cell(cell: &CellRef) -> Option<BitCodeMonad> {
         match &**cell {
-            SafasCell::Monad(cell, _)   => BitCodeMonad::from_cell(cell),
-            SafasCell::Any(any_val)     => any_val.downcast_ref::<BitCodeMonad>().cloned(),
-            SafasCell::Nil              => Some(BitCodeMonad::empty()),
-            _                           => None
+            SafasCell::Any(any_val)             => any_val.downcast_ref::<BitCodeMonad>().cloned(),
+            SafasCell::Monad(cell, monad_type)  => {
+                if let Some(result) = BitCodeMonad::from_cell(cell) { 
+                    // Already a bitcode monad
+                    Some(result) 
+                } else {
+                    // Call the map_fn to create a bitcode monad with the wrapped value
+                    let create_monad    = FnMonad::from(|args: FlatMapArgs| SafasCell::Any(Box::new(BitCodeMonad::with_value(args.monad_value))).into());
+                    let create_monad    = SafasCell::FrameMonad(Box::new(create_monad));
+                    let (_frame, monad) = monad_type.flat_map(cell.clone(), create_monad.into(), Frame::new(1, None));
+
+                    // TODO: version that doesn't recurse
+                    monad.ok()
+                        .as_ref()
+                        .and_then(|monad| Self::from_cell(monad))
+                }
+            },
+            _                               => None
         }
     }
 

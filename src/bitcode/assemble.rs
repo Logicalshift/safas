@@ -175,8 +175,7 @@ mod test {
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
-        println!("{}", val.to_string());
 
-        assert!(val.to_string() == "1u64".to_string());
+        assert!(val.to_string() == "$1u64".to_string());
     }
 }
