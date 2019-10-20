@@ -137,13 +137,27 @@ impl Assembler {
                 let mut our_labels  = HashSet::new();
                 mem::swap(&mut our_labels, &mut self.changed_labels);
 
-                // The initial value comes from the initial monad
-                let mut value       = self.assemble(monad)?;
+                // Loop until the labels in the flat_mapped section acquire stable values
+                let initial_bit_pos     = self.bit_pos;
+                let initial_code_len    = self.bitcode.len();
+                let mut value;
+                loop {
+                    // The initial value comes from the initial monad
+                    value               = self.assemble(monad)?;
 
-                // Evaluate each mapping in turn
-                for mapping in mappings.iter() {
-                    let next_monad  = mapping(value)?;
-                    value           = self.assemble(&next_monad)?;
+                    // Evaluate each mapping in turn
+                    for mapping in mappings.iter() {
+                        let next_monad  = mapping(value)?;
+                        value           = self.assemble(&next_monad)?;
+                    }
+
+                    // If there are no changed labels, stop running passes
+                    if self.changed_labels.len() == 0 { break; }
+
+                    // Reset for the next pass
+                    self.changed_labels = HashSet::new();
+                    self.bit_pos        = initial_bit_pos;
+                    self.bitcode.truncate(initial_code_len);
                 }
 
                 // Reset with the labels from this level of recursion
