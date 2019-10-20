@@ -254,6 +254,16 @@ mod test {
     }
 
     #[test]
+    fn write_three_bytes_from_monad_value() {
+        let result          = eval("((fun () (d (wrap $9fu8)) (d (wrap $1c42u16))))").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (value, _)      = assemble(&monad).unwrap();
+
+        assert!(value.to_string() == "()".to_string());
+    }
+
+    #[test]
     fn write_three_bytes_in_one_operation() {
         let result          = eval("((fun () (d $9fu8 $1c42u16)))").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
