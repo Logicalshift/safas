@@ -194,6 +194,16 @@ mod test {
     }
 
     #[test]
+    fn write_data_byte_from_monad() {
+        let result          = eval("((fun () (d (wrap $9fu8))))").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode == &vec![BitCode::Bits(8, 0x9f)])
+    }
+
+    #[test]
     fn write_three_bytes() {
         let result          = eval("((fun () (d $9fu8) (d $1c42u16)))").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
