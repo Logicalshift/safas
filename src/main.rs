@@ -9,7 +9,10 @@ mod bitcode;
 mod functions;
 mod interactive;
 
-use self::interactive::*;
+use crate::bind::*;
+use crate::exec::*;
+use crate::interactive::*;
+
 use clap::{App, Arg};
 
 fn main() {
@@ -39,9 +42,16 @@ fn main() {
             .value_name("OUTPUT"))
         .get_matches();
 
+    // Create the initial execution frame and bindings
+    let frame               = Frame::new(1, None);
+    let bindings            = SymbolBindings::new();
+
+    // Apply the standard bindings
+    let (frame, bindings)   = setup_standard_bindings(frame, bindings);
+
     // Start in interactive mode if the -i parameter is passed in
     if params.occurrences_of("interactive") > 0 {
-        run_interactive();
+        run_interactive(frame, bindings);
         return;
     } else {
         // No valid parameters supplied

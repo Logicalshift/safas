@@ -66,17 +66,11 @@ pub fn eval(expr: &str) -> Result<CellRef, RuntimeError> {
 }
 
 ///
-/// Runs the parser and interpreter in interactive mode, displaying the results to the user
+/// Applies the standard function bindings to the specified frame and bindings (sets these up for interactive mode)
 ///
-pub fn run_interactive() {
-    println!("{} version {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
-    println!("Interactive interpreter");
-
-    // Create the execution frame
-    let mut frame               = Frame::new(1, None);
-    let bindings                = SymbolBindings::new();
-
+pub fn setup_standard_bindings(frame: Frame, bindings: SymbolBindings) -> (Frame, SymbolBindings) {
     // Apply the standard bindings
+    let mut frame               = frame;
     let syntax                  = standard_syntax();
     let functions               = standard_functions();
     let (bindings, actions)     = syntax.bind(bindings);
@@ -84,6 +78,16 @@ pub fn run_interactive() {
     frame.allocate_for_bindings(&bindings);
     let (frame, _)              = actions.unwrap().execute(frame);
     let (frame, _)              = fn_actions.unwrap().execute(frame);
+
+    (frame, bindings)
+}
+
+///
+/// Runs the parser and interpreter in interactive mode, displaying the results to the user
+///
+pub fn run_interactive(frame: Frame, bindings: SymbolBindings) {
+    println!("{} version {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    println!("Interactive interpreter");
 
     let mut frame               = frame;
     let mut bindings            = bindings;
