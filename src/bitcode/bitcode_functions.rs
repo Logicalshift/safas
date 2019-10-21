@@ -13,28 +13,6 @@ lazy_static! {
 }
 
 ///
-/// Arguments passed in to the function called via the bitcode flat_map function 
-///
-pub struct BitCodeFlatMapArgs<TValue> {
-    /// The bitcode monad itself
-    pub monad_value: CellRef,
-
-    /// The value returned by flat_map
-    pub value: TValue
-}
-
-impl<TValue> FnArgs for BitCodeFlatMapArgs<TValue> 
-where   TValue:         TryFrom<CellRef>,
-        RuntimeError:   From<<TValue as TryFrom<CellRef>>::Error> {
-    fn args_from_frame(frame: &Frame) -> Result<Self, RuntimeError> {
-        match &*frame.cells[0] {
-            SafasCell::List(car, cdr)   => Ok(BitCodeFlatMapArgs { monad_value: car.clone(), value: TValue::try_from(cdr.clone())? }),
-            _                           => Err(RuntimeError::NotAMonad(frame.cells[0].clone()))
-        }
-    }
-}
-
-///
 /// A frame monad that performs the flat_map operation on a bitcode monad
 ///
 struct BitCodeFlatMap;

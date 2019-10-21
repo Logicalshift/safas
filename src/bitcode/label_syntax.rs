@@ -44,9 +44,7 @@ fn alloc_label() -> CellRef {
 /// Creates a 'read label value' flat_map function
 ///
 fn read_label_value() -> CellRef {
-    let read_label_value = FnMonad::from(|args: BitCodeFlatMapArgs<CellRef>| {
-        let label_id    = args.value;
-
+    let read_label_value = FnMonad::from(|(label_id, ): (CellRef, )| {
         let label_value = BitCodeMonad::read_label_value(label_id);
         let label_value = SafasCell::Any(Box::new(label_value)).into();     
 
@@ -64,9 +62,7 @@ fn read_label_value() -> CellRef {
 /// Creates a 'set label value' flat_map function
 ///
 fn set_label_value() -> CellRef {
-    let read_label_value = FnMonad::from(|args: BitCodeFlatMapArgs<CellRef>| {
-        let label_id    = args.value;
-
+    let read_label_value = FnMonad::from(|(label_id, ): (CellRef, )| {
         let bit_pos         = BitCodeMonad::read_bit_pos();
         let read_and_set    = bit_pos.flat_map(move |bit_pos| Ok(BitCodeMonad::set_label_value(label_id.clone(), bit_pos))).unwrap();
         let read_and_set    = SafasCell::Any(Box::new(read_and_set)).into();
@@ -85,8 +81,8 @@ fn set_label_value() -> CellRef {
 /// Creates the 'wrap_value' function as a cell
 ///
 fn wrap_value() -> CellRef {
-    let wrap_value = FnMonad::from(|args: BitCodeFlatMapArgs<CellRef>| {
-        let wrapped     = BitCodeMonad::with_value(args.value);
+    let wrap_value = FnMonad::from(|(value, ): (CellRef, )| {
+        let wrapped     = BitCodeMonad::with_value(value);
         let wrapped     = SafasCell::Any(Box::new(wrapped)).into();
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
