@@ -13,11 +13,40 @@ use std::sync::*;
 use std::result::{Result};
 
 lazy_static! {
-    static ref WRAP_KEYWORD: CellRef = SafasCell::ActionMonad(wrap_keyword(), NIL.clone()).into();
+    static ref WRAP_KEYWORD: CellRef = SafasCell::Syntax(wrap_keyword(), NIL.clone()).into();
 }
 
 ///
 /// Binds a statement to the value used for compiling
+/// 
+/// Binding is the process of swapping the symbolic values of the items in a statement with their 'actual'
+/// values from a binding environment. A binding environment is represented by the `SymbolBindings` structure.
+/// 
+/// The binding environment is set up by the `pre_bind_statement` call for a given set of statements.
+/// 
+/// Most of the types of symbol are constants: ie, the number `1` is just bound to itself. Atoms are a bit more
+/// interesting: they are looked up in the environment and bound to whatever value is found there, for example
+/// to a cell in the current frame.
+/// 
+/// Lists are processed as function calls or can be processed in a custom way if their first value is bound to
+/// a `Syntax` item.
+/// 
+/// Atoms that are bound to `Syntax` values can provide custom binding behaviour. They can either appear alone
+/// or in a list, and can return any value for their binding. They bind to a new list starting with the syntax
+/// item they're bound to (and followed by whatever their binding function returns). The compiler uses this to
+/// invoke their `generate_actions` funciton.
+/// 
+/// Atoms that are bound to `Monad` values or functions that evaluate to `Monad` values (whose `reference_type` is
+/// `ReturnsMonad`) are further treated specially. Rather than evaluating them as straight values, their wrapped
+/// value is obtained by rewriting the statement so that their `flat_map` method is called. This allows them to
+/// be treated as if they are normal values (this is equivalent to `do` syntax in other languages). 
+/// 
+/// For example: `(wrap 1)` creates a monad wrapping the value `1`. If we use this as a parameter to a function
+/// call - for instance `(list (wrap 1) 2)` - the result is not a list containing the monad and the number 2
+/// but instead is a monad containing a list `(1 2)`. This allows for a very natural code style when building
+/// assembler programs as well as a way to build similar code structures.
+/// 
+/// SAFAS is typeless, so there is only one `wrap` function needed.
 ///
 pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
     use self::SafasCell::*;
@@ -61,7 +90,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                         }
                     },
 
-                    ActionMonad(syntax_compiler, parameter)     => {
+                    Syntax(syntax_compiler, parameter)     => {
                         // If we're on a different syntax level, try rebinding the monad (the syntax might need to import symbols from an outer frame, for example)
                         let mut bindings = bindings;
 
@@ -78,7 +107,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                                 };
 
                                 // Add to the symbols in the current bindings so we don't need to rebind the syntax multiple times
-                                let new_syntax = ActionMonad(new_syntax, parameter.clone()).into();
+                                let new_syntax = Syntax(new_syntax, parameter.clone()).into();
                                 new_bindings.symbols.insert(*atom_id, new_syntax);
                                 new_bindings.export(*atom_id);
 
@@ -147,8 +176,8 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     // Frame references load the value from the frame and call that
                     FrameReference(_cell_num, _frame, _type)    => { let (actions, bindings) = bind_statement(car, bindings)?; bind_call(actions, cdr, bindings) }
                     
-                    // Action and macro monads resolve their respective syntaxes
-                    ActionMonad(syntax_compiler, parameter)     => {
+                    // Syntax items apply the actions specified in their binding monad
+                    Syntax(syntax_compiler, parameter)     => {
                         // If we're on a different syntax level, try rebinding the monad (the syntax might need to import symbols from an outer frame, for example)
                         let mut bindings = bindings;
 
@@ -164,8 +193,8 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                                     generate_actions:   Arc::clone(&syntax_compiler.generate_actions)
                                 };
 
-                                // Add to the symbols in the current bindings so we don't need to rebind the syntax multiple times
-                                let new_syntax = ActionMonad(new_syntax, parameter.clone()).into();
+                                // Add the bound syntax to the symbols in the current bindings so we don't need to rebind the syntax multiple times
+                                let new_syntax = Syntax(new_syntax, parameter.clone()).into();
                                 new_bindings.symbols.insert(*atom_id, new_syntax);
                                 new_bindings.export(*atom_id);
 

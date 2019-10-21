@@ -44,6 +44,7 @@ fn alloc_label() -> CellRef {
 /// Creates a 'read label value' flat_map function
 ///
 fn read_label_value() -> CellRef {
+    // Called on a monad that will return a label ID cell
     let read_label_value = FnMonad::from(|(label_id, ): (CellRef, )| {
         let label_value = BitCodeMonad::read_label_value(label_id);
         let label_value = SafasCell::Any(Box::new(label_value)).into();     
@@ -62,8 +63,12 @@ fn read_label_value() -> CellRef {
 /// Creates a 'set label value' flat_map function
 ///
 fn set_label_value() -> CellRef {
+    // Called on a monad that will return a label ID cell
     let read_label_value = FnMonad::from(|(label_id, ): (CellRef, )| {
+        // Create a monad that will read the current position
         let bit_pos         = BitCodeMonad::read_bit_pos();
+
+        // Flat_map to store the position read by the bit_pos monad
         let read_and_set    = bit_pos.flat_map(move |bit_pos| Ok(BitCodeMonad::set_label_value(label_id.clone(), bit_pos))).unwrap();
         let read_and_set    = SafasCell::Any(Box::new(read_and_set)).into();
 
@@ -81,6 +86,7 @@ fn set_label_value() -> CellRef {
 /// Creates the 'wrap_value' function as a cell
 ///
 fn wrap_value() -> CellRef {
+    // Creates a with_value bitcode monad from any value
     let wrap_value = FnMonad::from(|(value, ): (CellRef, )| {
         let wrapped     = BitCodeMonad::with_value(value);
         let wrapped     = SafasCell::Any(Box::new(wrapped)).into();
@@ -204,7 +210,7 @@ pub fn label_keyword() -> SyntaxCompiler {
                 let label_cell      = bindings.alloc_cell();
                 let label_reference = FrameReference(label_cell, 0, ReferenceType::Monad);
                 let label_action    = label_binding(label_reference);
-                bindings.symbols.insert(atom_id, SafasCell::ActionMonad(label_action, label_reference.into()).into());
+                bindings.symbols.insert(atom_id, SafasCell::Syntax(label_action, label_reference.into()).into());
                 bindings.export(atom_id);
 
                 // Result is just the atom as for the main binding function
@@ -219,8 +225,8 @@ pub fn label_keyword() -> SyntaxCompiler {
         // Results of the bindings is the cell reference
         let ListTuple((label_action, )): ListTuple<(CellRef, )> = value.try_into()?;
 
-        // The label should be bound to an action monad, with the frame cell as the parameter
-        let cell_reference = match &*label_action { SafasCell::ActionMonad(_, cell_reference) => Ok(cell_reference.clone()), _ => Err(BindError::MissingArgument) }?;
+        // The label should be bound to a syntax item, with the frame cell as the parameter
+        let cell_reference = match &*label_action { SafasCell::Syntax(_, cell_reference) => Ok(cell_reference.clone()), _ => Err(BindError::MissingArgument) }?;
 
         // Fetch out the frame reference
         let (cell_id, frame_num, _) = cell_reference.frame_reference().ok_or(BindError::MissingArgument)?;

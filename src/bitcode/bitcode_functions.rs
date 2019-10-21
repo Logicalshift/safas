@@ -22,16 +22,17 @@ impl FrameMonad for BitCodeFlatMap {
 
     /// Executes this monad against a frame
     fn execute(&self, frame: Frame) -> (Frame, Self::Binding) {
-        // Arguments should be flat_map arguments
+        // Arguments should be flat_map arguments (we expect to be called via flat_map in MonadType)
         let args = frame.cells[0].clone();
         let args = match FlatMapArgs::try_from(args) { Ok(args) => args, Err(err) => return (frame, Err(err)) };
 
-        // The monad value should be a bitcode monad of some kind
+        // This should be called on a bitcode monad, so we should be able to retrieve this from the monad cell
         let bitcode_monad = BitCodeMonad::from_cell(&args.monad_value);
 
         // Replace the empty bitcode monad with a 'full' bitcode monad
         let bitcode_monad = bitcode_monad.unwrap_or_else(|| BitCodeMonad::empty());
 
+        // Fetch the mapping function to apply (this is a function of the form 'x -> <Monad>', where <Monad> is another bitcode monad)
         let map_fn = args.map_fn;
 
         // Applying the map function should return the updated monad

@@ -43,7 +43,7 @@ pub fn compile_statement_quick(source: CellRef) -> Result<CompiledActions, BindE
         }
         
         // Action and macro monads resolve their respective syntaxes
-        ActionMonad(syntax_compiler, _)         => (syntax_compiler.generate_actions)(Arc::clone(&source)),
+        Syntax(syntax_compiler, _)              => (syntax_compiler.generate_actions)(Arc::clone(&source)),
 
         // Normal values just get loaded into cell 0
         _other                                  => { Ok(smallvec![Action::Value(Arc::clone(&source))].into()) }
@@ -83,14 +83,14 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<CompiledActions,
                 let actions = compile_statement_quick(car)?; compile_call(actions, cdr) 
             }
         }
+        
+        // Syntax items perform their custom compilation steps
+        Syntax(syntax_compiler, _)                              => (syntax_compiler.generate_actions)(cdr),
 
         // Frame references load the value from the frame and call that
         FrameReference(_cell_num, _frame, ReferenceType::ReturnsMonad)  |
         FrameReference(_cell_num, _frame, ReferenceType::Value)         => { let actions = compile_statement_quick(car)?; compile_call(actions, cdr) }
         FrameReference(_cell_num, _frame, ReferenceType::Monad)         => { let actions = compile_statement_quick(car)?; compile_monad_flat_map(actions, cdr) }
-        
-        // Action and macro monads resolve their respective syntaxes
-        ActionMonad(syntax_compiler, _)                         => (syntax_compiler.generate_actions)(cdr),
     }
 }
 

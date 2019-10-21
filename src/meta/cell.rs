@@ -67,9 +67,8 @@ pub enum SafasCell {
     /// A monad that transforms the state of a frame (generally a lambda)
     FrameMonad(Box<dyn FrameMonad<Binding=RuntimeResult>>),
 
-    /// An action will transform the binding state of the compiler and generate a binding, and will compile that binding to a set of interpreter actions
-    /// The parameter can be used to pass values between the pre-binding and the binding stage if needed
-    ActionMonad(SyntaxCompiler, CellRef),
+    // Syntax can describe a custom binding and compiler action
+    Syntax(SyntaxCompiler, CellRef),
 
     /// An arbitrary Rust type
     Any(Box<dyn Any+Send+Sync>)
@@ -133,7 +132,7 @@ impl SafasCell {
             SafasCell::FrameReference(_, _, ref_type)               => *ref_type,
             SafasCell::FrameMonad(frame_monad)                      => if frame_monad.returns_monad() { ReferenceType::ReturnsMonad } else { ReferenceType::Value },
             SafasCell::List(car, cdr)                               => {
-                if let SafasCell::ActionMonad(syntax, _) = &**car {
+                if let SafasCell::Syntax(syntax, _) = &**car {
                     syntax.binding_monad.reference_type(cdr.clone())
                 } else {
                     match car.reference_type() {
@@ -225,7 +224,7 @@ impl SafasCell {
             FrameReference(cell, frame, ReferenceType::ReturnsMonad)    => format!("monadfncell#({},{})", cell, frame),
             Monad(cell, monad)                                          => format!("monad#{}#{}", cell.to_string(), monad.to_string()),
             FrameMonad(monad)                                           => monad.description(),
-            ActionMonad(syntax, parameter)                              => format!("compile#{}#{}", syntax.binding_monad.description(), parameter.to_string()),
+            Syntax(syntax, parameter)                                   => format!("compile#{}#{}", syntax.binding_monad.description(), parameter.to_string()),
             Any(val)                                                    => format!("any#{:p}", val),
             List(first, second)                                         => {
                 let mut result  = format!("({}", first.to_string());

@@ -78,7 +78,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
             for (symbol_id, _) in macros.iter() {
                 // Symbols are intially bound to some syntax that generates an error
                 let error = SyntaxCompiler { binding_monad: Box::new(BindingFn::from_binding_fn(|bindings| (bindings, Err(BindError::ForwardReferencesNotAllowed)))), generate_actions: Arc::new(|_| Err(BindError::ForwardReferencesNotAllowed)) };
-                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::ActionMonad(error, NIL.clone()).into());
+                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(error, NIL.clone()).into());
             }
 
             for (symbol_id, symbol_patterns) in macros.iter() {
@@ -142,7 +142,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
                 let symbol = Arc::new(symbol);
 
                 // Define this as our symbol name
-                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::ActionMonad(SyntaxSymbol::syntax(symbol.clone()), NIL.clone()).into());
+                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(SyntaxSymbol::syntax(symbol.clone()), NIL.clone()).into());
                 symbol_syntax.push((AtomId(*symbol_id), symbol))
             }
 
@@ -175,7 +175,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
 
             // Bind to the name
             let AtomId(name_id) = name;
-            let syntax          = SafasCell::ActionMonad(syntax_closure.syntax(), NIL.clone());
+            let syntax          = SafasCell::Syntax(syntax_closure.syntax(), NIL.clone());
             bindings.symbols.insert(*name_id, syntax.into());
             bindings.export(*name_id);
 
@@ -388,8 +388,8 @@ impl SyntaxClosure {
             symbol.imported_bindings = Arc::clone(&imported_bindings);
             let symbol      = Arc::new(symbol);
 
-            // Turn into an action monad that we can add to a binding environment
-            let symbol_cell = SafasCell::ActionMonad(SyntaxSymbol::syntax(symbol.clone()), NIL.clone()).into();
+            // Turn into syntax that we can add to a binding environment
+            let symbol_cell = SafasCell::Syntax(SyntaxSymbol::syntax(symbol.clone()), NIL.clone()).into();
 
             // Push to the results
             bound_symbols.push((symbol_id, symbol_cell));
@@ -481,7 +481,7 @@ impl BindingMonad for SyntaxClosure {
     }
 
     fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) {
-        // Rebind all of the imported bindings, importing the frame reference and the action monads if there are any
+        // Rebind all of the imported bindings, importing the frame reference and the syntax if there are any
         let mut bindings                    = bindings;
         let mut rebound_imported_bindings   = (*self.imported_bindings).clone();
         let mut rebound                     = false;
@@ -500,15 +500,15 @@ impl BindingMonad for SyntaxClosure {
                     rebound             = true;
                 }
 
-                // Action monads might need to be rebound to the current frame
-                SafasCell::ActionMonad(old_syntax, _) => {
+                // Syntax might need to be rebound to the current frame
+                SafasCell::Syntax(old_syntax, _) => {
                     // Try to rebind the syntax
                     let (new_bindings, new_syntax) = old_syntax.binding_monad.rebind_from_outer_frame(bindings, frame_depth);
 
                     // Update the binding if the syntax update
                     if let Some(new_syntax) = new_syntax {
                         let new_syntax  = SyntaxCompiler { binding_monad: new_syntax, generate_actions: old_syntax.generate_actions.clone() };
-                        *binding        = SafasCell::ActionMonad(new_syntax, NIL.clone()).into();
+                        *binding        = SafasCell::Syntax(new_syntax, NIL.clone()).into();
                         rebound         = true;
                     }
 
