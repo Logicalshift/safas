@@ -361,10 +361,9 @@ mod test {
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
-        println!("{:?}", val.to_string());
 
         // Labels are 64-bits so we should end up with a label position of 64 here
-        assert!(val.to_string() == "$64u64".to_string());
+        assert!(val.to_string() == "$40u64".to_string());
     }
 
     #[test]
@@ -373,9 +372,8 @@ mod test {
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
-        println!("{:?}", val.to_string());
 
         // Cut down to 32 bits, so we end up with a label position of 32
-        assert!(val.to_string() == "$32u64".to_string());
+        assert!(val.to_string() == "$20u64".to_string());
     }
 }
