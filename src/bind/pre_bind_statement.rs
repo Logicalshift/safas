@@ -38,6 +38,7 @@ pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> (SymbolB
                     Monad(_, _)             |
                     FrameMonad(_)           |
                     Syntax(_, _)            |
+                    Error(_)                |
                     FrameReference(_, _, _) => (bindings, symbol_value),
                 }
             } else {
@@ -82,6 +83,7 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                     BitCode(_)                                  |
                     Char(_)                                     |
                     Monad(_, _)                                 |
+                    Error(_)                                    |
                     FrameMonad(_)                               => { pre_bind_call(symbol_value, cdr, bindings) },
 
                     // Lists bind themselves before calling

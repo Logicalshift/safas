@@ -67,6 +67,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<CompiledActions,
         Char(_)                                                 |
         BitCode(_)                                              |
         Monad(_, _)                                             |
+        Error(_)                                                |
         FrameMonad(_)                                           => {
             if car.reference_type() == ReferenceType::Monad {
                 compile_monad_flat_map(smallvec![Action::Value(car)].into(), cdr)

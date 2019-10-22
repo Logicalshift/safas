@@ -58,6 +58,9 @@ pub enum SafasCell {
     /// A list with a CAR and a CDR
     List(CellRef, CellRef),
 
+    /// A runtime error returned as a result
+    Error(RuntimeError),
+
     /// A reference to a value on the frame
     FrameReference(usize, u32, ReferenceType),
 
@@ -226,6 +229,7 @@ impl SafasCell {
             FrameMonad(monad)                                           => monad.description(),
             Syntax(syntax, parameter)                                   => format!("compile#{}#{}", syntax.binding_monad.description(), parameter.to_string()),
             Any(val)                                                    => format!("any#{:p}", val),
+            Error(err)                                                  => format!("error#{:?}", err),
             List(first, second)                                         => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;

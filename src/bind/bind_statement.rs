@@ -73,6 +73,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                     Char(_)                                     |
                     List(_, _)                                  |
                     Monad(_, _)                                 |
+                    Error(_)                                    |
                     FrameMonad(_)                               => Ok((symbol_value, bindings)),
 
                     FrameReference(cell_num, frame, cell_type)  => {
@@ -168,6 +169,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     BitCode(_)                                  |
                     Char(_)                                     |
                     Monad(_, _)                                 |
+                    Error(_)                                    |
                     FrameMonad(_)                               => { bind_call(symbol_value, cdr, bindings) },
 
                     // Lists bind themselves before calling
