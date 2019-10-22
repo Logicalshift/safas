@@ -333,7 +333,7 @@ mod test {
 
     #[test]
     fn define_basic_label() {
-        let result          = eval("((fun () (label foo) foo))").unwrap();
+        let result          = eval("(label foo) foo").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
@@ -343,7 +343,7 @@ mod test {
 
     #[test]
     fn define_basic_label_in_list() {
-        let result          = eval("((fun () (label foo) (list foo)))").unwrap();
+        let result          = eval("(label foo) (list foo)").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
@@ -353,7 +353,7 @@ mod test {
 
     #[test]
     fn label_reads_bit_position() {
-        let result          = eval("((fun () (d 5u8) (label foo) foo))").unwrap();
+        let result          = eval("(d 5u8) (label foo) foo").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
@@ -363,7 +363,7 @@ mod test {
 
     #[test]
     fn label_requiring_multiple_passes_1() {
-        let result          = eval("((fun () (d foo) (label foo) foo))").unwrap();
+        let result          = eval("(d foo) (label foo) foo").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
@@ -374,7 +374,7 @@ mod test {
 
     #[test]
     fn label_requiring_multiple_passes_2() {
-        let result          = eval("((fun () (d (bits 32 foo)) (label foo) foo))").unwrap();
+        let result          = eval("(d (bits 32 foo)) (label foo) foo").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
 
         let (val, _bitcode) = assemble(&monad).unwrap();
