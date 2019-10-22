@@ -7,7 +7,6 @@ use crate::functions::*;
 
 use std::io;
 use std::io::{Write};
-use std::sync::*;
 
 ///
 /// Evaluates a single line in an isolated SAFAS instance and returns the result
@@ -59,6 +58,7 @@ pub fn run_interactive(frame: Frame, bindings: SymbolBindings) {
 
     let mut frame               = frame;
     let mut bindings            = bindings;
+    let mut monad_value         = NIL.clone();
 
     loop {
         // Read a line
@@ -83,42 +83,18 @@ pub fn run_interactive(frame: Frame, bindings: SymbolBindings) {
             }
         };
 
-        // Pre-bind the statements
-        let mut statement   = Arc::clone(&input);
-        while let SafasCell::List(car, cdr) = &*statement {
-            let (new_bindings, _)   = pre_bind_statement(Arc::clone(&car), bindings);
-            bindings                = new_bindings;
-            statement               = Arc::clone(&cdr);
+        // Evaluate the frame
+        let (result, next_frame, next_bindings) = eval_statements(input, monad_value, frame, bindings);
+
+        // Display the next result
+        match &*result {
+            SafasCell::Error(err)   => println!("!! Error: {:?}", err),
+            _                       => println!("{}", result.to_string())
         }
 
-        // Run the statements in the current frame
-        let mut statement = Arc::clone(&input);
-        while let SafasCell::List(car, cdr) = &*statement {
-            // Bind this statement
-            let bind_result = bind_statement(Arc::clone(&car), bindings)
-                .and_then(|(bound, new_bindings)| match compile_statement(bound) {
-                    Ok(actions) => Ok((actions, new_bindings)),
-                    Err(err)    => Err((err, new_bindings))
-                });
-            let monad       = match bind_result {
-                Ok((actions, new_bindings))   => { bindings = new_bindings; actions.to_actions().collect::<Vec<_>>() },
-                Err((error, new_bindings))    => { 
-                    bindings = new_bindings;
-                    println!("!! Binding error: {:?}", error);
-                    break;
-                }
-            };
-
-            // Evaluate the monad
-            frame.allocate_for_bindings(&bindings);
-            let result      = monad.execute(frame);
-            match result {
-                (new_frame, Ok(result)) => { frame = new_frame; println!("{}", result.to_string()); }
-                (new_frame, Err(error)) => { frame = new_frame; println!("!! Error: {:?}", error); }    
-            }
-
-            // Move on to the next statement
-            statement = Arc::clone(&cdr);
-        }
+        // Update to the next result
+        frame       = next_frame;
+        bindings    = next_bindings;
+        monad_value = result;
     }
 }

@@ -41,7 +41,7 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
     }
 
     // Create the bound statements (and determine if we're going to use monad behaviour or not)
-    let mut monadic_result      = !result.is_nil();
+    let mut monadic_result      = result.reference_type() == ReferenceType::Monad;
     let mut current_statement   = &statement_list;
     let mut compiled_actions    = vec![];
 
