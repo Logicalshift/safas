@@ -16,6 +16,17 @@ fn wrap_nil() -> MonadType {
 }
 
 ///
+/// Wraps a value in a monad
+///
+fn wrap_value(value: CellRef) -> CellRef {
+    let wrap            = WrapFlatMap(value);
+    let wrap_flat_map   = SafasCell::FrameMonad(Box::new(wrap));
+    let monad_type      = MonadType::new(wrap_flat_map.into());
+
+    SafasCell::Monad(NIL.clone(), monad_type).into()
+}
+
+///
 /// Evaluates a set of parsed statements
 /// 
 /// The input values are a statement list, an input monad (if the statements are 'monadic', this is the initial value passed into the monad)
@@ -92,6 +103,13 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
 
         // Combine the expression result into the final result
         if monadic_result {
+            // Wrap the result if we're generating a monad return value
+            let expr_result = if expr_result.reference_type() != ReferenceType::Monad {
+                wrap_value(expr_result)
+            } else {
+                expr_result
+            };
+
             // Fetch the current monad value/type from the reuslt
             let (monad_value, monad_type) = match &*result {
                 SafasCell::Monad(monad_value, monad_type)   => (monad_value, monad_type),
