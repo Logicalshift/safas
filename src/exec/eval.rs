@@ -92,7 +92,7 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
 
     // Evaluate the actions
     for actions in compiled_actions {
-        // Collect the actions into a 
+        // Collect the actions into a list we can run
         let actions = actions.to_actions().collect::<Vec<_>>();
 
         let expr_result = actions.execute(frame);
