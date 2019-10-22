@@ -36,15 +36,24 @@ impl MonadType {
     ///
     /// Performs the flat_map operation on a monad value
     ///
-    pub fn flat_map(&self, value: CellRef, map_fn: CellRef, frame: Frame) -> (Frame, RuntimeResult) {
+    pub fn flat_map(&self, monad: CellRef, map_fn: CellRef, frame: Frame) -> (Frame, RuntimeResult) {
         match &*self.flat_map {
             SafasCell::FrameMonad(action) => {
+                // Call the flat map function with the monad and the supplied mapping function
                 let mut frame   = frame;
-                frame.cells[0]  = SafasCell::List(value, map_fn).into();
+                frame.cells[0]  = SafasCell::List(monad, map_fn).into();
                 action.execute(frame)
             },
             _ => return (frame, Err(RuntimeError::NotAFunction(Arc::clone(&self.flat_map))))
         }
+    }
+
+    ///
+    /// Performs the 'next' operation (flat_map where the value is discarded and the specified monad is returned)
+    ///
+    pub fn next(&self, monad: CellRef, next_monad: CellRef, frame: Frame) -> (Frame, RuntimeResult) {
+        let map_fn = SafasCell::FrameMonad(Box::new(wrap_frame(Ok(next_monad)))).into();
+        self.flat_map(monad, map_fn, frame)
     }
 }
 

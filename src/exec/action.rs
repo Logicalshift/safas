@@ -271,13 +271,13 @@ impl FrameMonad for Vec<Action> {
                     } else {
                         return (frame, Err(RuntimeError::StackIsEmpty));
                     };
-                    result = SafasCell::FrameMonad(Box::new(wrap_frame(Ok(result)))).into();
+                    let map_fn = SafasCell::FrameMonad(Box::new(wrap_frame(Ok(result)))).into();
 
                     match &*monad {
                         // Result contains the map function
                         SafasCell::Monad(value, monad_type) => {
                             // Call the monad's flat_map function with this cell value
-                            let (new_frame, new_result) = monad_type.flat_map(value.clone(), result, frame);
+                            let (new_frame, new_result) = monad_type.flat_map(value.clone(), map_fn, frame);
                             if let Ok(new_result) = new_result {
                                 frame                   = new_frame;
                                 result                  = new_result;
@@ -287,7 +287,7 @@ impl FrameMonad for Vec<Action> {
                             }
                         },
 
-                        _ => return (frame, Err(RuntimeError::NotAMonad(Arc::clone(&result))))
+                        _ => return (frame, Err(RuntimeError::NotAMonad(Arc::clone(&monad))))
                     }
                 }
             }

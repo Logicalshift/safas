@@ -3,6 +3,7 @@
 //! generating its final result
 //!
 
+mod eval;
 mod frame;
 mod frame_monad;
 mod action;
@@ -13,6 +14,7 @@ mod runtime_error;
 mod fn_monad;
 mod returns_monad;
 
+pub use self::eval::*;
 pub use self::frame::*;
 pub use self::frame_monad::*;
 pub use self::action::*;
