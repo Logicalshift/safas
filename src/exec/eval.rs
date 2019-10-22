@@ -90,10 +90,17 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
 
     let (nil_monad_value, nil_monad_type) = (NIL.clone(), wrap_nil());
 
+    // Run the setup actions
+    for actions in compiled_actions.iter() {
+        let (new_frame, setup_result) = actions.frame_setup.execute(frame);
+        frame = new_frame;
+        if let Err(err) = setup_result { return (SafasCell::Error(err.into()).into(), frame, bindings); }
+    }
+
     // Evaluate the actions
     for actions in compiled_actions {
         // Collect the actions into a list we can run
-        let actions = actions.to_actions().collect::<Vec<_>>();
+        let actions = actions.actions;
 
         let expr_result = actions.execute(frame);
         let expr_result = match expr_result {
