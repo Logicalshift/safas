@@ -14,55 +14,23 @@ use std::sync::*;
 ///
 pub fn eval(expr: &str) -> Result<CellRef, RuntimeError> {
     // Create the execution frame
-    let mut frame               = Frame::new(1, None);
+    let frame                   = Frame::new(1, None);
     let bindings                = SymbolBindings::new();
 
     // Apply the standard bindings
-    let syntax                  = standard_syntax();
-    let functions               = standard_functions();
-    let (bindings, actions)     = syntax.bind(bindings);
-    let (bindings, fn_actions)  = functions.bind(bindings);
-    frame.allocate_for_bindings(&bindings);
-    let (frame, _)              = actions.unwrap().execute(frame);
-    let (frame, _)              = fn_actions.unwrap().execute(frame);
-
-    let mut frame               = frame;
-    let mut bindings            = bindings;
+    let (frame, bindings)       = setup_standard_bindings(frame, bindings);
 
     // Parse the expression
     let expr = parse_safas(&mut TokenReadBuffer::new(expr.chars()), FileLocation::new("<expr>"))?;
 
-    // Pre-bind the statements
-    let mut statement   = Arc::clone(&expr);
-    while let SafasCell::List(car, cdr) = &*statement {
-        let (new_bindings, _)   = pre_bind_statement(Arc::clone(&car), bindings);
-        bindings                = new_bindings;
-        statement               = Arc::clone(&cdr);
+    // Evaluate the expression
+    let (result, _frame, _bindings) = eval_statements(expr, NIL.clone(), frame, bindings);
+
+    if let SafasCell::Error(err) = &*result {
+        Err(err.clone())
+    } else {
+        Ok(result)
     }
-
-    // Run the statements in the current frame
-    let mut statement   = Arc::clone(&expr);
-    let mut result      = NIL.clone();
-    while let SafasCell::List(car, cdr) = &*statement {
-        // Bind this statement
-        let (bound, new_bindings)   = match bind_statement(Arc::clone(&car), bindings) { Ok((bound, new_bindings)) => (bound, new_bindings), Err((err, _new_bindings)) => return Err(err.into()) };
-        let actions                 = compile_statement(bound)?;
-        let monad                   = actions.to_actions().collect::<Vec<_>>();
-        bindings                    = new_bindings;
-
-        // Evaluate the monad
-        frame.allocate_for_bindings(&bindings);
-        let expr_result = monad.execute(frame);
-        match expr_result {
-            (new_frame, Ok(expr_result))    => { frame = new_frame; result = expr_result; }
-            (_new_frame, Err(error))        => { return Err(error); }
-        }
-
-        // Move on to the next statement
-        statement = Arc::clone(&cdr);
-    }
-
-    Ok(result)
 }
 
 ///
