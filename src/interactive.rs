@@ -23,7 +23,7 @@ pub fn eval(expr: &str) -> Result<CellRef, RuntimeError> {
     let expr = parse_safas(&mut TokenReadBuffer::new(expr.chars()), FileLocation::new("<expr>"))?;
 
     // Evaluate the expression
-    let (result, _frame, _bindings) = eval_statements(expr, NIL.clone(), frame, bindings);
+    let (result, _bindings, _frame) = eval_statements(expr, NIL.clone(), bindings, frame);
 
     if let SafasCell::Error(err) = &*result {
         Err(err.clone())
@@ -84,7 +84,7 @@ pub fn run_interactive(frame: Frame, bindings: SymbolBindings) {
         };
 
         // Evaluate the frame
-        let (result, next_frame, next_bindings) = eval_statements(input, monad_value, frame, bindings);
+        let (result, next_bindings, next_frame) = eval_statements(input, monad_value, bindings, frame);
 
         // Display the next result
         match &*result {

@@ -33,7 +33,7 @@ fn wrap_value(value: CellRef) -> CellRef {
 /// and the initial frame and bindings (an updated version of these is returned). `monad` can be set to nil to indicate that a non-monad
 /// result can be returned.
 ///
-pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bindings: SymbolBindings) -> (CellRef, Frame, SymbolBindings) {
+pub fn eval_statements(statement_list: CellRef, monad: CellRef, bindings: SymbolBindings, frame: Frame) -> (CellRef, SymbolBindings, Frame) {
     // These three values represent the state of the evaluation
     let mut result      = monad;
     let mut frame       = frame;
@@ -63,7 +63,7 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
         match bound_statement {
             Err((err, new_bindings)) => {
                 // Give up with an error
-                return (SafasCell::Error(err.into()).into(), frame, new_bindings);
+                return (SafasCell::Error(err.into()).into(), new_bindings, frame);
             }
 
             Ok((bound, new_bindings)) => {
@@ -75,7 +75,7 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
 
                 // Compile the bound statement
                 let actions         = compile_statement(bound);
-                let actions         = match actions { Ok(actions) => actions, Err(err) => return (SafasCell::Error(err.into()).into(), frame, bindings) };
+                let actions         = match actions { Ok(actions) => actions, Err(err) => return (SafasCell::Error(err.into()).into(), bindings, frame) };
 
                 compiled_actions.push(actions);
             }
@@ -94,7 +94,7 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
     for actions in compiled_actions.iter() {
         let (new_frame, setup_result) = actions.frame_setup.execute(frame);
         frame = new_frame;
-        if let Err(err) = setup_result { return (SafasCell::Error(err.into()).into(), frame, bindings); }
+        if let Err(err) = setup_result { return (SafasCell::Error(err.into()).into(), bindings, frame); }
     }
 
     // Evaluate the actions
@@ -105,7 +105,7 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
         let expr_result = actions.execute(frame);
         let expr_result = match expr_result {
             (new_frame, Ok(expr_result))    => { frame = new_frame; expr_result }
-            (new_frame, Err(err))           => { return (SafasCell::Error(err.into()).into(), new_frame, bindings); }
+            (new_frame, Err(err))           => { return (SafasCell::Error(err.into()).into(), bindings, new_frame); }
         };
 
         // Combine the expression result into the final result
@@ -129,7 +129,7 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
 
             match next_result {
                 Ok(next_result)     => { result = next_result; },
-                Err(err)            => { return (SafasCell::Error(err.into()).into(), frame, bindings); }
+                Err(err)            => { return (SafasCell::Error(err.into()).into(), bindings, frame); }
             }
         } else {
             // The result is the result of the last expression
@@ -137,5 +137,5 @@ pub fn eval_statements(statement_list: CellRef, monad: CellRef, frame: Frame, bi
         }
     }
 
-    (result, frame, bindings)
+    (result, bindings, frame)
 }
