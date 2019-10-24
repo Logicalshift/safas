@@ -8,7 +8,7 @@ use std::result::{Result};
 ///
 /// Indicates an error that ocurred during binding
 ///
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum BindError {
     /// Something that was meant to be infallible failed
     NotInfallible,
@@ -71,7 +71,13 @@ pub enum BindError {
     NumberTooLarge,
 
     /// An attempt was made to use a symbol that was not yet defined
-    ForwardReferencesNotAllowed
+    ForwardReferencesNotAllowed,
+
+    /// A file could not be found
+    FileNotFound,
+
+    /// An IO error occurred
+    IOError
 }
 
 /// Result of a binding operation
@@ -90,6 +96,8 @@ impl From<RuntimeError> for BindError {
             NotInfallible                       => BindError::NotInfallible,
             NumberTooLarge                      => BindError::NumberTooLarge,
             NotImplemented                      => BindError::NotImplemented,
+            FileNotFound                        => BindError::FileNotFound,
+            IOError                             => BindError::IOError,
             BindingError(err)                   => err,
             ParseError(_)                       |
             StackIsEmpty                        |

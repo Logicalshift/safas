@@ -293,3 +293,15 @@ impl Debug for SafasCell {
         write!(formatter, "{}", self.to_string())
     }
 }
+
+impl From<RuntimeError> for SafasCell {
+    fn from(error: RuntimeError) -> SafasCell {
+        SafasCell::Error(error)
+    }
+}
+
+impl Into<CellRef> for RuntimeError {
+    fn into(self: RuntimeError) -> CellRef {
+        SafasCell::from(self).into()
+    }
+}

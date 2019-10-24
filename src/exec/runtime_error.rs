@@ -51,7 +51,13 @@ pub enum RuntimeError {
     CannotAllocateLabelsDuringAssembly,
 
     /// The number is too large to fit into the correct format
-    NumberTooLarge
+    NumberTooLarge,
+
+    /// A file could not be found
+    FileNotFound,
+
+    /// An IO error occurred (we would have known the io::Error at the time but it's not compatible with RuntimeError as it can't be compared or cloned)
+    IOError
 }
 
 /// The result of a runtime operation (most common binding type of a frame monad)
