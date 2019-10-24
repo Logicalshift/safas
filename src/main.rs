@@ -10,11 +10,15 @@ mod bitcode;
 mod functions;
 mod interactive;
 
+use crate::io::*;
 use crate::bind::*;
+use crate::meta::*;
 use crate::exec::*;
+use crate::bitcode::*;
 use crate::interactive::*;
 
 use clap::{App, Arg};
+use std::process::{exit};
 
 fn main() {
     // Fetch the parameters
@@ -48,14 +52,57 @@ fn main() {
     let bindings            = SymbolBindings::new();
 
     // Apply the standard bindings
-    let (frame, bindings)   = setup_standard_bindings(frame, bindings);
+    let (mut frame, mut bindings)   = setup_standard_bindings(frame, bindings);
+    let mut output                  = NIL.clone();
+
+    // Import any input files into the frame
+    if let Some(input_file) = params.value_of("INPUT") {
+        let (import_result, new_bindings, new_frame) = import_file(input_file, bindings, frame);
+
+        // Report any errors
+        if let SafasCell::Error(err) = &*import_result {
+            println!("!! {:?}", err);
+            println!();
+            exit(1);
+        }
+
+        // Update the syntax
+        bindings    = new_bindings;
+        frame       = new_frame;
+
+        output      = import_result;
+    }
 
     // Start in interactive mode if the -i parameter is passed in
     if params.occurrences_of("interactive") > 0 {
         run_interactive(frame, bindings);
         return;
-    } else {
+    }
+
+    // Generate the output
+    if output.is_nil() {
         // No valid parameters supplied
         println!("{}", params.usage());
+    }
+
+    if let Some(output) = BitCodeMonad::from_cell(&output) {
+        // Assemble the result
+        let assemble_result = assemble(&output);
+        let (val, bitcode)  = match assemble_result { 
+            Ok(result)  => result, 
+            Err(err)    => {
+                println!("!! {:?}", err);
+                println!();
+                exit(1);
+            }
+        };
+
+        // Generate the output
+        if !val.is_nil() {
+            println!("{}", val.to_string());
+        }
+        println!("{:?}", bitcode);      // (TODO: actually generate the output)
+    } else {
+        println!("{}", output.to_string());
     }
 }
