@@ -101,7 +101,9 @@ fn main() {
         if !val.is_nil() {
             println!("{}", val.to_string());
         }
-        println!("{:?}", bitcode);      // (TODO: actually generate the output)
+
+        let bytes = bitcode_to_bytes(bitcode);
+        println!("{}", hexdump(&bytes));
     } else {
         println!("{}", output.to_string());
     }

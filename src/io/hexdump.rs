@@ -3,7 +3,7 @@ use std::fmt::{Write};
 ///
 /// Generate a hex-dump of byte data
 ///
-pub fn hexdump(data: Vec<u8>) -> String {
+pub fn hexdump(data: &Vec<u8>) -> String {
     let mut result = String::new();
 
     // Each row is 16 bytes
