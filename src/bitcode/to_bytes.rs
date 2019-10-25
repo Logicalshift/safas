@@ -15,12 +15,13 @@ pub fn bitcode_to_bytes<BitCodeIterator: IntoIterator<Item=BitCode>>(bitcode: Bi
     for code in bitcode {
         use self::BitCode::*;
 
+        let code = code;
+
         match code {
             Bits(len, pattern)              => { 
                 // Resize so that the pattern will fit in to the result
                 let new_bit_pos = cur_bit_pos + len as usize;
                 while (new_bit_pos/8) > result.len() {
-                    println!("Resize: {} {}", new_bit_pos/8, result.len());
                     result.resize(result.len() * 2, 0u8);
                 }
 
@@ -47,8 +48,8 @@ pub fn bitcode_to_bytes<BitCodeIterator: IntoIterator<Item=BitCode>>(bitcode: Bi
                     result[pos]         &= !(mask<<shift);
 
                     // Store the bits from the pattern
-                    let pattern         =   pattern_remaining&(mask as u128);
-                    result[pos]         |=  (pattern as u8)<<shift;
+                    let pattern         = pattern_remaining&(mask as u128);
+                    result[pos]         |= (pattern as u8)<<shift;
 
                     // Next part of the pattern
                     pattern_remaining   >>= to_write;
@@ -57,7 +58,61 @@ pub fn bitcode_to_bytes<BitCodeIterator: IntoIterator<Item=BitCode>>(bitcode: Bi
                 }
             },
 
-            Align(len, pattern, alignment)  => { }
+            Align(pattern_len, pattern, alignment)  => {
+                // Work out where we're going to align to 
+                let alignment           = alignment as usize;
+                let align_target_pos    = if (cur_bit_pos%alignment) == 0 {
+                    cur_bit_pos
+                } else {
+                    cur_bit_pos + (alignment - cur_bit_pos%alignment)
+                };
+
+                let pattern     = pattern & ((1<<pattern_len)-1);
+                let pattern_len = if pattern_len == 0 { 8 } else { pattern_len as usize };
+
+                // Write out the pattern
+                let mut bits_remaining      = align_target_pos - cur_bit_pos;
+                let mut pattern_pos         = 0usize;
+
+                while bits_remaining > 0 {
+                    // Work out how many bits to write
+                    let mut to_write    = bits_remaining;
+                    let cur_byte        = (cur_bit_pos/8)*8;
+                    let next_byte       = cur_byte+8;
+                    let pos             = cur_byte/8;
+
+                    // Wrap the pattern position if needed
+                    if pattern_pos >= pattern_len {
+                        pattern_pos = 0;
+                    }
+
+                    // Write to the end of the current byte
+                    if cur_bit_pos + to_write > next_byte {
+                        to_write        = next_byte - cur_bit_pos;
+                    }
+
+                    // Also to the end of the pattern
+                    if pattern_pos + to_write > pattern_len {
+                        to_write = (pattern_len - pattern_pos) as usize;
+                    }
+
+                    // Create the mask
+                    let mask            = ((1u16 << to_write) - 1u16) as u8;
+                    let shift           = cur_bit_pos - cur_byte;
+
+                    // Mask out the bits
+                    result[pos]         &= !(mask<<shift);
+
+                    // Store the bits from the pattern
+                    let pattern         = (pattern >> pattern_pos) & (mask as u128);
+                    result[pos]         |= (pattern as u8)<<shift;
+
+                    // Next part of the pattern
+                    pattern_pos         += to_write;
+                    bits_remaining      -= to_write;
+                    cur_bit_pos         += to_write;
+                }
+            }
 
             Move(new_bit_pos)               => {
                 // Move and resize
@@ -159,5 +214,25 @@ mod test {
         let byte = bitcode_to_bytes(vec![BitCode::Bits(8, 0x99), BitCode::Move(2), BitCode::Bits(4, 0x9)]);
         assert!(byte[0] == 0xa5);
         assert!(byte.len() == 1);
+    }
+
+    #[test]
+    fn align_word_after_nybble() {
+        let byte = bitcode_to_bytes(vec![BitCode::Bits(4, 0x9), BitCode::Align(8, 0, 32)]);
+        assert!(byte[0] == 0x9);
+        assert!(byte[1] == 0x0);
+        assert!(byte[2] == 0x0);
+        assert!(byte[3] == 0x0);
+        assert!(byte.len() == 4);
+    }
+
+    #[test]
+    fn align_with_pattern() {
+        let byte = bitcode_to_bytes(vec![BitCode::Bits(4, 0x9), BitCode::Align(8, 0x42, 32)]);
+        assert!(byte[0] == 0x29);
+        assert!(byte[1] == 0x24);
+        assert!(byte[2] == 0x24);
+        assert!(byte[3] == 0x24);
+        assert!(byte.len() == 4);
     }
 }
