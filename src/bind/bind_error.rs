@@ -105,6 +105,7 @@ impl From<RuntimeError> for BindError {
             NotAFunction(_)                     |
             TooManyArguments(_)                 |
             NotAMonad(_)                        |
+            NotAString(_)                       |
             MismatchedMonad(_)                  |
             NotALabel(_)                        |
             CannotAllocateLabelsDuringAssembly  |

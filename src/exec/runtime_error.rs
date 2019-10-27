@@ -35,6 +35,9 @@ pub enum RuntimeError {
     /// Value cannot be treated as a monad
     NotAMonad(CellRef),
 
+    /// Value cannot be treated as a string
+    NotAString(CellRef),
+
     /// FlatMap function returned the wrong monad type
     MismatchedMonad(CellRef),
 

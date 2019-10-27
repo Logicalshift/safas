@@ -81,6 +81,16 @@ impl TryFrom<CellRef> for CellValue<i128> {
     fn try_from(cell: CellRef) -> Result<Self, RuntimeError> { Ok(CellValue(i128::try_from(SafasNumber::try_from(cell)?)?)) }
 }
 
+impl TryFrom<CellRef> for CellValue<String> {
+    type Error=RuntimeError;
+    fn try_from(cell: CellRef) -> Result<Self, RuntimeError> {
+        match &*cell {
+            SafasCell::String(string_value) => Ok(CellValue(string_value.clone())),
+            _                               => Err(RuntimeError::NotAString(cell))
+        }
+    }
+}
+
 ///
 /// Represents an atom ID, used for conversions
 ///
