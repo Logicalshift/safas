@@ -22,21 +22,9 @@ pub enum ImportFile {
 ///
 /// Reads a value retrieved using look_up from a set of symbol bindings as a series of strings
 ///
-fn read_strings(value: Option<(CellRef, u32)>, frame: &Frame) -> Vec<String> {
+fn read_strings(value: Option<(CellRef, u32)>) -> Vec<String> {
     value.map(|(import_path, depth)| {
             match (&*import_path, depth) {
-                (SafasCell::FrameReference(cell_id, 0, _), 0) => {
-                    // Fetch from the frame (note that external frames aren't supported here: any syntax should try to pull in import_paths itself)
-                    let import_path = frame.cells[*cell_id].clone();
-                    import_path.to_vec().unwrap_or_else(|| vec![])
-                        .into_iter()
-                        .filter_map(|cell| match &*cell {
-                            SafasCell::String(path) => Some(path.clone()),
-                            _                       => None
-                        })
-                        .collect()
-                },
-
                 (SafasCell::List(_, _), _) => {
                     import_path.to_vec().unwrap_or_else(|| vec![])
                         .into_iter()
@@ -55,7 +43,7 @@ fn read_strings(value: Option<(CellRef, u32)>, frame: &Frame) -> Vec<String> {
 ///
 /// Attempts to locate where a particular file to be imported can be loaded from
 ///
-pub fn locate_import_file(filename: &str, bindings: &SymbolBindings, frame: &Frame, allow_relative: bool) -> (Option<ImportFile>) {
+pub fn locate_import_file(filename: &str, bindings: &SymbolBindings, allow_relative: bool) -> (Option<ImportFile>) {
     // The import_path atom can be defined to a list of paths to try to read imported files from
     let import_path = get_id_for_atom_with_name("import_path");
     let built_ins   = get_id_for_atom_with_name("built_ins");
@@ -64,7 +52,7 @@ pub fn locate_import_file(filename: &str, bindings: &SymbolBindings, frame: &Fra
     let built_ins   = bindings.look_up(built_ins);
 
     // Convert the import path into a list of strings
-    let import_path = read_strings(import_path, frame);
+    let import_path = read_strings(import_path);
 
     // Try to open the file by searching the input paths
     let file_path = Path::new(filename);
@@ -113,7 +101,7 @@ pub fn locate_import_file(filename: &str, bindings: &SymbolBindings, frame: &Fra
 /// be found on the import path)
 ///
 pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame, allow_relative: bool) -> (CellRef, SymbolBindings, Frame) {
-    let file_path = locate_import_file(filename, &bindings, &frame, allow_relative);
+    let file_path = locate_import_file(filename, &bindings, allow_relative);
 
     // Read the file contents
     let (file_content, file_path) = if let Some(ImportFile::FromPath(file_path)) = file_path {
