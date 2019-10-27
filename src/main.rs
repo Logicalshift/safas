@@ -37,13 +37,6 @@ fn main() {
             .short("i")
             .long("interactive")
             .help("Launches the interactive interpreter"))
-        .arg(Arg::with_name("import-path")
-            .short("I")
-            .long("import-path")
-            .takes_value(true)
-            .multiple(true)
-            .number_of_values(1)
-            .help("Adds another path to search for imported files"))
         .arg(Arg::with_name("INPUT")
             .help("Sets the input file to read from")
             .index(1))
@@ -52,6 +45,16 @@ fn main() {
             .long("output")
             .help("Sets the location to write the output to")
             .value_name("OUTPUT"))
+        .arg(Arg::with_name("import-path")
+            .short("I")
+            .long("import-path")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1)
+            .help("Adds another path to search for imported files"))
+        .arg(Arg::with_name("no-default-library")
+            .long("no-default-library")
+            .help("Do not load the default set of library functions (only the built-in functions will be provided)"))
         .get_matches();
 
     // Create the initial execution frame and bindings
@@ -62,7 +65,7 @@ fn main() {
     let (mut frame, mut bindings)   = setup_standard_bindings(frame, bindings);
     let mut output                  = NIL.clone();
 
-    // Add any extra impoort paths
+    // Add any extra import paths
     if let Some(import_paths) = params.values_of("import-path") {
         // These get added to the import path
         let import_atom = get_id_for_atom_with_name("import_path");
@@ -77,6 +80,21 @@ fn main() {
             // Update the binding
             bindings.symbols.insert(import_atom, import_path.into());
         }
+    }
+
+    // Load the default library
+    if params.occurrences_of("no-default-library") == 0 {
+        let (import_result, new_bindings, new_frame) = import_file("standard/default.sf", bindings, frame, false);
+
+        if let SafasCell::Error(err) = &*import_result {
+            println!("!! Failed to load default library");
+            println!("!! {:?}", err);
+            println!();
+            exit(1);
+        }
+
+        bindings    = new_bindings;
+        frame       = new_frame;
     }
 
     // Import any input files into the frame
