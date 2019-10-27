@@ -139,7 +139,11 @@ pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame, allow
     let file_content = match file_content { Ok(content) => content, Err(err) => { return (RuntimeError::ParseError(err).into(), bindings, frame); } };
 
     // Evaluate the file
-    eval_statements(file_content, NIL.clone(), bindings, frame)
+    let bindings                    = bindings.push_interior_frame();
+    let (result, bindings, frame)   = eval_statements(file_content, NIL.clone(), bindings, frame);
+
+    let (bindings, _imports)        = bindings.pop();
+    (result, bindings, frame)
 }
 
 struct LocateImportFile;

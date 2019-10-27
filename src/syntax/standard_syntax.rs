@@ -20,6 +20,10 @@ pub fn standard_syntax() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> {
     let syntax  = wrap_binding(smallvec![]);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("import",        SafasCell::Syntax(import_keyword(), NIL.clone())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("export",        SafasCell::Syntax(export_keyword(), NIL.clone())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("re_export",     SafasCell::Syntax(re_export_keyword(), NIL.clone())), syntax);
+
+    let syntax: Box<dyn BindingMonad<Binding=_>> = Box::new(syntax);
+
     let syntax  = flat_map_binding_actions(move || define_symbol_value("def",           SafasCell::Syntax(def_keyword(), NIL.clone())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::Syntax(def_syntax_keyword(), NIL.clone())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("fun",           SafasCell::Syntax(fun_keyword(), NIL.clone())), syntax);

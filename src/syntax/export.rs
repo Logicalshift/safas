@@ -49,3 +49,53 @@ pub fn export_keyword() -> SyntaxCompiler {
         generate_actions:   Arc::new(compile)
     }
 }
+
+///
+/// Re-export keyword: takes a statement and exports everything that it exports
+/// 
+/// Typically used with import: `(re_export (import "some_library"))`
+///
+pub fn re_export_keyword() -> SyntaxCompiler {
+    let bind = get_expression_arguments().and_then(|ListTuple((expr, )): ListTuple<(CellRef, )>| {
+
+        BindingFn::from_binding_fn(move |bindings| {
+            // Create an interior frame
+            let inner_bindings                  = bindings.push_interior_frame();
+
+            // Bind our expression to it
+            let (bound_expr, inner_bindings)    = match bind_statement(expr.clone(), inner_bindings) {
+                Ok((bound_expr, inner_bindings))    => (bound_expr, inner_bindings),
+                Err((err, inner_bindings))          => return (inner_bindings.pop().0, Err(err))
+            };
+
+            // Export all of the symbols defined in the inner bindings (these will be the ones exported from whatever expression was evaluated)
+            let re_exports                  = inner_bindings.symbols.iter()
+                .map(|(atom_id, value)| (*atom_id, value.clone()))
+                .collect::<Vec<_>>();
+
+            // Pop the interior frame
+            let (mut bindings, _imports)    = inner_bindings.pop();
+
+            // Re-export all of the symbols from our inner frame
+            for (atom_id, value) in re_exports {
+                // Add the symbol to our bindings
+                bindings.symbols.insert(atom_id, value);
+
+                // Export from the parent context
+                bindings.export_from_parent(atom_id);
+            }
+
+            // Result is the expression we just bound
+            (bindings, Ok(bound_expr))
+        })
+
+    });
+
+    // Expression is just compiled as normal
+    let compile = |expr| compile_statement(expr);
+
+    SyntaxCompiler {
+        binding_monad:      Box::new(bind),
+        generate_actions:   Arc::new(compile)
+    }
+}

@@ -149,6 +149,8 @@ impl SymbolBindings {
                     // For symbols with a depth, export again through the parent context
                     parent.export_symbols.push((export_id, depth-1))
                 }
+            } else {
+                panic!("Missing symbol {}", name_for_atom_with_id(export_id));
             }
         }
 
@@ -183,6 +185,8 @@ impl SymbolBindings {
     pub fn export(&mut self, atom_id: u64) {
         if self.is_interior {
             self.export_symbols.push((atom_id, 1));
+        } else {
+            panic!("Cannot export to a non-interior frame");
         }
     }
 
@@ -194,6 +198,8 @@ impl SymbolBindings {
     pub fn export_from_parent(&mut self, atom_id: u64) {
         if self.is_interior && self.parent.as_ref().map(|parent| parent.is_interior) == Some(true) {
             self.export_symbols.push((atom_id, 2));
+        } else {
+            panic!("Cannot export to a non-interior frame");
         }
     }
 

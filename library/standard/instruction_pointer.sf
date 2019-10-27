@@ -1,0 +1,10 @@
+;;;
+;;; Sets the expected value of the instruction pointer to a new value
+;;;
+(def set_ip 
+    (fun (new_ip) 
+        (set_bit_pos new_ip)        ;; TODO!
+    )
+)
+
+(export set_ip)
