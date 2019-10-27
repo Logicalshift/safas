@@ -26,6 +26,9 @@ pub enum BindError {
     /// A symbol has a value but is not bound to anything
     UnboundSymbol,
 
+    /// The specified symbol must be defined in the current context
+    SymbolNotDefinedLocally(String),
+
     /// Attempted to compile a FrameReference that points at a different frame (they should all be bound to the current frame)
     CannotLoadCellInOtherFrame,
 

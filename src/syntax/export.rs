@@ -24,7 +24,7 @@ pub fn export_keyword() -> SyntaxCompiler {
             if let Some((symbol_value, depth)) = symbol_value {
                 if depth != 0 {
                     // Must be exporting something from the current frame (ie, not require importing)
-                    (bindings, Err(BindError::NotInfallible))
+                    (bindings, Err(BindError::SymbolNotDefinedLocally(name_for_atom_with_id(atom_id))))
                 } else {
                     // Add to the 'local' symbols
                     bindings.symbols.insert(atom_id, symbol_value);
