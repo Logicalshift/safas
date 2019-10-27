@@ -18,8 +18,8 @@ pub struct SymbolBindings {
     /// The symbols in this binding
     pub symbols: HashMap<u64, CellRef>,
 
-    /// The symbols to export to the parent context
-    pub export_symbols: SmallVec<[u64; 2]>,
+    /// The symbols to export to the parent context, and the number of contexts they should be exported through
+    pub export_symbols: SmallVec<[(u64, u64); 2]>,
 
     /// A list of the symbols to import from the parent, along with the cell they should be stored in
     pub import_symbols: SmallVec<[(CellRef, usize); 2]>,
@@ -141,9 +141,14 @@ impl SymbolBindings {
         }
 
         // Move any export symbols into the parent
-        for export_id in self.export_symbols.drain() {
+        for (export_id, depth) in self.export_symbols.drain() {
             if let Some(value) = self.symbols.get(&export_id) {
                 parent.symbols.insert(export_id, value.clone());
+
+                if depth > 1 {
+                    // For symbols with a depth, export again through the parent context
+                    parent.export_symbols.push((export_id, depth-1))
+                }
             }
         }
 
@@ -177,7 +182,18 @@ impl SymbolBindings {
     ///
     pub fn export(&mut self, atom_id: u64) {
         if self.is_interior {
-            self.export_symbols.push(atom_id);
+            self.export_symbols.push((atom_id, 1));
+        }
+    }
+
+    ///
+    /// Exports the specified atom from the parent bindings
+    /// 
+    /// This must be an interior binding for this to work. The value of the specified symbol will become visible outside of this binding.
+    ///
+    pub fn export_from_parent(&mut self, atom_id: u64) {
+        if self.is_interior && self.parent.as_ref().map(|parent| parent.is_interior) == Some(true) {
+            self.export_symbols.push((atom_id, 2));
         }
     }
 
