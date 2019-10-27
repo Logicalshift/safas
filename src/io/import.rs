@@ -175,6 +175,8 @@ impl BindingMonad for LocateImportFile {
 
 ///
 /// Creates the compiler for the import keyword
+/// 
+/// `(import "foo")` attempts to import the file `foo.sf` from the current set of search paths.
 ///
 pub fn import_keyword() -> SyntaxCompiler {
     let bind = LocateImportFile.map_result(|(filename, file_path)| {

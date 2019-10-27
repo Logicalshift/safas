@@ -3,4 +3,4 @@
     )
 )
 
-(publish assemble_6502)
+(export assemble_6502)

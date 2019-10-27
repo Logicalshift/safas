@@ -3,6 +3,7 @@ mod def_syntax;
 mod fun;
 mod quote;
 mod monad;
+mod export;
 mod pattern_match;
 mod standard_syntax;
 
