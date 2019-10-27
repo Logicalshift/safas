@@ -3,7 +3,7 @@
 ;;;
 (def set_ip 
     (fun (new_ip) 
-        (set_bit_pos (/ new_ip 8))
+        (set_bit_pos (* new_ip 8))
     )
 )
 
