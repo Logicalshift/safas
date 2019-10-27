@@ -6,6 +6,8 @@ use crate::parse::*;
 use std::path::{Path, Component};
 use std::fs;
 
+const DEFAULT_EXTENSION: &str = "sf";
+
 ///
 /// Reads a value retrieved using look_up from a set of symbol bindings as a series of strings
 ///
@@ -61,10 +63,15 @@ pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame, allow
     let file_path = if allow_current_dir && !file_path.is_absolute() && file_path.is_file() {
         // If the current directory is allowed then try the current directory
         Some(file_path.to_path_buf())
+    } else if allow_current_dir && !file_path.is_absolute() && file_path.extension().is_none() && file_path.with_extension(DEFAULT_EXTENSION).is_file() {
+        // We also add the '.sf' extension if it's not already set
+        Some(file_path.with_extension(DEFAULT_EXTENSION))
     } else if file_path.is_absolute() || file_path.components().nth(0) == Some(Component::CurDir) || file_path.components().nth(0) == Some(Component::ParentDir) {
         // Absolute paths are not searched for: we'll just return it as existing if an absolute path or a path starting at the current directory is used
         if file_path.is_file() {
             Some(file_path.to_path_buf())
+        } else if file_path.extension().is_none() && file_path.with_extension(DEFAULT_EXTENSION).is_file() {
+            Some(file_path.with_extension(DEFAULT_EXTENSION))
         } else {
             None
         }
@@ -79,6 +86,8 @@ pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame, allow
                 let try_path = import_prefix.join(file_path);
                 if try_path.is_file() {
                     found = Some(try_path);
+                } else if try_path.extension().is_none() && try_path.with_extension(DEFAULT_EXTENSION).is_file() {
+                    found = Some(try_path.with_extension(DEFAULT_EXTENSION));
                 }
             }
         }
