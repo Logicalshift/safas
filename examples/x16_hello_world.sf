@@ -14,7 +14,7 @@
         (def BSOUT $FFD2)
 
     ;; Number of characters to write
-        (def hello_world_len (- hello_word_end hello_world))
+        (def hello_world_len (- hello_world_end hello_world))
 
     ;; X = string offset
         (ldx #$0)
