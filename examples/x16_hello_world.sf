@@ -1,0 +1,33 @@
+(import "cpu/6502")
+
+(assemble_6502
+    ;; .PRG files starting with a BASIC statement are loaded at address 801
+    (set_ip $801)
+
+    ;; PRG header: 2 bytes indicating the start address
+    (label start)
+        (d (bits 16 start))
+
+    ;; TODO: basic header
+
+    ;; BSOUT writes a character
+        (def BSOUT $FFD2)
+
+    ;; Number of characters to write
+        (def hello_world_len (- hello_word_end hello_world))
+
+    ;; X = string offset
+        (ldx #$0)
+    (label loop)
+        (lda hello_world, X)
+        (jsr BSOUT)
+        (cpx #hello_world_len)
+        (bne loop)
+
+        (rts)
+
+    ;; The 'hello world text'
+    (label hello_world)
+        (latin1 "Hello, world")
+    (label hello_world_end)
+)
