@@ -38,7 +38,7 @@ pub fn fun_keyword() -> SyntaxCompiler {
             Ok(smallvec![Action::Value(fun)].into())
         } else {
             // Unknown type of function (binder error/input from the wrong place)
-            Err(BindError::UnknownSymbol)
+            Err(BindError::NotImplemented)
         }
     };
 

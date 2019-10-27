@@ -195,7 +195,7 @@ pub fn label_keyword() -> SyntaxCompiler {
             BindingFn(move |bindings| {
                 // Binding function (just the atom that's assigned to this label)
                 let reference = bindings.look_up(atom_id);
-                let reference = match reference { Some((reference, 0)) => reference.clone(), _ => return (bindings, Err(BindError::UnknownSymbol)) };
+                let reference = match reference { Some((reference, 0)) => reference.clone(), _ => return (bindings, Err(BindError::UnknownSymbol(name_for_atom_with_id(atom_id)))) };
 
                 // TODO: check that we've got the reference we allocated in the pre-binding (if it's been rebound the label is invalid)
 

@@ -17,7 +17,7 @@ pub enum BindError {
     NotImplemented,
 
     /// A symbol has no known value
-    UnknownSymbol,
+    UnknownSymbol(String),
 
     /// A symbol has a value but is not bound to anything
     UnboundSymbol,

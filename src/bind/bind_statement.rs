@@ -136,7 +136,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                 }
             } else {
                 // Not a valid symbol
-                Err((BindError::UnknownSymbol, bindings))
+                Err((BindError::UnknownSymbol(name_for_atom_with_id(*atom_id)), bindings))
             }
         }
 
@@ -223,7 +223,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     }
                 } 
             } else {
-                return Err((BindError::UnknownSymbol, bindings));
+                return Err((BindError::UnknownSymbol(name_for_atom_with_id(*atom_id)), bindings));
             }
         },
 
