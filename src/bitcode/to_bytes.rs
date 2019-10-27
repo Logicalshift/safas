@@ -227,6 +227,14 @@ mod test {
     }
 
     #[test]
+    fn byte_align_byte() {
+        let byte = bitcode_to_bytes(vec![BitCode::Bits(8, 0x42), BitCode::Align(8, 0, 8), BitCode::Bits(8, 0x43)]);
+        assert!(byte[0] == 0x42);
+        assert!(byte[1] == 0x43);
+        assert!(byte.len() == 2);
+    }
+
+    #[test]
     fn align_with_pattern() {
         let byte = bitcode_to_bytes(vec![BitCode::Bits(4, 0x9), BitCode::Align(8, 0x42, 32)]);
         assert!(byte[0] == 0x29);
