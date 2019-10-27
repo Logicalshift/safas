@@ -57,7 +57,7 @@ pub enum RuntimeError {
     NumberTooLarge,
 
     /// A file could not be found
-    FileNotFound,
+    FileNotFound(String),
 
     /// An IO error occurred (we would have known the io::Error at the time but it's not compatible with RuntimeError as it can't be compared or cloned)
     IOError

@@ -132,7 +132,7 @@ pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame, allow
         (content, file_path)
     } else {
         // File not found (TODO: search through the builtins)
-        return (RuntimeError::FileNotFound.into(), bindings, frame);
+        return (RuntimeError::FileNotFound(filename.to_string()).into(), bindings, frame);
     };
 
     // Parse the file
@@ -161,7 +161,7 @@ impl BindingMonad for LocateImportFile {
 
         match file_path {
             // Import file could not be found
-            ImportFile::NotFound => (bindings, Err(BindError::FileNotFound)),
+            ImportFile::NotFound => (bindings, Err(BindError::FileNotFound(filename))),
 
             // Return the file location
             _ => (bindings, Ok(file_path))

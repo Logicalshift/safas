@@ -74,7 +74,7 @@ pub enum BindError {
     ForwardReferencesNotAllowed,
 
     /// A file could not be found
-    FileNotFound,
+    FileNotFound(String),
 
     /// An IO error occurred
     IOError
@@ -96,7 +96,7 @@ impl From<RuntimeError> for BindError {
             NotInfallible                       => BindError::NotInfallible,
             NumberTooLarge                      => BindError::NumberTooLarge,
             NotImplemented                      => BindError::NotImplemented,
-            FileNotFound                        => BindError::FileNotFound,
+            FileNotFound(file)                  => BindError::FileNotFound(file),
             IOError                             => BindError::IOError,
             BindingError(err)                   => err,
             ParseError(_)                       |
