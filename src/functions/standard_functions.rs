@@ -1,6 +1,7 @@
 use super::list::*;
 use super::bits::*;
 use super::monad::*;
+use super::arithmetic::*;
 
 use crate::meta::*;
 use crate::exec::*;
@@ -34,6 +35,14 @@ pub fn standard_functions() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> 
     let functions   = flat_map_binding_actions(move || define_function("a",             a_fn()), functions);
     let functions   = flat_map_binding_actions(move || define_function("set_bit_pos",   set_bit_pos_fn()), functions);
     let functions   = flat_map_binding_actions(move || define_function("bit_pos",       bit_pos_fn()), functions);
+
+    let functions: Box<dyn BindingMonad<Binding=_>> = Box::new(functions);
+
+    // Arithmetic functions
+    let functions   = flat_map_binding_actions(move || define_function("+",             add_fn()), functions);
+    let functions   = flat_map_binding_actions(move || define_function("-",             sub_fn()), functions);
+    let functions   = flat_map_binding_actions(move || define_function("/",             div_fn()), functions);
+    let functions   = flat_map_binding_actions(move || define_function("*",             mul_fn()), functions);
 
     let functions: Box<dyn BindingMonad<Binding=_>> = Box::new(functions);
 
