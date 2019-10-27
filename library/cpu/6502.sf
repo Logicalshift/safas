@@ -1,5 +1,39 @@
-(def_syntax assemble_6502 (
+;; TODO: 
+;;      * Zero-page instructions (absolute with value < 0)
+;;      * Indirect syntax not matching properly
 
+(def_syntax assemble_6502 (
+        (brk) ((a 0 8) (d $00u8))
+
+        (bne <addr>)            ((a 0 8) (d $d0u8) (d (bits 8 (- addr ip 1))))
+
+        (cpx #<immediate>)      ((a 0 8) (d $e0u8) (d (bits 8 immediate)))
+        (cpx <absolute>)        ((a 0 8) (d $ecu8) (d (bits 16 absolute)))
+
+        (cpy #<immediate>)      ((a 0 8) (d $c0u8) (d (bits 8 immediate)))
+        (cpy <absolute>)        ((a 0 8) (d $ccu8) (d (bits 16 absolute)))
+
+        (lda #<immediate>)      ((a 0 8) (d $a9u8) (d (bits 8 immediate)))
+        (lda <absolute>)        ((a 0 8) (d $adu8) (d (bits 16 absolute)))
+        (lda <absolute>, X)     ((a 0 8) (d $bdu8) (d (bits 16 absolute)))
+        (lda <absolute>, Y)     ((a 0 8) (d $b9u8) (d (bits 16 absolute)))
+        ;(lda (<indirect>, X))    ((a 0 8) (d $a1u8) (d (bits 8 indirect)))
+        ;(lda (<indirect>), Y)    ((a 0 8) (d $b1u8) (d (bits 8 indirect)))
+
+        (ldx #<immediate>)      ((a 0 8) (d $a2u8) (d (bits 8 immediate)))
+        (ldx <absolute>)        ((a 0 8) (d $aeu8) (d (bits 16 absolute)))
+        (ldx <absolute>, Y)     ((a 0 8) (d $beu8) (d (bits 16 absolute)))
+
+        (jsr <addr>)            ((a 0 8) (d $20u8) (d (bits 16 addr)))
+
+        (ora #<immediate>)      ((a 0 8) (d $09u8) (d (bits 8 immediate)))
+        (ora <absolute>)        ((a 0 8) (d $0du8) (d (bits 16 absolute)))
+        (ora <absolute>, X)     ((a 0 8) (d $1du8) (d (bits 16 absolute)))
+        (ora <absolute>, Y)     ((a 0 8) (d $19u8) (d (bits 16 absolute)))
+        ;(ora (<indirect>, X))   ((a 0 8) (d $01u8) (d (bits 8 indirect)))
+        ;(ora (<indirect>), Y)   ((a 0 8) (d $11u8) (d (bits 8 indirect)))
+
+        (rts)                   ((a 0 8) (d $60u8))
     )
 )
 
