@@ -44,7 +44,7 @@ fn read_strings(value: Option<(CellRef, u32)>, frame: &Frame) -> Vec<String> {
 /// to a list of places to look. `built_ins` can be used to supply a set of built-in files as strings that are used if the file can't
 /// be found on the import path)
 ///
-pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame) -> (CellRef, SymbolBindings, Frame) {
+pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame, allow_current_dir: bool) -> (CellRef, SymbolBindings, Frame) {
     // The import_path atom can be defined to a list of paths to try to read imported files from
     let import_path = get_id_for_atom_with_name("import_path");
     let built_ins   = get_id_for_atom_with_name("built_ins");
@@ -58,8 +58,11 @@ pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame) -> (C
     // Try to open the file by searching the input paths
     let file_path = Path::new(filename);
 
-    let file_path = if file_path.is_absolute() || file_path.components().nth(0) == Some(Component::CurDir) {
-        // Absolute paths are not searched for: we'll just return it as existing if 
+    let file_path = if allow_current_dir && !file_path.is_absolute() && file_path.is_file() {
+        // If the current directory is allowed then try the current directory
+        Some(file_path.to_path_buf())
+    } else if file_path.is_absolute() || file_path.components().nth(0) == Some(Component::CurDir) || file_path.components().nth(0) == Some(Component::ParentDir) {
+        // Absolute paths are not searched for: we'll just return it as existing if an absolute path or a path starting at the current directory is used
         if file_path.is_file() {
             Some(file_path.to_path_buf())
         } else {
@@ -71,8 +74,8 @@ pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame) -> (C
         for import_prefix in import_path.iter() {
             let import_prefix = Path::new(import_prefix);
 
-            // To be a valid import path, the path must contain
-            if import_prefix.is_absolute() || import_prefix.components().nth(0) == Some(Component::CurDir) {
+            // To be a valid import path, the path must indicate exactly where it's located
+            if import_prefix.is_absolute() || import_prefix.components().nth(0) == Some(Component::CurDir) || import_prefix.components().nth(0) == Some(Component::ParentDir) {
                 let try_path = import_prefix.join(file_path);
                 if try_path.is_file() {
                     found = Some(try_path);

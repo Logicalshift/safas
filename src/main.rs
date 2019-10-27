@@ -57,7 +57,7 @@ fn main() {
 
     // Import any input files into the frame
     if let Some(input_file) = params.value_of("INPUT") {
-        let (import_result, new_bindings, new_frame) = import_file(input_file, bindings, frame);
+        let (import_result, new_bindings, new_frame) = import_file(input_file, bindings, frame, true);
 
         // Report any errors
         if let SafasCell::Error(err) = &*import_result {
