@@ -203,7 +203,32 @@ struct SyntaxSymbol {
     patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>,
 
     /// The bindings that were imported from outside of this symbol
-    imported_bindings: Arc<HashMap<usize, CellRef>>
+    imported_bindings: Arc<HashMap<usize, CellRef>>,
+
+    /// The type of referernce for this syntax symbol
+    reference_type: ReferenceType
+}
+
+///
+/// Given a partially-bound set of statements, returns if they'll return a monad or a value
+/// 
+/// We never return ReturnsMonad for a custom syntax, so syntaxes that generate a function can't use
+/// this form at the moment: a possible future enhancement might be to return this instead of value
+/// if the last statement evaluates this way
+///
+fn reference_type_for_partially_bound_statements(statements: &CellRef) -> ReferenceType {
+    let mut pos = statements;
+
+    while let SafasCell::List(statement, next) = &**pos {
+        // The whole set of statements should be treated as a monad if any one of them is
+        if statement.reference_type() == ReferenceType::Monad {
+            return ReferenceType::Monad;
+        }
+
+        pos = next;
+    }
+
+    ReferenceType::Value
 }
 
 impl SyntaxSymbol {
@@ -211,9 +236,20 @@ impl SyntaxSymbol {
     /// Creates a new syntax symbol that will match one of the specified patterns
     ///
     pub fn new(patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>) -> SyntaxSymbol {
+        // This syntax should have a monad reference type if any of its statements have a monad reference type 
+        let mut reference_type = ReferenceType::Value;
+
+        for (_, _, partially_bound) in patterns.iter() {
+            if reference_type_for_partially_bound_statements(partially_bound) == ReferenceType::Monad {
+                // If any of the definitions for a symbol returns a monad, then assume they all do
+                reference_type = ReferenceType::Monad;
+                break;
+            }
+        }
+
         // TODO : we currently initialize the imported bindings to nothing, expecting to fill them in later but this has the
         // issue that when using a macro from within another macro, it won't work properly
-        SyntaxSymbol { patterns: patterns, imported_bindings: Arc::new(HashMap::new()) }
+        SyntaxSymbol { patterns: patterns, imported_bindings: Arc::new(HashMap::new()), reference_type: reference_type }
     }
 
     ///
@@ -304,6 +340,10 @@ impl BindingMonad for Arc<SyntaxSymbol> {
 
         // No matching pattern
         (bindings, Err(BindError::SyntaxMatchFailed))
+    }
+
+    fn reference_type(&self, _bound_value: CellRef) -> ReferenceType {
+        self.reference_type
     }
 }
 
@@ -413,7 +453,7 @@ impl SyntaxClosure {
             let mut actions = CompiledActions::empty();
 
             while let SafasCell::List(car, cdr) = pos {
-                // Compile this statements
+                // Compile this statement
                 actions.extend(compile_statement(car.clone())?);
 
                 // Move on to the next statement
@@ -533,7 +573,8 @@ impl BindingMonad for SyntaxClosure {
                 let patterns    = symbol.patterns.clone();
                 let new_symbol  = SyntaxSymbol {
                     patterns:           patterns, 
-                    imported_bindings:  Arc::clone(&rebound_imported_bindings)
+                    imported_bindings:  Arc::clone(&rebound_imported_bindings),
+                    reference_type:     symbol.reference_type
                 };
 
                 (AtomId(*atom_id), Arc::new(new_symbol))
