@@ -10,6 +10,11 @@ use std::sync::*;
 use std::collections::{HashMap};
 use std::convert::*;
 
+lazy_static! {
+    static ref RETURNS_VALUE_ATOM: u64  = get_id_for_atom_with_name("RETURNS_VALUE");
+    static ref RETURNS_MONAD_ATOM: u64  = get_id_for_atom_with_name("RETURNS_MONAD");
+}
+
 ///
 /// The (def_syntax) keyword, expressed as a binding monad
 /// 
@@ -448,16 +453,23 @@ impl SyntaxClosure {
     /// Generates the syntax compiler for this closure
     ///
     pub fn syntax(self) -> SyntaxCompiler {
-        let generate_actions = |statements: CellRef| {
-            let mut pos     = &*statements;
+        let generate_actions = |bound_syntax: CellRef| {
             let mut actions = CompiledActions::empty();
 
-            while let SafasCell::List(car, cdr) = pos {
-                // Compile this statement
-                actions.extend(compile_statement(car.clone())?);
+            if let SafasCell::List(reference_type, statements) = &*bound_syntax {
+                // The reference_type indicates whether or not the statements evaluate to a monad
+                let is_monad    = reference_type.to_atom_id() == Some(*RETURNS_MONAD_ATOM);
 
-                // Move on to the next statement
-                pos = &*cdr;
+                // Iterate through the list of statements
+                let mut pos     = &**statements;
+
+                while let SafasCell::List(statement, next) = pos {
+                    // Compile this statement
+                    actions.extend(compile_statement(statement.clone())?);
+
+                    // Move on to the next statement
+                    pos = &*next;
+                }
             }
 
             Ok(actions)
@@ -495,10 +507,17 @@ impl BindingMonad for SyntaxClosure {
         // The arguments are the statements for these macros: compile them one after the other
         let mut pos                 = &*args;
         let mut bound               = vec![];
+        let mut reference_type      = ReferenceType::Value;
         while let SafasCell::List(car, cdr) = pos {
             // Bind car
             match bind_statement(car.clone(), interior_bindings) {
                 Ok((bound_statement, new_bindings)) => {
+                    // Note for later if this returns a monad or a reference
+                    if bound_statement.reference_type() == ReferenceType::Monad {
+                        reference_type = ReferenceType::Monad;
+                    }
+
+                    // Update hte bindings and add the statement
                     interior_bindings = new_bindings;
                     bound.push(bound_statement);
                 },
@@ -514,10 +533,12 @@ impl BindingMonad for SyntaxClosure {
         }
 
         let bound                   = SafasCell::list_with_cells(bound);
+        let reference_type          = match reference_type { ReferenceType::Monad => SafasCell::Atom(*RETURNS_MONAD_ATOM).into(), _ => SafasCell::Atom(*RETURNS_VALUE_ATOM).into() };
+        let bound                   = SafasCell::List(reference_type, bound).into();
 
         // Finish up: pop the interior bindings and return
         let (bindings, _imports)    = interior_bindings.pop();
-        (bindings, Ok(bound.into()))
+        (bindings, Ok(bound))
     }
 
     fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) {
