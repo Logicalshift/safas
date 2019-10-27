@@ -17,9 +17,26 @@ pub fn export_keyword() -> SyntaxCompiler {
 
         BindingFn::from_binding_fn(move |bindings| {
             let mut bindings = bindings;
-            bindings.export(atom_id);
 
-            (bindings, Ok(NIL.clone()))
+            // Look up the symbol value
+            let symbol_value = bindings.look_up(atom_id);
+
+            if let Some((symbol_value, depth)) = symbol_value {
+                if depth != 0 {
+                    // Must be exporting something from the current frame (ie, not require importing)
+                    (bindings, Err(BindError::NotInfallible))
+                } else {
+                    // Add to the 'local' symbols
+                    bindings.symbols.insert(atom_id, symbol_value);
+
+                    // Export to the parent binding
+                    bindings.export_from_parent(atom_id);
+
+                    (bindings, Ok(NIL.clone()))
+                }
+            } else {
+                (bindings, Err(BindError::UnknownSymbol(name_for_atom_with_id(atom_id))))
+            }
         })
 
     });
