@@ -462,13 +462,35 @@ impl SyntaxClosure {
 
                 // Iterate through the list of statements
                 let mut pos     = &**statements;
+                let mut first   = true;
 
                 while let SafasCell::List(statement, next) = pos {
                     // Compile this statement
                     actions.extend(compile_statement(statement.clone())?);
 
+                    if is_monad {
+                        if statement.reference_type() != ReferenceType::Monad {
+                            // All return values need to be wrapped into a monad
+                            actions.push(Action::Wrap);
+                        }
+
+                        if first {
+                            // First instruction pushes the monad value
+                            actions.push(Action::Push);
+                        } else {
+                            // Others just call next to perform the flat_mapping operation
+                            actions.push(Action::Next);
+                        }
+                    }
+
                     // Move on to the next statement
-                    pos = &*next;
+                    pos     = &*next;
+                    first   = false;
+                }
+
+                if is_monad {
+                    // For a monad value, the result is the monad sitting on the stack
+                    actions.push(Action::Pop);
                 }
             }
 
