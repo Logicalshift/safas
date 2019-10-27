@@ -37,6 +37,13 @@ fn main() {
             .short("i")
             .long("interactive")
             .help("Launches the interactive interpreter"))
+        .arg(Arg::with_name("import-path")
+            .short("I")
+            .long("import-path")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1)
+            .help("Adds another path to search for imported files"))
         .arg(Arg::with_name("INPUT")
             .help("Sets the input file to read from")
             .index(1))
@@ -54,6 +61,23 @@ fn main() {
     // Apply the standard bindings
     let (mut frame, mut bindings)   = setup_standard_bindings(frame, bindings);
     let mut output                  = NIL.clone();
+
+    // Add any extra impoort paths
+    if let Some(import_paths) = params.values_of("import-path") {
+        // These get added to the import path
+        let import_atom = get_id_for_atom_with_name("import_path");
+
+        for path in import_paths.rev() {
+            // Get the current path
+            let import_path = bindings.look_up(import_atom).map(|(cell, _depth)| cell).unwrap_or(NIL.clone());
+
+            // Add this path to the beginning
+            let import_path = SafasCell::List(SafasCell::String(path.to_string()).into(), import_path);
+
+            // Update the binding
+            bindings.symbols.insert(import_atom, import_path.into());
+        }
+    }
 
     // Import any input files into the frame
     if let Some(input_file) = params.value_of("INPUT") {
