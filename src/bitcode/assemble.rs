@@ -23,6 +23,9 @@ struct Assembler {
 
     /// The current bitcode position
     bit_pos: u64,
+
+    /// The current offset, added to bit_pos when generating label values
+    bit_offset: i64
 }
 
 impl Assembler {
@@ -34,7 +37,8 @@ impl Assembler {
             label_values:   HashMap::new(),
             changed_labels: HashSet::new(),
             bitcode:        vec![],
-            bit_pos:        0
+            bit_pos:        0,
+            bit_offset:     0
         }
     }
 
@@ -129,7 +133,31 @@ impl Assembler {
             BitCodeValue::SetLabelValue(label, value)       => self.set_label_value(label, value.clone()),
 
             // Map based on the current bit position
-            BitCodeValue::BitPos                            => Ok(SafasCell::Number(SafasNumber::BitNumber(64, self.bit_pos as u128)).into()),
+            BitCodeValue::BitPos                            => {
+                let pos     = self.bit_pos;
+                let offset  = self.bit_offset;
+
+                if offset < 0 && (-offset as u64) > pos {
+                    Err(RuntimeError::BeforeStartOfFile)
+                } else {
+                    let pos = (pos as i64) + offset;
+
+                    Ok(SafasCell::Number(SafasNumber::BitNumber(64, pos as u128)).into())
+                }
+            },
+
+            BitCodeValue::SetBitPos(value)                  => {
+                // Value must be a number
+                let value       = value.number_value().ok_or(RuntimeError::NotANumber(value.clone()))?;
+                let value       = value.to_usize() as u64;
+
+                // Update the offset
+                let offset      = (value as i64) - (self.bit_pos as i64);
+
+                self.bit_offset = offset;
+
+                Ok(NIL.clone())
+            },
 
             // Value is the result of applying the mapping function to the specified monad, and then trying again with the current monad
             BitCodeValue::FlatMap(monad, mappings)          => {

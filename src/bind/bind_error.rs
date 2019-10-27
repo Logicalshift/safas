@@ -71,6 +71,9 @@ pub enum BindError {
     /// A symbol that could not be matched was encountered in a syntax pattern
     SyntaxMatchFailed,
 
+    /// A number was expected
+    NotANumber,
+
     /// We tried to evaluate some SAFAS code but it failed
     RuntimeError,
 
@@ -111,6 +114,7 @@ impl From<RuntimeError> for BindError {
             NotImplemented                      => BindError::NotImplemented,
             FileNotFound(file)                  => BindError::FileNotFound(file),
             IOError                             => BindError::IOError,
+            NotANumber(_)                       => BindError::NotANumber,
             BindingError(err)                   => err,
             ParseError(_)                       |
             StackIsEmpty                        |
@@ -122,6 +126,7 @@ impl From<RuntimeError> for BindError {
             MismatchedMonad(_)                  |
             NotALabel(_)                        |
             CannotAllocateLabelsDuringAssembly  |
+            BeforeStartOfFile                   |
             NotEnoughArguments(_)               => BindError::RuntimeError
         }
     }

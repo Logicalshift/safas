@@ -31,6 +31,9 @@ pub enum BitCodeValue {
     /// Reads the current assembly position
     BitPos,
 
+    /// Sets the instruction pointer to the specified value (by updating the offset)
+    SetBitPos(CellRef),
+
     /// Value is the result of a chain of flat_map operations on a bitcode monad
     FlatMap(Arc<BitCodeMonad>, Vec<Arc<dyn Fn(CellRef) -> Result<BitCodeMonad, RuntimeError>+Send+Sync>>)
 }
@@ -45,6 +48,7 @@ impl Debug for BitCodeValue {
             LabelValue(value)           => write!(fmt, "LabelValue({})", value.to_string()),
             SetLabelValue(label, value) => write!(fmt, "SetLabelValue({}, {})", label.to_string(), value.to_string()),
             BitPos                      => write!(fmt, "BitPos"),
+            SetBitPos(value)            => write!(fmt, "SetBitPos({})", value.to_string()),
             FlatMap(monad, flat_map)    => write!(fmt, "FlatMap({:?}, [{}])", monad, flat_map.len())
         }
     }
@@ -213,6 +217,17 @@ impl BitCodeMonad {
     pub fn read_bit_pos() -> BitCodeMonad {
         BitCodeMonad {
             value:              BitCodeValue::BitPos,
+            bitcode:            BitCodeContent::Empty,
+            following_bitcode:  BitCodeContent::Empty
+        }
+    }
+
+    ///
+    /// Creates a bitcode monad that wraps a value
+    ///
+    pub fn set_bit_pos(value: CellRef) -> BitCodeMonad {
+        BitCodeMonad {
+            value:              BitCodeValue::SetBitPos(value),
             bitcode:            BitCodeContent::Empty,
             following_bitcode:  BitCodeContent::Empty
         }

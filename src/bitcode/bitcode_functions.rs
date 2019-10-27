@@ -156,8 +156,37 @@ pub fn a_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     }))
 }
 
+///
+/// The 'set_bit_pos' function
+/// 
+/// `(set_bit_pos $8000)` changes any read of the current file position to be `$8000` (also affecting the future reads)
+/// This differs from `(m $8000)` in that this just acts like the file is at bit position $8000 rather than actually
+/// moving to location $8000 in the resulting file
+///
+pub fn set_bit_pos_fn() -> impl FrameMonad<Binding=RuntimeResult> {
+    ReturnsMonad(FnMonad::from(|(position, ): (SafasNumber, )| {
+        // Create a bitcode monad cell
+        let bitcode_monad   = BitCodeMonad::set_bit_pos(SafasCell::Number(position).into());
+        bitcode_monad.to_cell()
+    }))
+}
+
+///
+/// The 'bit_pos' function
+/// 
+/// `(bit_pos)` returns the current bit position
+///
+pub fn bit_pos_fn() -> impl FrameMonad<Binding=RuntimeResult>  {
+    ReturnsMonad(FnMonad::from(|_: ()| {
+        // Create a bitcode monad cell
+        let bitcode_monad   = BitCodeMonad::read_bit_pos();
+        bitcode_monad.to_cell()
+    }))
+}
+
 #[cfg(test)]
 mod test {
+    use crate::meta::*;
     use crate::bitcode::*;
     use crate::interactive::*;
 
@@ -249,6 +278,26 @@ mod test {
         let (_, bitcode)    = assemble(&monad).unwrap();
 
         assert!(&bitcode == &vec![BitCode::Bits(64, 0)])
+    }
+
+    #[test]
+    fn write_label_value_set_bit_pos() {
+        let result          = eval("(set_bit_pos $8000) (label foo) (d foo)").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode == &vec![BitCode::Bits(64, 0x8000)])
+    }
+
+    #[test]
+    fn read_bit_pos() {
+        let result          = eval("(set_bit_pos $8000) (label foo) (d foo) (bit_pos)").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (value, _)      = assemble(&monad).unwrap();
+
+        assert!(value.number_value() == Some(SafasNumber::BitNumber(64, 0x8040)));
     }
 
     #[test]

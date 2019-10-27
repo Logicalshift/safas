@@ -38,6 +38,9 @@ pub enum RuntimeError {
     /// Value cannot be treated as a string
     NotAString(CellRef),
 
+    /// Value cannot be treated as a number
+    NotANumber(CellRef),
+
     /// FlatMap function returned the wrong monad type
     MismatchedMonad(CellRef),
 
@@ -58,6 +61,9 @@ pub enum RuntimeError {
 
     /// A file could not be found
     FileNotFound(String),
+
+    /// A bit position is before the start of the current file
+    BeforeStartOfFile,
 
     /// An IO error occurred (we would have known the io::Error at the time but it's not compatible with RuntimeError as it can't be compared or cloned)
     IOError
