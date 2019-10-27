@@ -3,8 +3,16 @@
 ;;;
 (def set_ip 
     (fun (new_ip) 
-        (set_bit_pos new_ip)        ;; TODO!
+        (set_bit_pos (/ new_ip 8))
     )
 )
 
+;;;
+;;; Retrieves the current instruction pointer value
+;;;
+(def ip
+    (/ (bit_pos) 8)
+)
+
 (export set_ip)
+(export ip)
