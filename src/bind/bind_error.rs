@@ -1,6 +1,7 @@
 use super::symbol_bindings::*;
 
 use crate::exec::*;
+use crate::parse::*;
 
 use std::convert::{Infallible};
 use std::result::{Result};
@@ -15,6 +16,9 @@ pub enum BindError {
 
     /// A feature is not yet implemented
     NotImplemented,
+
+    /// A parse error occurred
+    ParseError(ParseError),
 
     /// A symbol has no known value
     UnknownSymbol(String),
@@ -86,6 +90,12 @@ pub type BindResult<T> = Result<(T, SymbolBindings), (BindError, SymbolBindings)
 impl From<Infallible> for BindError {
     fn from(_: Infallible) -> BindError {
         BindError::NotInfallible
+    }
+}
+
+impl From<ParseError> for BindError {
+    fn from(err: ParseError) -> BindError {
+        BindError::ParseError(err)
     }
 }
 

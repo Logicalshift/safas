@@ -3,7 +3,6 @@ use crate::meta::*;
 use crate::exec::*;
 use crate::parse::*;
 
-use smallvec::*;
 use std::path::{Path, PathBuf, Component};
 use std::convert::{TryFrom};
 use std::sync::*;
@@ -21,8 +20,8 @@ pub enum ImportFile {
     /// File to be loaded from a particular path
     FromPath(PathBuf),
 
-    // File found in the builtins specified in the bindings
-    BuiltIn(String)
+    // File found in the builtins specified in the bindings (two strings are the path name and the file data)
+    BuiltIn(String, String)
 }
 
 impl Default for ImportFile {
@@ -146,9 +145,9 @@ pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame, allow
 struct LocateImportFile;
 
 impl BindingMonad for LocateImportFile {
-    type Binding = ImportFile;
+    type Binding = (String, ImportFile);
 
-    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<ImportFile, BindError>) {
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
         // Fetch the arguments to this expression
         let args = match bindings.args.as_ref() { Some(args) => args.clone(), None => return (bindings, Err(BindError::MissingArgument)) };
         let args = ListTuple::<(CellValue<String>, )>::try_from(args);
@@ -161,16 +160,16 @@ impl BindingMonad for LocateImportFile {
 
         match file_path {
             // Import file could not be found
-            ImportFile::NotFound => (bindings, Err(BindError::FileNotFound(filename))),
+            ImportFile::NotFound    => (bindings, Err(BindError::FileNotFound(filename))),
 
             // Return the file location
-            _ => (bindings, Ok(file_path))
+            _                       => (bindings, Ok((filename, file_path)))
         }
     }
 
-    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, ImportFile) {
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
         // No pre-binding is performed with the import files
-        (bindings, ImportFile::NotFound)
+        (bindings, ("".to_string(), ImportFile::NotFound))
     }
 }
 
@@ -178,12 +177,74 @@ impl BindingMonad for LocateImportFile {
 /// Creates the compiler for the import keyword
 ///
 pub fn import_keyword() -> SyntaxCompiler {
-    let bind = LocateImportFile.and_then(|file_path| {
-        wrap_binding(NIL.clone())
+    let bind = LocateImportFile.map_result(|(filename, file_path)| {
+        // Read the file content
+        let file_content = match file_path {
+            ImportFile::NotFound                => "".to_string(),
+            ImportFile::FromPath(path)          => fs::read_to_string(path.as_path()).map_err(|_io| BindError::IOError)?,
+            ImportFile::BuiltIn(_name, data)    => data
+        };
+
+        // Parse the file content
+        let parsed = parse_safas(&mut TokenReadBuffer::new(file_content.chars()), FileLocation::new(&filename))?;
+
+        // Pass through the parsed content
+        Ok((filename, parsed))
+    }).and_then(|(_filename, parsed_input)| {
+
+        // Bind the result
+        BindingFn::from_binding_fn(move |bindings| {
+            // The input is a list of statements
+            let mut bindings    = bindings;
+            let mut pos         = &*parsed_input;
+
+            // Pre-bind each of the statements
+            while let SafasCell::List(statement, next) = pos {
+                let (next_bindings, _result)    = pre_bind_statement(statement.clone(), bindings);
+                bindings                        = next_bindings;
+
+                pos                             = &*next;
+            }
+
+            // Bind each statement in turn
+            let mut bound_statements    = vec![];
+            let mut pos                 = &*parsed_input;
+
+            while let SafasCell::List(statement, next) = pos {
+                match bind_statement(statement.clone(), bindings) {
+                    Ok((result, new_bindings))  => { bindings = new_bindings; bound_statements.push(result); }
+                    Err((err, new_bindings))    => { return (new_bindings, Err(err)); }
+                }
+
+                pos                             = &*next;
+            }
+
+            // Result is the list of bound cells
+            (bindings, Ok(SafasCell::list_with_cells(bound_statements).into()))
+        })
+
     });
 
-    let compile = |binding| {
-        Ok(CompiledActions::empty())
+    let compile = |binding: CellRef| {
+        // Start with some empty actions for the import
+        let mut actions = CompiledActions::empty();
+
+        // The binding is the list of statements from the import
+        let mut pos = &*binding;
+
+        while let SafasCell::List(statement, next) = pos {
+            // Compile the next statement
+            let compiled = compile_statement(statement.clone())?;
+
+            // Add the actions to the compiled result
+            actions.extend(compiled);
+
+            // Move to the next statement
+            pos = &*next;
+        }
+
+        // Return the final result
+        Ok(actions)
     };
 
     SyntaxCompiler {

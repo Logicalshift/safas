@@ -3,7 +3,7 @@ use super::file_location::*;
 ///
 /// Indicates an error with parsing a SAFAS file
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ParseError {
     /// Found an unimplemented feature
     Unimplemented,

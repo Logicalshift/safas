@@ -3,7 +3,7 @@ use std::sync::*;
 ///
 /// Represents a location in a file
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FileLocation {
     pub filename:   Arc<String>,
     pub line:       u32,
