@@ -557,9 +557,9 @@ impl BindingMonad for SyntaxClosure {
         let mut pos                 = &*args;
         let mut bound               = vec![];
         let mut reference_type      = ReferenceType::Value;
-        while let SafasCell::List(car, cdr) = pos {
-            // Bind car
-            match bind_statement(car.clone(), interior_bindings) {
+        while let SafasCell::List(argument, next) = pos {
+            // Bind the argument
+            match bind_statement(argument.clone(), interior_bindings) {
                 Ok((bound_statement, new_bindings)) => {
                     // Note for later if this returns a monad or a reference
                     if bound_statement.reference_type() == ReferenceType::Monad {
@@ -577,8 +577,8 @@ impl BindingMonad for SyntaxClosure {
                 }
             }
 
-            // Next item in the list
-            pos = &*cdr;
+            // Move on to the next argument in the list
+            pos = &*next;
         }
 
         let bound                   = SafasCell::list_with_cells(bound);
