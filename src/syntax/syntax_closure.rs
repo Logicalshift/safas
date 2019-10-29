@@ -47,7 +47,7 @@ impl SyntaxClosure {
             let symbol      = Arc::new(symbol);
 
             // Turn into syntax that we can add to a binding environment
-            let symbol_cell = SafasCell::Syntax(SyntaxSymbol::syntax(symbol.clone()), NIL.clone()).into();
+            let symbol_cell = SafasCell::Syntax(Box::new(SyntaxSymbol::syntax(symbol.clone())), NIL.clone()).into();
 
             // Push to the results
             bound_symbols.push((symbol_id, symbol_cell));
@@ -65,55 +65,58 @@ impl SyntaxClosure {
     ///
     /// Generates the syntax compiler for this closure
     ///
-    pub fn syntax(self) -> SyntaxCompiler {
-        let generate_actions = |bound_syntax: CellRef| {
-            let mut actions = CompiledActions::empty();
+    pub fn syntax(self) -> impl BindingMonad<Binding=SyntaxCompiler> {
+        self.map(|bound_syntax| {
+            let bound_syntax = bound_syntax.clone();
 
-            if let SafasCell::List(reference_type, statements) = &*bound_syntax {
-                // The reference_type indicates whether or not the statements evaluate to a monad
-                let is_monad    = reference_type.to_atom_id() == Some(*RETURNS_MONAD_ATOM);
+            let generate_actions = move || {
+                let mut actions = CompiledActions::empty();
 
-                // Iterate through the list of statements
-                let mut pos     = &**statements;
-                let mut first   = true;
+                if let SafasCell::List(reference_type, statements) = &*bound_syntax {
+                    // The reference_type indicates whether or not the statements evaluate to a monad
+                    let is_monad    = reference_type.to_atom_id() == Some(*RETURNS_MONAD_ATOM);
 
-                while let SafasCell::List(statement, next) = pos {
-                    // Compile this statement
-                    actions.extend(compile_statement(statement.clone())?);
+                    // Iterate through the list of statements
+                    let mut pos     = &**statements;
+                    let mut first   = true;
 
-                    if is_monad {
-                        if statement.reference_type() != ReferenceType::Monad {
-                            // All return values need to be wrapped into a monad
-                            actions.push(Action::Wrap);
+                    while let SafasCell::List(statement, next) = pos {
+                        // Compile this statement
+                        actions.extend(compile_statement(statement.clone())?);
+
+                        if is_monad {
+                            if statement.reference_type() != ReferenceType::Monad {
+                                // All return values need to be wrapped into a monad
+                                actions.push(Action::Wrap);
+                            }
+
+                            if first {
+                                // First instruction pushes the monad value
+                                actions.push(Action::Push);
+                            } else {
+                                // Others just call next to perform the flat_mapping operation
+                                actions.push(Action::Next);
+                            }
                         }
 
-                        if first {
-                            // First instruction pushes the monad value
-                            actions.push(Action::Push);
-                        } else {
-                            // Others just call next to perform the flat_mapping operation
-                            actions.push(Action::Next);
-                        }
+                        // Move on to the next statement
+                        pos     = &*next;
+                        first   = false;
                     }
 
-                    // Move on to the next statement
-                    pos     = &*next;
-                    first   = false;
+                    if is_monad && !first {
+                        // For a monad value, the result is the monad sitting on the stack
+                        actions.push(Action::Pop);
+                    }
                 }
 
-                if is_monad && !first {
-                    // For a monad value, the result is the monad sitting on the stack
-                    actions.push(Action::Pop);
-                }
+                Ok(actions)
+            };
+
+            SyntaxCompiler {
+                generate_actions:   Arc::new(generate_actions)
             }
-
-            Ok(actions)
-        };
-
-        SyntaxCompiler {
-            binding_monad:      Box::new(self),
-            generate_actions:   Arc::new(generate_actions)
-        }
+        })
     }
 }
 
@@ -197,14 +200,13 @@ impl BindingMonad for SyntaxClosure {
                 }
 
                 // Syntax might need to be rebound to the current frame
-                SafasCell::Syntax(old_syntax, _) => {
+                SafasCell::Syntax(old_syntax, val) => {
                     // Try to rebind the syntax
-                    let (new_bindings, new_syntax) = old_syntax.binding_monad.rebind_from_outer_frame(bindings, frame_depth);
+                    let (new_bindings, new_syntax) = old_syntax.rebind_from_outer_frame(bindings, frame_depth);
 
                     // Update the binding if the syntax update
                     if let Some(new_syntax) = new_syntax {
-                        let new_syntax  = SyntaxCompiler { binding_monad: new_syntax, generate_actions: old_syntax.generate_actions.clone() };
-                        *binding        = SafasCell::Syntax(new_syntax, NIL.clone()).into();
+                        *binding        = SafasCell::Syntax(new_syntax, val.clone()).into();
                         rebound         = true;
                     }
 

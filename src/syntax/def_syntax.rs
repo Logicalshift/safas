@@ -22,8 +22,8 @@ use std::convert::*;
 /// 
 /// ```(<name> <statements>)```
 ///
-pub fn def_syntax_keyword() -> SyntaxCompiler {
-    let bind = get_expression_arguments().map_result(|args: ListWithTail<(AtomId, CellRef), CellRef>| {
+pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
+    get_expression_arguments().map_result(|args: ListWithTail<(AtomId, CellRef), CellRef>| {
 
         // First step: parse the arguments to the expression
 
@@ -78,8 +78,10 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
             // Initially all symbols generate errors
             for (symbol_id, _) in macros.iter() {
                 // Symbols are intially bound to some syntax that generates an error
-                let error = SyntaxCompiler { binding_monad: Box::new(BindingFn::from_binding_fn(|bindings| (bindings, Err(BindError::ForwardReferencesNotAllowed)))), generate_actions: Arc::new(|_| Err(BindError::ForwardReferencesNotAllowed)) };
-                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(error, NIL.clone()).into());
+                let error = BindingFn::from_binding_fn(|bindings| (bindings, Err(BindError::ForwardReferencesNotAllowed)))
+                    .map(|_| SyntaxCompiler { generate_actions: Arc::new(|| Err(BindError::ForwardReferencesNotAllowed)) });
+
+                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(Box::new(error), NIL.clone()).into());
             }
 
             for (symbol_id, symbol_patterns) in macros.iter() {
@@ -143,7 +145,7 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
                 let symbol = Arc::new(symbol);
 
                 // Define this as our symbol name
-                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(SyntaxSymbol::syntax(symbol.clone()), NIL.clone()).into());
+                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(Box::new(SyntaxSymbol::syntax(symbol.clone())), NIL.clone()).into());
                 symbol_syntax.push((AtomId(*symbol_id), symbol))
             }
 
@@ -176,23 +178,14 @@ pub fn def_syntax_keyword() -> SyntaxCompiler {
 
             // Bind to the name
             let AtomId(name_id) = name;
-            let syntax          = SafasCell::Syntax(syntax_closure.syntax(), NIL.clone());
+            let syntax          = SafasCell::Syntax(Box::new(syntax_closure.syntax()), NIL.clone());
             bindings.symbols.insert(*name_id, syntax.into());
             bindings.export(*name_id);
 
             (bindings, Ok(NIL.clone()))
 
         })
-    });
-
-    let compile = |_args: CellRef| {
-        Ok(smallvec![].into())
-    };
-
-    SyntaxCompiler {
-        binding_monad:      Box::new(bind),
-        generate_actions:   Arc::new(compile)
-    }
+    }).map(|_| SyntaxCompiler::default())
 }
 
 #[cfg(test)]
