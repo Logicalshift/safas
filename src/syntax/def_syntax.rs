@@ -359,4 +359,39 @@ mod test {
 
         assert!(val.reference_type() == ReferenceType::Monad);
     }
+
+    #[test]
+    fn bind_to_value_outside_syntax() {
+        let val = eval(
+            "(def y 123)
+            (def_syntax some_syntax (
+                (make_list <x>) ((list y x))
+            ))
+            (def y 3)
+            (some_syntax 
+                (make_list 2)
+            )"
+            ).unwrap().to_string();
+
+        println!("{:?}", val);
+
+        assert!(val == "(123 2)".to_string());
+    }
+
+    #[test]
+    fn use_syntax_in_closure() {
+        let val = eval(
+            "(def y 123)
+            (def_syntax some_syntax (
+                (make_list <x>) ((list y x))
+            ))
+            (some_syntax 
+                ((fun () (make_list 2)))
+            )"
+            ).unwrap().to_string();
+
+        println!("{:?}", val);
+
+        assert!(val == "(123 2)".to_string());
+    }
 }
