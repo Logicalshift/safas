@@ -18,21 +18,21 @@ use smallvec::*;
 pub fn standard_syntax() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> {
     // Define the standard syntax
     let syntax  = wrap_binding(smallvec![]);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("import",        SafasCell::Syntax(import_keyword(), NIL.clone())), syntax);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("export",        SafasCell::Syntax(export_keyword(), NIL.clone())), syntax);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("re_export",     SafasCell::Syntax(re_export_keyword(), NIL.clone())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("import",        SafasCell::Syntax(import_keyword())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("export",        SafasCell::Syntax(export_keyword())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("re_export",     SafasCell::Syntax(re_export_keyword())), syntax);
 
     let syntax: Box<dyn BindingMonad<Binding=_>> = Box::new(syntax);
 
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("def",           SafasCell::Syntax(def_keyword(), NIL.clone())), syntax);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::Syntax(def_syntax_keyword(), NIL.clone())), syntax);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("fun",           SafasCell::Syntax(fun_keyword(), NIL.clone())), syntax);
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("quote",         SafasCell::Syntax(quote_keyword(), NIL.clone())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("def",           SafasCell::Syntax(def_keyword())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::Syntax(def_syntax_keyword())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("fun",           SafasCell::Syntax(fun_keyword())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("quote",         SafasCell::Syntax(quote_keyword())), syntax);
 
     let syntax: Box<dyn BindingMonad<Binding=_>> = Box::new(syntax);
 
     // Define the bitcode syntax
-    let syntax  = flat_map_binding_actions(move || define_symbol_value("label",         SafasCell::Syntax(label_keyword(), NIL.clone())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("label",         SafasCell::Syntax(label_keyword())), syntax);
 
     syntax
 }

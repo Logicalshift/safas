@@ -182,8 +182,8 @@ impl BindingMonad for LocateImportFile {
 /// 
 /// `(import "foo")` attempts to import the file `foo.sf` from the current set of search paths.
 ///
-pub fn import_keyword() -> SyntaxCompiler {
-    let bind = LocateImportFile.map_result(|(filename, file_path)| {
+pub fn import_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
+    LocateImportFile.map_result(|(filename, file_path)| {
         // Read the file content
         let file_content = match file_path {
             ImportFile::NotFound                => "".to_string(),
@@ -229,32 +229,36 @@ pub fn import_keyword() -> SyntaxCompiler {
             (bindings, Ok(SafasCell::list_with_cells(bound_statements).into()))
         })
 
-    });
+    }).map(|binding: CellRef| {
+        // Create a copy of binidng for ourselves
+        let binding = binding.clone();
 
-    let compile = |binding: CellRef| {
-        // Start with some empty actions for the import
-        let mut actions = CompiledActions::empty();
+        let compile = move || {
+            let binding = binding.clone();
 
-        // The binding is the list of statements from the import
-        let mut pos = &*binding;
+            // Start with some empty actions for the import
+            let mut actions = CompiledActions::empty();
 
-        while let SafasCell::List(statement, next) = pos {
-            // Compile the next statement
-            let compiled = compile_statement(statement.clone())?;
+            // The binding is the list of statements from the import
+            let mut pos = &*binding;
 
-            // Add the actions to the compiled result
-            actions.extend(compiled);
+            while let SafasCell::List(statement, next) = pos {
+                // Compile the next statement
+                let compiled = compile_statement(statement.clone())?;
 
-            // Move to the next statement
-            pos = &*next;
+                // Add the actions to the compiled result
+                actions.extend(compiled);
+
+                // Move to the next statement
+                pos = &*next;
+            }
+
+            // Return the final result
+            Ok(actions)
+        };
+
+        SyntaxCompiler {
+            generate_actions: Arc::new(compile)
         }
-
-        // Return the final result
-        Ok(actions)
-    };
-
-    SyntaxCompiler {
-        binding_monad:      Box::new(bind),
-        generate_actions:   Arc::new(compile)
-    }
+    })
 }

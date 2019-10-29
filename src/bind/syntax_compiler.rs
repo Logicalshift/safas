@@ -1,7 +1,5 @@
 use super::bind_error::*;
-use super::binding_monad::*;
 
-use crate::meta::*;
 use crate::exec::*;
 
 use std::sync::*;
@@ -13,9 +11,15 @@ use std::sync::*;
 /// takes the result of the binding and applies it to generate the actions required to execute the syntax
 ///
 pub struct SyntaxCompiler {
-    /// Generates the bound statement for this syntax
-    pub binding_monad: Box<dyn BindingMonad<Binding=CellRef>>,
-
     /// Generates the actions for the bound syntax
-    pub generate_actions: Arc<dyn Fn(CellRef) -> Result<CompiledActions, BindError>+Send+Sync>
+    pub generate_actions: Arc<dyn Fn() -> Result<CompiledActions, BindError>+Send+Sync>
+}
+
+impl Default for SyntaxCompiler {
+    fn default() -> SyntaxCompiler {
+        // Default syntax compiler compiles nothing
+        SyntaxCompiler {
+            generate_actions: Arc::new(|| Ok(CompiledActions::empty()))
+        }
+    }
 }

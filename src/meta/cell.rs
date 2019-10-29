@@ -71,7 +71,10 @@ pub enum SafasCell {
     FrameMonad(Box<dyn FrameMonad<Binding=RuntimeResult>>),
 
     // Syntax can describe a custom binding and compiler action
-    Syntax(SyntaxCompiler, CellRef),
+    Syntax(Box<dyn BindingMonad<Binding=SyntaxCompiler>>),
+
+    // Binding result for a syntax item
+    BoundSyntax(SyntaxCompiler),
 
     /// An arbitrary Rust type
     Any(Box<dyn Any+Send+Sync>)
