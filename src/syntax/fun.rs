@@ -23,30 +23,33 @@ lazy_static! {
 pub fn fun_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
     // Function binding is a bit complicated so we use our own monad implementation
     // TODO (maybe): FunBinder doesn't need to return a cellref any more so we can return a custom structure if needed
-    FunBinder.map(|bindings| {
+    FunBinder.map_result(|bindings| {
         let bound_value = bindings.clone();
+
+        // Our monad generates something like (MONAD CLOSURE <some_closure>)
+        let bound_value: ListTuple<(AtomId, AtomId, CellRef)>   = bound_value.clone().try_into()?;
+        let ListTuple((monad_type, fun_type, fun))             = bound_value;
 
         // Compiling needs to call closures and just store lambdas
         let compile = move || -> Result<_, BindError> {
-            // Our monad generates something like (MONAD CLOSURE <some_closure>)
-            let bound_value: ListTuple<(AtomId, AtomId, CellRef)>   = bound_value.clone().try_into()?;
-            let ListTuple((_monad_type, fun_type, fun))             = bound_value;
-
             if fun_type == AtomId(*CLOSURE_ATOM) {
                 // The closure needs to be called to bind its values
-                Ok(smallvec![Action::Value(fun), Action::Call].into())
+                Ok(smallvec![Action::Value(fun.clone()), Action::Call].into())
             } else if fun_type == AtomId(*LAMBDA_ATOM) {
                 // Lambdas can just be loaded directly
-                Ok(smallvec![Action::Value(fun)].into())
+                Ok(smallvec![Action::Value(fun.clone())].into())
             } else {
                 // Unknown type of function (binder error/input from the wrong place)
                 Err(BindError::NotImplemented)
             }
         };
 
-        SyntaxCompiler {
-            generate_actions:   Arc::new(compile)
-        }
+        let reference_type = if monad_type == AtomId(*MONAD_ATOM) { ReferenceType::ReturnsMonad } else { ReferenceType::Value };
+
+        Ok(SyntaxCompiler {
+            generate_actions:   Arc::new(compile),
+            reference_type:     reference_type
+        })
     })
 }
 

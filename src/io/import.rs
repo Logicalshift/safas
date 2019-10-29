@@ -258,7 +258,8 @@ pub fn import_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
         };
 
         SyntaxCompiler {
-            generate_actions: Arc::new(compile)
+            generate_actions:   Arc::new(compile),
+            reference_type:     ReferenceType::Value
         }
     })
 }

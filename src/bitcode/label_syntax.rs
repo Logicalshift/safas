@@ -174,7 +174,8 @@ fn label_binding(label_cell: FrameReference) -> impl BindingMonad<Binding=Syntax
         };
 
         SyntaxCompiler {
-            generate_actions:   Arc::new(compile)
+            generate_actions:   Arc::new(compile),
+            reference_type:     ReferenceType::Monad
         }
     })
 }
@@ -257,7 +258,8 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             };
 
             SyntaxCompiler {
-                generate_actions:   Arc::new(compiler)
+                generate_actions:   Arc::new(compiler),
+                reference_type:     ReferenceType::Monad
             }
         });
 

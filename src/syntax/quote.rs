@@ -24,7 +24,8 @@ pub fn quote_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
         };
 
         SyntaxCompiler {
-            generate_actions:   Arc::new(compiler)
+            generate_actions:   Arc::new(compiler),
+            reference_type:     ReferenceType::Value
         }
     })
 }

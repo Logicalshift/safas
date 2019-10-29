@@ -78,7 +78,7 @@ pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             for (symbol_id, _) in macros.iter() {
                 // Symbols are intially bound to some syntax that generates an error
                 let error = BindingFn::from_binding_fn(|bindings| -> (SymbolBindings, Result<CellRef, BindError>) { (bindings, Err(BindError::ForwardReferencesNotAllowed)) })
-                    .map(|_| SyntaxCompiler { generate_actions: Arc::new(|| Err(BindError::ForwardReferencesNotAllowed)) });
+                    .map(|_| SyntaxCompiler { generate_actions: Arc::new(|| Err(BindError::ForwardReferencesNotAllowed)), reference_type: ReferenceType::Value });
 
                 evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(Box::new(error), NIL.clone()).into());
             }

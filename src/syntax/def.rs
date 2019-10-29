@@ -45,17 +45,17 @@ pub fn def_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
                 })
             })
         })
-    }).map(|def_binding| {
-        let def_binding = def_binding.clone();
+    }).map_result(|def_binding| {
+        // Fetch the frame reference and the bound value from the value
+        let bound_values: ListTuple<(FrameReference, CellRef)>  = def_binding.clone().try_into()?;
+        let ListTuple((FrameReference(cell, _, _), value))      = bound_values;
+
+        let reference_type                                      = value.reference_type();
 
         // Create the action compiler (load the value and store in the cell)
         let compiler = move || -> Result<_, BindError> {
-            // Fetch the frame reference and the bound value from the value
-            let bound_values: ListTuple<(FrameReference, CellRef)>  = def_binding.clone().try_into()?;
-            let ListTuple((FrameReference(cell, _, _), value))      = bound_values;
-
             // Compile the actions to generate the value
-            let mut actions                                         = compile_statement(value)?;
+            let mut actions                                         = compile_statement(value.clone())?;
 
             // Store in the cell
             actions.push(Action::StoreCell(cell));
@@ -63,9 +63,10 @@ pub fn def_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             Ok(actions)
         };
 
-        SyntaxCompiler {
-            generate_actions:   Arc::new(compiler)
-        }
+        Ok(SyntaxCompiler {
+            generate_actions:   Arc::new(compiler),
+            reference_type:     reference_type
+        })
     })
 }
 

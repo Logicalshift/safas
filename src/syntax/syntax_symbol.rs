@@ -125,7 +125,8 @@ impl SyntaxSymbol {
             };
 
             SyntaxCompiler {
-                generate_actions: Arc::new(compile)
+                generate_actions:   Arc::new(compile),
+                reference_type:     if is_monad { ReferenceType::Monad } else { ReferenceType::Value }
             }
         })
     }

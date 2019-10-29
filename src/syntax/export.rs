@@ -90,7 +90,8 @@ pub fn re_export_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
         let compile = move || compile_statement(expr.clone());
 
         SyntaxCompiler {
-            generate_actions:   Arc::new(compile)
+            generate_actions:   Arc::new(compile),
+            reference_type:     ReferenceType::Value
         }
     })
 }

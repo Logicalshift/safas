@@ -67,7 +67,13 @@ impl SyntaxClosure {
     ///
     pub fn syntax(self) -> impl BindingMonad<Binding=SyntaxCompiler> {
         self.map(|bound_syntax| {
-            let bound_syntax = bound_syntax.clone();
+            let bound_syntax    = bound_syntax.clone();
+            let is_monad        = if let SafasCell::List(reference_type, statements) = &*bound_syntax {
+                // The reference_type indicates whether or not the statements evaluate to a monad
+                reference_type.to_atom_id() == Some(*RETURNS_MONAD_ATOM)
+            } else { 
+                false
+            };
 
             let generate_actions = move || {
                 let mut actions = CompiledActions::empty();
@@ -114,7 +120,8 @@ impl SyntaxClosure {
             };
 
             SyntaxCompiler {
-                generate_actions:   Arc::new(generate_actions)
+                generate_actions:   Arc::new(generate_actions),
+                reference_type:     if is_monad { ReferenceType::Monad } else { ReferenceType::Value }
             }
         })
     }
