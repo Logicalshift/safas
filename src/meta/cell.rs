@@ -139,7 +139,7 @@ impl SafasCell {
             SafasCell::FrameMonad(frame_monad)                      => if frame_monad.returns_monad() { ReferenceType::ReturnsMonad } else { ReferenceType::Value },
             SafasCell::List(car, cdr)                               => {
                 if let SafasCell::Syntax(syntax, _) = &**car {
-                    syntax.binding_monad.reference_type(cdr.clone())
+                    syntax.reference_type(cdr.clone())
                 } else {
                     match car.reference_type() {
                         ReferenceType::ReturnsMonad => ReferenceType::Monad,            // Calling something that returns a monad, so evaluates to a monad
@@ -230,7 +230,8 @@ impl SafasCell {
             FrameReference(cell, frame, ReferenceType::ReturnsMonad)    => format!("monadfncell#({},{})", cell, frame),
             Monad(cell, monad)                                          => format!("monad#{}#{}", cell.to_string(), monad.to_string()),
             FrameMonad(monad)                                           => monad.description(),
-            Syntax(syntax, parameter)                                   => format!("compile#{}#{}", syntax.binding_monad.description(), parameter.to_string()),
+            Syntax(syntax, parameter)                                   => format!("compile#{}#{}", syntax.description(), parameter.to_string()),
+            BoundSyntax(syntax)                                         => format!("bound_syntax#{:p}", syntax),
             Any(val)                                                    => format!("any#{:p}", val),
             Error(err)                                                  => format!("error#{:?}", err),
             List(first, second)                                         => {

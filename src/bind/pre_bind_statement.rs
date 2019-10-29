@@ -38,6 +38,7 @@ pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> (SymbolB
                     Monad(_, _)             |
                     FrameMonad(_)           |
                     Syntax(_, _)            |
+                    BoundSyntax(_)          |
                     Error(_)                |
                     FrameReference(_, _, _) => (bindings, symbol_value),
                 }
@@ -84,6 +85,7 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                     Char(_)                                     |
                     Monad(_, _)                                 |
                     Error(_)                                    |
+                    BoundSyntax(_)                              |
                     FrameMonad(_)                               => { pre_bind_call(symbol_value, cdr, bindings) },
 
                     // Lists bind themselves before calling
@@ -98,12 +100,12 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                         let mut bindings        = bindings.push_interior_frame();
                         bindings.args           = Some(cdr);
                         bindings.depth          = Some(symbol_level);
-                        let (bindings, bound)   = syntax_compiler.binding_monad.pre_bind(bindings);
+                        let (bindings, bound)   = syntax_compiler.pre_bind(bindings);
                         let (bindings, imports) = bindings.pop();
 
                         if imports.len() > 0 { panic!("Should be no imports when pre-binding"); }
 
-                        (bindings, SafasCell::List(symbol_value, bound).into())
+                        (bindings, SafasCell::List(symbol_value, SafasCell::BoundSyntax(bound).into()).into())
                     }
                 } 
             } else {

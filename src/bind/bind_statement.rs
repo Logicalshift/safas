@@ -2,7 +2,6 @@ use super::symbol_bindings::*;
 use super::bind_error::*;
 use super::binding_monad::*;
 use super::binding_monad_sugar::*;
-use super::syntax_compiler::*;
 use super::compile_statement::*;
 
 use crate::meta::*;
@@ -13,7 +12,7 @@ use std::sync::*;
 use std::result::{Result};
 
 lazy_static! {
-    static ref WRAP_KEYWORD: CellRef = SafasCell::Syntax(wrap_keyword(), NIL.clone()).into();
+    static ref WRAP_KEYWORD: CellRef = SafasCell::Syntax(Box::new(wrap_keyword()), NIL.clone()).into();
 }
 
 ///
@@ -74,6 +73,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                     List(_, _)                                  |
                     Monad(_, _)                                 |
                     Error(_)                                    |
+                    BoundSyntax(_)                              |
                     FrameMonad(_)                               => Ok((symbol_value, bindings)),
 
                     FrameReference(cell_num, frame, cell_type)  => {
@@ -91,24 +91,18 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                         }
                     },
 
-                    Syntax(syntax_compiler, parameter)     => {
+                    Syntax(binding_monad, parameter)     => {
                         // If we're on a different syntax level, try rebinding the monad (the syntax might need to import symbols from an outer frame, for example)
                         let mut bindings = bindings;
 
                         if symbol_level != 0 {
                             // Try to rebind the syntax from an outer frame
-                            let (mut new_bindings, rebound_monad) = syntax_compiler.binding_monad.rebind_from_outer_frame(bindings, symbol_level);
+                            let (mut new_bindings, rebound_monad) = binding_monad.rebind_from_outer_frame(bindings, symbol_level);
 
                             // If the compiler rebinds itself...
                             if let Some(rebound_monad) = rebound_monad {
-                                // ... create a new syntax using the rebound binding monad
-                                let new_syntax = SyntaxCompiler {
-                                    binding_monad:      rebound_monad,
-                                    generate_actions:   Arc::clone(&syntax_compiler.generate_actions)
-                                };
-
                                 // Add to the symbols in the current bindings so we don't need to rebind the syntax multiple times
-                                let new_syntax = Syntax(new_syntax, parameter.clone()).into();
+                                let new_syntax = Syntax(rebound_monad, parameter.clone()).into();
                                 new_bindings.symbols.insert(*atom_id, new_syntax);
                                 new_bindings.export(*atom_id);
 
@@ -120,16 +114,16 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                             bindings = new_bindings
                         }
 
-                        let mut bindings        = bindings.push_interior_frame();
-                        bindings.args           = None;
-                        bindings.depth          = Some(symbol_level);
-                        let (bindings, bound)   = syntax_compiler.binding_monad.bind(bindings);
-                        let (bindings, imports) = bindings.pop();
+                        let mut bindings            = bindings.push_interior_frame();
+                        bindings.args               = None;
+                        bindings.depth              = Some(symbol_level);
+                        let (bindings, compiler)    = binding_monad.bind(bindings);
+                        let (bindings, imports)     = bindings.pop();
 
                         if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
 
-                        match bound {
-                            Ok(bound)       => Ok((SafasCell::List(symbol_value, bound).into(), bindings)),
+                        match compiler {
+                            Ok(compiler)       => Ok((SafasCell::BoundSyntax(compiler).into(), bindings)),
                             Err(error)      => Err((error, bindings))
                         }
                     }
@@ -170,6 +164,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     Char(_)                                     |
                     Monad(_, _)                                 |
                     Error(_)                                    |
+                    BoundSyntax(_)                              |
                     FrameMonad(_)                               => { bind_call(symbol_value, cdr, bindings) },
 
                     // Lists bind themselves before calling
@@ -185,18 +180,12 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
 
                         if symbol_level != 0 {
                             // Try to rebind the syntax from an outer frame
-                            let (mut new_bindings, rebound_monad) = syntax_compiler.binding_monad.rebind_from_outer_frame(bindings, symbol_level);
+                            let (mut new_bindings, rebound_monad) = syntax_compiler.rebind_from_outer_frame(bindings, symbol_level);
 
                             // If the compiler rebinds itself...
                             if let Some(rebound_monad) = rebound_monad {
-                                // ... create a new syntax using the rebound binding monad
-                                let new_syntax = SyntaxCompiler {
-                                    binding_monad:      rebound_monad,
-                                    generate_actions:   Arc::clone(&syntax_compiler.generate_actions)
-                                };
-
                                 // Add the bound syntax to the symbols in the current bindings so we don't need to rebind the syntax multiple times
-                                let new_syntax = Syntax(new_syntax, parameter.clone()).into();
+                                let new_syntax = Syntax(rebound_monad, parameter.clone()).into();
                                 new_bindings.symbols.insert(*atom_id, new_syntax);
                                 new_bindings.export(*atom_id);
 
@@ -208,16 +197,16 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                             bindings = new_bindings
                         }
 
-                        let mut bindings        = bindings.push_interior_frame();
-                        bindings.args           = Some(cdr);
-                        bindings.depth          = Some(symbol_level);
-                        let (bindings, bound)   = syntax_compiler.binding_monad.bind(bindings);
-                        let (bindings, imports) = bindings.pop();
+                        let mut bindings            = bindings.push_interior_frame();
+                        bindings.args               = Some(cdr);
+                        bindings.depth              = Some(symbol_level);
+                        let (bindings, compiler)    = syntax_compiler.bind(bindings);
+                        let (bindings, imports)     = bindings.pop();
 
                         if imports.len() > 0 { panic!("Should not need to import symbols into an interior frame"); }
 
-                        match bound {
-                            Ok(bound)       => Ok((SafasCell::List(symbol_value, bound).into(), bindings)),
+                        match compiler {
+                            Ok(compiler)    => Ok((SafasCell::BoundSyntax(compiler).into(), bindings)),
                             Err(error)      => Err((error, bindings))
                         }
                     }
