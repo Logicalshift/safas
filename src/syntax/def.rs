@@ -14,13 +14,13 @@ use std::convert::*;
 /// Assigns `<value>` to the atom called `<name>`. It is possible to redefine an existing atom. The value
 /// will be available to everything in the same frame after this statement.
 ///
-pub fn def_keyword() -> SyntaxCompiler {
+pub fn def_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
     // Create the binding expression
     // 
     //   This retrieves the arguments, binds the value, allocates a cell and associates the name with 
     //   the cell and generates a list containing (cell_binding, value_binding) to pass to the compiler
     //   
-    let bind = get_expression_arguments().and_then(|args: ListTuple<(AtomId, CellRef)>| {
+    get_expression_arguments().and_then(|args: ListTuple<(AtomId, CellRef)>| {
         // The arguments are just the name and the value
         let ListTuple((name, value)) = args;
 
@@ -45,27 +45,28 @@ pub fn def_keyword() -> SyntaxCompiler {
                 })
             })
         })
-    });
+    }).map(|def_binding| {
+        let def_binding = def_binding.clone();
 
-    // Create the action compiler (load the value and store in the cell)
-    let compiler = |value: CellRef| -> Result<_, BindError> {
-        // Fetch the frame reference and the bound value from the value
-        let bound_values: ListTuple<(FrameReference, CellRef)>  = value.try_into()?;
-        let ListTuple((FrameReference(cell, _, _), value))      = bound_values;
+        // Create the action compiler (load the value and store in the cell)
+        let compiler = move || -> Result<_, BindError> {
+            // Fetch the frame reference and the bound value from the value
+            let bound_values: ListTuple<(FrameReference, CellRef)>  = def_binding.clone().try_into()?;
+            let ListTuple((FrameReference(cell, _, _), value))      = bound_values;
 
-        // Compile the actions to generate the value
-        let mut actions                                         = compile_statement(value)?;
+            // Compile the actions to generate the value
+            let mut actions                                         = compile_statement(value)?;
 
-        // Store in the cell
-        actions.push(Action::StoreCell(cell));
+            // Store in the cell
+            actions.push(Action::StoreCell(cell));
 
-        Ok(actions)
-    };
+            Ok(actions)
+        };
 
-    SyntaxCompiler {
-        binding_monad:      Box::new(bind),
-        generate_actions:   Arc::new(compiler)
-    }
+        SyntaxCompiler {
+            generate_actions:   Arc::new(compiler)
+        }
+    })
 }
 
 ///

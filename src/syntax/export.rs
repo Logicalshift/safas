@@ -1,6 +1,5 @@
 use crate::bind::*;
 use crate::meta::*;
-use crate::exec::*;
 
 use std::sync::*;
 
@@ -10,8 +9,8 @@ use std::sync::*;
 /// Most commonly used in files intended to be loaded by `import`, where this can be used to specify the symbols that are
 /// available outside of that file.
 ///
-pub fn export_keyword() -> SyntaxCompiler {
-    let bind = get_expression_arguments().and_then(|ListTuple((atom, )): ListTuple<(AtomId, )>| {
+pub fn export_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
+    get_expression_arguments().and_then(|ListTuple((atom, )): ListTuple<(AtomId, )>| {
         // All the binding does is add to the export list for the current bindings
         let AtomId(atom_id) = atom;
 
@@ -39,15 +38,10 @@ pub fn export_keyword() -> SyntaxCompiler {
             }
         })
 
-    });
-
-    // No actions for the compilation
-    let compile = |_| Ok(CompiledActions::empty());
-
-    SyntaxCompiler {
-        binding_monad:      Box::new(bind),
-        generate_actions:   Arc::new(compile)
-    }
+    }).map(|_| {
+        // 'Export' just adds to the bindings and performs no actual compilation
+        SyntaxCompiler::default()
+    })
 }
 
 ///
@@ -55,8 +49,8 @@ pub fn export_keyword() -> SyntaxCompiler {
 /// 
 /// Typically used with import: `(re_export (import "some_library"))`
 ///
-pub fn re_export_keyword() -> SyntaxCompiler {
-    let bind = get_expression_arguments().and_then(|ListTuple((expr, )): ListTuple<(CellRef, )>| {
+pub fn re_export_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
+    get_expression_arguments().and_then(|ListTuple((expr, )): ListTuple<(CellRef, )>| {
 
         BindingFn::from_binding_fn(move |bindings| {
             // Create an interior frame
@@ -89,13 +83,14 @@ pub fn re_export_keyword() -> SyntaxCompiler {
             (bindings, Ok(bound_expr))
         })
 
-    });
+    }).map(|expr| {
+        let expr = expr.clone();
 
-    // Expression is just compiled as normal
-    let compile = |expr| compile_statement(expr);
+        // Expression is just compiled as normal
+        let compile = move || compile_statement(expr.clone());
 
-    SyntaxCompiler {
-        binding_monad:      Box::new(bind),
-        generate_actions:   Arc::new(compile)
-    }
+        SyntaxCompiler {
+            generate_actions:   Arc::new(compile)
+        }
+    })
 }

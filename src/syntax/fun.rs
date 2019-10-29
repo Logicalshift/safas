@@ -20,32 +20,34 @@ lazy_static! {
 /// Defines a function that will bind the atoms specified in the arg list to the arguments passed in.
 /// The result of the function is the value of the last of the list of statements.
 ///
-pub fn fun_keyword() -> SyntaxCompiler {
+pub fn fun_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
     // Function binding is a bit complicated so we use our own monad implementation
-    let bind    = FunBinder;
+    // TODO (maybe): FunBinder doesn't need to return a cellref any more so we can return a custom structure if needed
+    FunBinder.map(|bindings| {
+        let bound_value = bindings.clone();
 
-    // Compiling needs to call closures and just store lambdas
-    let compile = |bound_value: CellRef| -> Result<_, BindError> {
-        // Our monad generates something like (MONAD CLOSURE <some_closure>)
-        let bound_value: ListTuple<(AtomId, AtomId, CellRef)>   = bound_value.try_into()?;
-        let ListTuple((_monad_type, fun_type, fun))             = bound_value;
+        // Compiling needs to call closures and just store lambdas
+        let compile = move || -> Result<_, BindError> {
+            // Our monad generates something like (MONAD CLOSURE <some_closure>)
+            let bound_value: ListTuple<(AtomId, AtomId, CellRef)>   = bound_value.clone().try_into()?;
+            let ListTuple((_monad_type, fun_type, fun))             = bound_value;
 
-        if fun_type == AtomId(*CLOSURE_ATOM) {
-            // The closure needs to be called to bind its values
-            Ok(smallvec![Action::Value(fun), Action::Call].into())
-        } else if fun_type == AtomId(*LAMBDA_ATOM) {
-            // Lambdas can just be loaded directly
-            Ok(smallvec![Action::Value(fun)].into())
-        } else {
-            // Unknown type of function (binder error/input from the wrong place)
-            Err(BindError::NotImplemented)
+            if fun_type == AtomId(*CLOSURE_ATOM) {
+                // The closure needs to be called to bind its values
+                Ok(smallvec![Action::Value(fun), Action::Call].into())
+            } else if fun_type == AtomId(*LAMBDA_ATOM) {
+                // Lambdas can just be loaded directly
+                Ok(smallvec![Action::Value(fun)].into())
+            } else {
+                // Unknown type of function (binder error/input from the wrong place)
+                Err(BindError::NotImplemented)
+            }
+        };
+
+        SyntaxCompiler {
+            generate_actions:   Arc::new(compile)
         }
-    };
-
-    SyntaxCompiler {
-        binding_monad:      Box::new(bind),
-        generate_actions:   Arc::new(compile)
-    }
+    })
 }
 
 struct FunBinder;
