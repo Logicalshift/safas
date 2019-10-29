@@ -1,5 +1,7 @@
 mod def;
 mod def_syntax;
+mod syntax_symbol;
+mod syntax_closure;
 mod fun;
 mod quote;
 mod monad;
