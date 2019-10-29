@@ -345,4 +345,18 @@ mod test {
 
         assert!(val == "2");
     }
+
+    #[test]
+    fn syntax_monad() {
+        let val = eval(
+            "(def_syntax some_syntax (
+                (make_list <x>) ((list 1 x))
+            ))
+            (some_syntax (make_list (wrap 2)))"
+            ).unwrap();
+
+        println!("{:?}", val.to_string());
+
+        assert!(val.reference_type() == ReferenceType::Monad);
+    }
 }
