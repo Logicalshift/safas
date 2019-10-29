@@ -87,7 +87,13 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<CompiledActions,
         }
         
         // Syntax items perform their custom compilation steps
-        BoundSyntax(syntax_compiler)                            => (syntax_compiler.generate_actions)(),
+        BoundSyntax(syntax_compiler)                            => {
+            if syntax_compiler.reference_type == ReferenceType::Monad {
+                let actions = (syntax_compiler.generate_actions)()?; compile_monad_flat_map(actions, cdr)
+            } else {
+                let actions = (syntax_compiler.generate_actions)()?; compile_call(actions, cdr)
+            }
+        }
 
         // Frame references load the value from the frame and call that
         FrameReference(_cell_num, _frame, ReferenceType::ReturnsMonad)  |
