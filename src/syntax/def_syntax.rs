@@ -331,4 +331,18 @@ mod test {
 
         assert!(val == "(3 4 5)");
     }
+
+    #[test]
+    fn define_function_in_syntax() {
+        let val = eval(
+            "(def_syntax some_syntax (
+                (make_fun <x>) ((fun () x))
+            ))
+            (some_syntax ((make_fun 2)))"
+            ).unwrap().to_string();
+
+        println!("{:?}", val);
+
+        assert!(val == "2");
+    }
 }
