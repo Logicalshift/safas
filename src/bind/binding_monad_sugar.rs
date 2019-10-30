@@ -1,7 +1,44 @@
 use super::binding_monad::*;
 use super::bind_error::*;
 
+use crate::meta::*;
+use crate::bind::*;
+
 use std::sync::*;
+
+struct MapBinding<InputMonad, NextFn> {
+    input:  InputMonad,
+    next:   Arc<NextFn>
+}
+
+impl<InputMonad, OutputValue, NextFn> BindingMonad for MapBinding<InputMonad, NextFn>
+where   InputMonad:     'static+BindingMonad,
+        OutputValue:    'static+Default,
+        NextFn:         'static+Fn(InputMonad::Binding) -> Result<OutputValue, BindError>+Send+Sync {
+    type Binding = OutputValue;
+
+    fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<OutputValue, BindError>) {
+        let (bindings, val) = self.input.bind(bindings);
+        let map_val         = val.and_then(|val| (self.next)(val));
+        (bindings, map_val)
+    }
+
+    fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, OutputValue) { 
+        let (bindings, _val)    = self.input.pre_bind(bindings);
+        let map_val             = OutputValue::default();
+        (bindings, map_val)
+    }
+    
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) { 
+        let (bindings, rebound_input)   = self.input.rebind_from_outer_frame(bindings, frame_depth);
+        let rebound_input               = rebound_input.map(|rebound_input| MapBinding { input: rebound_input, next: self.next.clone() });
+        let rebound_input               = rebound_input.map(|rebound_input| -> Box<dyn BindingMonad<Binding=Self::Binding>> { Box::new(rebound_input) });
+
+        (bindings, rebound_input) 
+    }
+
+    fn reference_type(&self, bound_value: CellRef) -> ReferenceType { self.input.reference_type(bound_value) }
+}
 
 ///
 /// Adds the `and_then` operation to a binding monad
@@ -35,19 +72,11 @@ impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
     }
 
     fn map_result<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Result<Out, BindError>+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
-        let binding1    = Arc::new(self);
-        let binding2    = Arc::clone(&binding1);
+        let result = MapBinding {
+            input:  self,
+            next:   Arc::new(action)
+        };
 
-        let result = BindingFn::from_functions(move |bindings| {
-            let (bindings, val) = binding1.bind(bindings);
-            let map_val         = val.and_then(|val| action(val));
-            (bindings, map_val)
-        },
-        move |bindings| {
-            let (bindings, _val)    = binding2.pre_bind(bindings);
-            let map_val             = Out::default();
-            (bindings, map_val)
-        });
         Box::new(result)
     }
 }
