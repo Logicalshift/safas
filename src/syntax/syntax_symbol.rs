@@ -282,14 +282,25 @@ fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: Symbol
         }
 
         SafasCell::BoundSyntax(compiler) => {
-            // TODO: need to deal with cells that aren't substituted here too!
-            let substitute = compiler.substitute_frame_refs(|FrameReference(cell_id, frame, cell_type)| {
+            let mut bindings    = bindings;
+            let substitute      = compiler.substitute_frame_refs(|FrameReference(cell_id, frame, cell_type)| {
                 if frame == 0 {
                     // Is from the macro frame: bind via the subtitutions function
                     if let Some(actual_cell) = substitutions(cell_id) {
                         Some(actual_cell)
                     } else {
-                        panic!("Need to allocate!")
+                        let bound_cell_id = if let Some(bound_cell_id) = allocated_cells.get(&cell_id) {
+                            // We've already bound this cell to a value on frame
+                            *bound_cell_id
+                        } else {
+                            // This cell needs to be allocated on the current frame
+                            let bound_cell_id = bindings.alloc_cell();
+                            allocated_cells.insert(cell_id, bound_cell_id);
+                            bound_cell_id
+                        };
+
+                        // Return the bound cell
+                        Some(SafasCell::FrameReference(bound_cell_id, 0, cell_type).into())
                     }
                 } else {
                     // Bound from a different frame
