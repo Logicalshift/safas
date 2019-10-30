@@ -281,6 +281,11 @@ fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: Symbol
             (SafasCell::List(car, cdr).into(), bindings)
         }
 
+        SafasCell::BoundSyntax(compiler) => {
+            let substitute = compiler.substitute_frame_refs(substitutions);
+            (SafasCell::BoundSyntax(substitute).into(), bindings)
+        }
+
         // Frame references are bound by the substitution function
         SafasCell::FrameReference(cell_id, frame, cell_type) => {
             if *frame == 0 {
