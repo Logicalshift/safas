@@ -65,6 +65,8 @@ impl SyntaxCompiler {
             let new_parameter       = substitute_frame_refs(parameter_for_substitute.clone(), get_new_frame_ref);
             let generate_actions    = actions_for_substitute.clone();
 
+            println!("Rebind {} -> {}", parameter_for_substitute.to_string(), new_parameter.to_string());
+
             // Create a new syntax compiler
             SyntaxCompiler::with_compiler_and_reftype_arc(generate_actions, new_parameter, reference_type)
         };
@@ -107,6 +109,7 @@ fn substitute_frame_refs(original: CellRef, get_new_frame_ref: &dyn Fn(usize) ->
 
     match &*original {
         FrameReference(cell, 0, _)  => if let Some(substitute) = get_new_frame_ref(*cell) { substitute } else { original },
+        BoundSyntax(syntax)         => SafasCell::BoundSyntax(syntax.substitute_frame_refs(get_new_frame_ref)).into(),
         List(car, cdr)              => List(substitute_frame_refs(car.clone(), get_new_frame_ref), substitute_frame_refs(cdr.clone(), get_new_frame_ref)).into(),
         _                           => original,
     }
