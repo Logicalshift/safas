@@ -75,7 +75,7 @@ impl SyntaxClosure {
                 false
             };
 
-            let generate_actions = move || {
+            let generate_actions = move |bound_syntax: CellRef| {
                 let mut actions = CompiledActions::empty();
 
                 if let SafasCell::List(reference_type, statements) = &*bound_syntax {
@@ -119,10 +119,8 @@ impl SyntaxClosure {
                 Ok(actions)
             };
 
-            SyntaxCompiler {
-                generate_actions:   Arc::new(generate_actions),
-                reference_type:     if is_monad { ReferenceType::Monad } else { ReferenceType::Value }
-            }
+            let reference_type = if is_monad { ReferenceType::Monad } else { ReferenceType::Value };
+            SyntaxCompiler::with_compiler_and_reftype(generate_actions, bound_syntax, reference_type)
         })
     }
 }

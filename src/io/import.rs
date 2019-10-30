@@ -5,7 +5,6 @@ use crate::parse::*;
 
 use std::path::{Path, PathBuf, Component};
 use std::convert::{TryFrom};
-use std::sync::*;
 use std::fs;
 
 const DEFAULT_EXTENSION: &str = "sf";
@@ -233,7 +232,7 @@ pub fn import_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
         // Create a copy of binidng for ourselves
         let binding = binding.clone();
 
-        let compile = move || {
+        let compile = |binding: CellRef| {
             let binding = binding.clone();
 
             // Start with some empty actions for the import
@@ -257,9 +256,6 @@ pub fn import_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             Ok(actions)
         };
 
-        SyntaxCompiler {
-            generate_actions:   Arc::new(compile),
-            reference_type:     ReferenceType::Value
-        }
+        SyntaxCompiler::with_compiler(compile, binding)
     })
 }

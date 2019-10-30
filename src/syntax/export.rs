@@ -1,8 +1,6 @@
 use crate::bind::*;
 use crate::meta::*;
 
-use std::sync::*;
-
 ///
 /// Implements the `(export foo)` symbol, which lifts a symbol out of the current compilation context into the parent context
 /// 
@@ -87,11 +85,6 @@ pub fn re_export_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
         let expr = expr.clone();
 
         // Expression is just compiled as normal
-        let compile = move || compile_statement(expr.clone());
-
-        SyntaxCompiler {
-            generate_actions:   Arc::new(compile),
-            reference_type:     ReferenceType::Value
-        }
+        SyntaxCompiler::with_compiler(|expr| compile_statement(expr), expr)
     })
 }

@@ -2,7 +2,6 @@ use crate::bind::*;
 use crate::exec::*;
 use crate::meta::*;
 
-use std::sync::*;
 use std::convert::*;
 
 ///
@@ -17,7 +16,7 @@ pub fn wrap_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
         bind(wrap_statement)
     }).map(|wrap_statement| {
         let wrap_statement = wrap_statement.clone();
-        let compile = move || {
+        let compile = move |wrap_statement: CellRef| {
             // Compile the statement as usual
             let ListTuple((args, )) = wrap_statement.clone().try_into()?;
             let mut actions         = compile_statement(args)?;
@@ -27,9 +26,6 @@ pub fn wrap_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             Ok(actions)
         };
 
-        SyntaxCompiler {
-            generate_actions:   Arc::new(compile),
-            reference_type:     ReferenceType::Monad
-        }
+        SyntaxCompiler::with_compiler_and_reftype(compile, wrap_statement, ReferenceType::Monad)
     })
 }

@@ -3,7 +3,6 @@ use crate::exec::*;
 use crate::meta::*;
 
 use smallvec::*;
-use std::sync::*;
 
 ///
 /// The monad for the 'quote' syntax (quote literal)
@@ -19,14 +18,11 @@ pub fn quote_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
         let literal = literal.clone();
 
         // The compiler just loads the literal
-        let compiler = move || {
+        let compiler = move |_| {
             Ok(smallvec![Action::Value(literal.clone())].into())
         };
 
-        SyntaxCompiler {
-            generate_actions:   Arc::new(compiler),
-            reference_type:     ReferenceType::Value
-        }
+        SyntaxCompiler::with_compiler(compiler, NIL.clone())
     })
 }
 

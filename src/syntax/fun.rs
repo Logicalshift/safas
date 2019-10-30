@@ -4,7 +4,6 @@ use crate::exec::*;
 
 use smallvec::*;
 use std::convert::*;
-use std::sync::*;
 
 lazy_static! {
     static ref CLOSURE_ATOM: u64 = get_id_for_atom_with_name("CLOSURE");
@@ -27,11 +26,14 @@ pub fn fun_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
         let bound_value = bindings.clone();
 
         // Our monad generates something like (MONAD CLOSURE <some_closure>)
-        let bound_value: ListTuple<(AtomId, AtomId, CellRef)>   = bound_value.clone().try_into()?;
-        let ListTuple((monad_type, fun_type, fun))             = bound_value;
+        let fun_value: ListTuple<(AtomId, AtomId, CellRef)> = bound_value.clone().try_into()?;
+        let ListTuple((monad_type, _fun_type, _fun))        = fun_value;
 
         // Compiling needs to call closures and just store lambdas
-        let compile = move || -> Result<_, BindError> {
+        let compile = |bound_value: CellRef| -> Result<_, BindError> {
+            let fun_value: ListTuple<(AtomId, AtomId, CellRef)> = bound_value.clone().try_into()?;
+            let ListTuple((_monad_type, fun_type, fun))         = fun_value;
+
             if fun_type == AtomId(*CLOSURE_ATOM) {
                 // The closure needs to be called to bind its values
                 Ok(smallvec![Action::Value(fun.clone()), Action::Call].into())
@@ -46,10 +48,7 @@ pub fn fun_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
 
         let reference_type = if monad_type == AtomId(*MONAD_ATOM) { ReferenceType::ReturnsMonad } else { ReferenceType::Value };
 
-        Ok(SyntaxCompiler {
-            generate_actions:   Arc::new(compile),
-            reference_type:     reference_type
-        })
+        Ok(SyntaxCompiler::with_compiler_and_reftype(compile, bound_value, reference_type))
     })
 }
 
