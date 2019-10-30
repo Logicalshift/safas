@@ -31,20 +31,7 @@ impl<T: 'static+BindingMonad> BindingMonadAndThen for T {
     }
 
     fn map<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Out+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
-        let binding1    = Arc::new(self);
-        let binding2    = Arc::clone(&binding1);
-
-        let result = BindingFn::from_functions(move |bindings| {
-            let (bindings, val) = binding1.bind(bindings);
-            let map_val         = val.map(|val| action(val));
-            (bindings, map_val)
-        },
-        move |bindings| {
-            let (bindings, _val)    = binding2.pre_bind(bindings);
-            let map_val             = Out::default();
-            (bindings, map_val)
-        });
-        Box::new(result)
+        self.map_result(move |val| Ok(action(val)))
     }
 
     fn map_result<Out: 'static+Default, NextFn: 'static+Fn(Self::Binding) -> Result<Out, BindError>+Send+Sync>(self, action: NextFn) -> Box<dyn BindingMonad<Binding=Out>> {
