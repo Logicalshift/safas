@@ -6,6 +6,7 @@ use crate::meta::*;
 
 use smallvec::*;
 use std::marker::{PhantomData};
+use std::sync::*;
 
 ///
 /// The binding monad describes how to bind a program against its symbols
@@ -159,14 +160,14 @@ pub fn wrap_binding<Binding: Default+Send+Sync+Clone>(value: Binding) -> impl Bi
 
 struct FlatMapValue<InputMonad, OutputMonad, NextFn> {
     input:  InputMonad,
-    next:   NextFn,
+    next:   Arc<NextFn>,
     output: PhantomData<OutputMonad>
 }
 
 impl<InputMonad, OutputMonad, NextFn> BindingMonad for FlatMapValue<InputMonad, OutputMonad, NextFn>
-where   InputMonad:     BindingMonad,
-        OutputMonad:    BindingMonad,
-        NextFn:         Fn(InputMonad::Binding) -> OutputMonad+Send+Sync {
+where   InputMonad:     'static+BindingMonad,
+        OutputMonad:    'static+BindingMonad,
+        NextFn:         'static+Fn(InputMonad::Binding) -> OutputMonad+Send+Sync {
     type Binding = OutputMonad::Binding;
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<OutputMonad::Binding, BindError>) {
@@ -184,15 +185,25 @@ where   InputMonad:     BindingMonad,
         let next                = (self.next)(value);
         next.pre_bind(bindings)
     }
+    
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) { 
+        let (bindings, rebound_input)   = self.input.rebind_from_outer_frame(bindings, frame_depth);
+        let rebound_input               = rebound_input.map(|rebound_input| FlatMapValue { input: rebound_input, next: self.next.clone(), output: PhantomData });
+        let rebound_input               = rebound_input.map(|rebound_input| -> Box<dyn BindingMonad<Binding=Self::Binding>> { Box::new(rebound_input) });
+
+        (bindings, rebound_input) 
+    }
+
+    fn reference_type(&self, bound_value: CellRef) -> ReferenceType { self.input.reference_type(bound_value) }
 }
 
 ///
 /// The flat_map function for a binding monad
 ///
-pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, NextFn: Fn(InputMonad::Binding) -> OutputMonad+Send+Sync>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=OutputMonad::Binding> {
+pub fn flat_map_binding<InputMonad: 'static+BindingMonad, OutputMonad: 'static+BindingMonad, NextFn: 'static+Fn(InputMonad::Binding) -> OutputMonad+Send+Sync>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=OutputMonad::Binding> {
     FlatMapValue {
         input:  monad,
-        next:   action,
+        next:   Arc::new(action),
         output: PhantomData
     }
 }
@@ -201,9 +212,9 @@ pub fn flat_map_binding<InputMonad: BindingMonad, OutputMonad: BindingMonad, Nex
 /// As for flat_map but combines two monads that generate actions by concatenating the actions together
 ///
 pub fn flat_map_binding_actions<InputMonad, OutputMonad, NextFn>(action: NextFn, monad: InputMonad) -> impl BindingMonad<Binding=SmallVec<[Action; 8]>>
-where   InputMonad:     BindingMonad<Binding=SmallVec<[Action; 8]>>,
-        OutputMonad:    BindingMonad<Binding=SmallVec<[Action; 8]>>,
-        NextFn:         Fn() -> OutputMonad+Send+Sync {
+where   InputMonad:     'static+BindingMonad<Binding=SmallVec<[Action; 8]>>,
+        OutputMonad:    'static+BindingMonad<Binding=SmallVec<[Action; 8]>>,
+        NextFn:         'static+Fn() -> OutputMonad+Send+Sync {
     // Perform the input monad
     flat_map_binding(move |actions| {
         // Resolve the output
