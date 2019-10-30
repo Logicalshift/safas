@@ -65,8 +65,6 @@ impl SyntaxCompiler {
             let new_parameter       = substitute_frame_refs(parameter_for_substitute.clone(), get_new_frame_ref);
             let generate_actions    = actions_for_substitute.clone();
 
-            println!("Rebind {} -> {}", parameter_for_substitute.to_string(), new_parameter.to_string());
-
             // Create a new syntax compiler
             SyntaxCompiler::with_compiler_and_reftype_arc(generate_actions, new_parameter, reference_type)
         };
