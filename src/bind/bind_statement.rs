@@ -11,10 +11,6 @@ use crate::syntax::*;
 use std::sync::*;
 use std::result::{Result};
 
-lazy_static! {
-    static ref WRAP_KEYWORD: CellRef = SafasCell::Syntax(Box::new(wrap_keyword()), NIL.clone()).into();
-}
-
 ///
 /// Binds a statement to the value used for compiling
 /// 
@@ -323,13 +319,20 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
     // If the result is not bound to a monad expression, we need to wrap the result
     let is_inner_expression                 = bound_monad_fn.reference_type() != ReferenceType::Monad;
 
-    let bound_monad_fn                      = if is_inner_expression {
+    let (bound_monad_fn, interior_frame)    = if is_inner_expression {
         // The inner result of a monadic expression needs to be wrapped so the return value is itself a monad (note we don't bind the bound monad fn itself here)
+        // TODO: add a way to generate a bound wrap expression more simply
+        let mut bindings                    = interior_frame;
         let bound_monad_fn                  = SafasCell::List(bound_monad_fn, NIL.clone()).into();
-        let bound_monad_fn                  = SafasCell::List(WRAP_KEYWORD.clone(), bound_monad_fn).into();
-        bound_monad_fn
+        bindings.args                       = Some(SafasCell::List(bound_monad_fn, NIL.clone()).into());
+        let (bindings, bound_monad_fn)      = wrap_keyword().bind(bindings);
+
+        match bound_monad_fn {
+            Ok(bound_monad_fn)  => (SafasCell::BoundSyntax(bound_monad_fn).into(), bindings),
+            Err(_err)           => unimplemented!()
+        }
     } else {
-        bound_monad_fn
+        (bound_monad_fn, interior_frame)
     };
 
     // Compile to a closure (this generates the function passed to FlatMap later on)
