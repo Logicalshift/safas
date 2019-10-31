@@ -31,22 +31,25 @@ pub fn fun_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             let function_def        = bound_value.clone();
             let substitute_function = bound_value.clone();
 
-            Ok(SyntaxCompiler::custom(
-                move || {
-                    // Create the cell that contains the function
-                    let fun = match (function_def.reference_type, &*function_def.definition) {
-                        (ReferenceType::ReturnsMonad, FunctionDefinition::Lambda(fun))  => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
-                        (ReferenceType::ReturnsMonad, FunctionDefinition::Closure(fun)) => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
-                        (_, FunctionDefinition::Lambda(fun))                            => SafasCell::FrameMonad(Box::new(fun.clone())),
-                        (_, FunctionDefinition::Closure(fun))                           => SafasCell::FrameMonad(Box::new(fun.clone()))
-                    };
+            // Compilation function is re-used when substituting values
+            let compile             = Arc::new(|function_def: &FunctionBinding| {
+                // Create the cell that contains the function
+                let fun = match (function_def.reference_type, &*function_def.definition) {
+                    (ReferenceType::ReturnsMonad, FunctionDefinition::Lambda(fun))  => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
+                    (ReferenceType::ReturnsMonad, FunctionDefinition::Closure(fun)) => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
+                    (_, FunctionDefinition::Lambda(fun))                            => SafasCell::FrameMonad(Box::new(fun.clone())),
+                    (_, FunctionDefinition::Closure(fun))                           => SafasCell::FrameMonad(Box::new(fun.clone()))
+                };
 
-                    // Closures need to be called to bind their values before the function can be called
-                    match &*function_def.definition {
-                        FunctionDefinition::Lambda(_)       => Ok(smallvec![Action::Value(fun.into())].into()),
-                        FunctionDefinition::Closure(_)      => Ok(smallvec![Action::Value(fun.into()), Action::Call].into())
-                    }
-                },
+                // Closures need to be called to bind their values before the function can be called
+                match &*function_def.definition {
+                    FunctionDefinition::Lambda(_)       => Ok(smallvec![Action::Value(fun.into())].into()),
+                    FunctionDefinition::Closure(_)      => Ok(smallvec![Action::Value(fun.into()), Action::Call].into())
+                }
+            });
+
+            Ok(SyntaxCompiler::custom(
+                move || { (compile)(&function_def) },
 
                 |map_cell| { unimplemented!() },
                 bound_value.reference_type
