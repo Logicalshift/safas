@@ -23,6 +23,9 @@ pub struct Closure<Action: FrameMonad> {
     /// The two values in the tuple are the location in the source frame and the location in the target frame
     import_cells: Vec<(usize, usize)>,
 
+    /// Cells bound to values other than frame references
+    bound_cells: Vec<(usize, CellRef)>,
+
     /// The number of cells to allocate on the frame for this function
     num_cells: usize,
 
@@ -40,11 +43,47 @@ impl<Action: 'static+FrameMonad> Closure<Action> {
         Closure {
             action:         Arc::new(action),
             import_cells:   import_cells.into_iter().collect(),
+            bound_cells:    vec![],
             num_cells:      num_cells,
             arg_count:      arg_count
         }
     }
 }
+
+impl<Action: 'static+FrameMonad+Clone> Closure<Action> {
+    ///
+    /// Changes the source references according to the results of the substitution function
+    ///
+    pub fn substitute_frame_references(&self, substitute: &mut dyn FnMut(FrameReference) -> Option<CellRef>) -> Closure<Action> {
+        // Rebind the imported cells for this closure
+        let mut new_import_cells    = vec![];
+        let mut new_bound_cells     = self.bound_cells.clone();
+
+        // Substitute the imported cells
+        for (src_cell_id, tgt_cell_id) in self.import_cells.iter() {
+            if let Some(substitution) = substitute(FrameReference(*src_cell_id, 0, ReferenceType::Value)) {
+                // Bind to an absolute value or a different cell
+                match &*substitution {
+                    SafasCell::FrameReference(new_src_cell_id, 0, _)    => new_import_cells.push((*new_src_cell_id, *tgt_cell_id)),
+                    _                                                   => new_bound_cells.push((*tgt_cell_id, substitution))
+                }
+            } else {
+                // Import as before
+                new_import_cells.push((*src_cell_id, *tgt_cell_id));
+            }
+        }
+
+        // Generate the substituted closure
+        Closure {
+            action:         Arc::clone(&self.action),
+            import_cells:   new_import_cells,
+            bound_cells:    new_bound_cells,
+            num_cells:      self.num_cells,
+            arg_count:      self.arg_count
+        }
+    }
+}
+
 
 impl<Action: 'static+FrameMonad<Binding=RuntimeResult>> FrameMonad for Closure<Action> {
     type Binding = RuntimeResult;
@@ -57,7 +96,11 @@ impl<Action: 'static+FrameMonad<Binding=RuntimeResult>> FrameMonad for Closure<A
 
     fn execute(&self, frame: Frame) -> (Frame, RuntimeResult) {
         // Read the cells from the current frame
-        let cells   = self.import_cells.iter().map(|(src_idx, tgt_idx)| (*tgt_idx, Arc::clone(&frame.cells[*src_idx]))).collect();
+        let cells   = self.import_cells.iter()
+            .map(|(src_idx, tgt_idx)| (*tgt_idx, Arc::clone(&frame.cells[*src_idx])))
+            .chain(self.bound_cells.iter()
+                .map(|(tgt_idx, cell_ref)| (*tgt_idx, Arc::clone(cell_ref))))
+            .collect();
 
         // Create a closure body
         let body    = ClosureBody { action: Arc::clone(&self.action), cells: cells };
