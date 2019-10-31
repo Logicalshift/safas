@@ -13,6 +13,7 @@ use std::sync::*;
 /// That is, given a function that needs to read values from the current frame to work, this will return a function
 /// with those values bound.
 ///
+#[derive(Clone)]
 pub struct Closure<Action: FrameMonad> {
     /// The action that will be performed by the closure
     action: Arc<Action>,

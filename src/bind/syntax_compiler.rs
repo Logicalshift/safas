@@ -35,6 +35,21 @@ impl Default for SyntaxCompiler {
 
 impl SyntaxCompiler {
     ///
+    /// Creates a syntax compiler with entirely custom functions
+    /// 
+    /// The `with_compiler` variants can be used with a `CellRef` in order to automatically implement the substitution function
+    ///
+    pub fn custom<ActionFn, SubstituteFn>(generate_actions: ActionFn, substitute_frame_refs: SubstituteFn, reference_type: ReferenceType) -> SyntaxCompiler
+    where   ActionFn:       'static+Fn() -> Result<CompiledActions, BindError>+Send+Sync,
+            SubstituteFn:   'static+Fn(&mut dyn FnMut(FrameReference) -> Option<CellRef>) -> SyntaxCompiler+Send+Sync {
+        SyntaxCompiler {
+            generate_actions:       Box::new(generate_actions),
+            substitute_frame_refs:  Box::new(substitute_frame_refs),
+            reference_type:         reference_type
+        }
+    }
+
+    ///
     /// Creates a simple syntax compiler that generates actions from a cell
     ///
     pub fn with_compiler<ActionFn>(generate_actions: ActionFn, parameter: CellRef) -> SyntaxCompiler 

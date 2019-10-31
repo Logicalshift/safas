@@ -3,6 +3,7 @@ use crate::meta::*;
 use crate::exec::*;
 
 use smallvec::*;
+use std::sync::*;
 use std::convert::*;
 
 lazy_static! {
@@ -25,43 +26,69 @@ pub fn fun_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
     FunBinder.map_result(|bindings| {
         let bound_value = bindings.clone();
 
-        // Our monad generates something like (MONAD CLOSURE <some_closure>)
-        let fun_value: ListTuple<(AtomId, AtomId, CellRef)> = bound_value.clone().try_into()?;
-        let ListTuple((monad_type, _fun_type, _fun))        = fun_value;
+        if let Some(bound_value) = bound_value {
+            // Need two copies of the function for the syntax compiler
+            let function_def        = bound_value.clone();
+            let substitute_function = bound_value.clone();
 
-        // Compiling needs to call closures and just store lambdas
-        let compile = |bound_value: CellRef| -> Result<_, BindError> {
-            let fun_value: ListTuple<(AtomId, AtomId, CellRef)> = bound_value.clone().try_into()?;
-            let ListTuple((_monad_type, fun_type, fun))         = fun_value;
+            Ok(SyntaxCompiler::custom(
+                move || {
+                    // Create the cell that contains the function
+                    let fun = match (function_def.reference_type, &*function_def.definition) {
+                        (ReferenceType::ReturnsMonad, FunctionDefinition::Lambda(fun))  => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
+                        (ReferenceType::ReturnsMonad, FunctionDefinition::Closure(fun)) => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
+                        (_, FunctionDefinition::Lambda(fun))                            => SafasCell::FrameMonad(Box::new(fun.clone())),
+                        (_, FunctionDefinition::Closure(fun))                           => SafasCell::FrameMonad(Box::new(fun.clone()))
+                    };
 
-            if fun_type == AtomId(*CLOSURE_ATOM) {
-                // The closure needs to be called to bind its values
-                Ok(smallvec![Action::Value(fun.clone()), Action::Call].into())
-            } else if fun_type == AtomId(*LAMBDA_ATOM) {
-                // Lambdas can just be loaded directly
-                Ok(smallvec![Action::Value(fun.clone())].into())
-            } else {
-                // Unknown type of function (binder error/input from the wrong place)
-                Err(BindError::NotImplemented)
-            }
-        };
+                    // Closures need to be called to bind their values before the function can be called
+                    match &*function_def.definition {
+                        FunctionDefinition::Lambda(_)       => Ok(smallvec![Action::Value(fun.into())].into()),
+                        FunctionDefinition::Closure(_)      => Ok(smallvec![Action::Value(fun.into()), Action::Call].into())
+                    }
+                },
 
-        let reference_type = if monad_type == AtomId(*MONAD_ATOM) { ReferenceType::ReturnsMonad } else { ReferenceType::Value };
-
-        Ok(SyntaxCompiler::with_compiler_and_reftype(compile, bound_value, reference_type))
+                |map_cell| { unimplemented!() },
+                bound_value.reference_type
+            ))
+        } else {
+            Err(BindError::ArgumentsWereNotSupplied)
+        }
     })
+}
+
+///
+/// The possible ways a function can be defined 
+///
+enum FunctionDefinition {
+    /// Function that does not capture its environment
+    Lambda(Lambda<Vec<Action>>),
+
+    /// Function that captures its environment
+    Closure(Closure<Vec<Action>>)
+}
+
+///
+/// Represents a binding of a function
+///
+#[derive(Clone)]
+struct FunctionBinding {
+    /// The type of reference represented by the function (ReturnsMonad or Value)
+    reference_type: ReferenceType,
+
+    /// The definition of this function
+    definition: Arc<FunctionDefinition>
 }
 
 struct FunBinder;
 
 impl BindingMonad for FunBinder {
-    type Binding=CellRef;
+    type Binding=Option<FunctionBinding>;
 
     fn description(&self) -> String { "##fun##".to_string() }
 
     fn pre_bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Self::Binding) {
-        let args = bindings.args.clone().unwrap_or_else(|| NIL.clone());
-        (bindings, args)
+        (bindings, None)
     }
 
     fn bind(&self, bindings: SymbolBindings) -> (SymbolBindings, Result<Self::Binding, BindError>) {
@@ -190,33 +217,41 @@ impl BindingMonad for FunBinder {
             // Return the closure
             let closure         = Closure::new(actions.to_actions().collect::<Vec<_>>(), cell_imports, num_cells, num_args);
             if monadic_function {
-                let closure     = Box::new(ReturnsMonad(closure));
-                let closure     = SafasCell::FrameMonad(closure);
+                let closure     = FunctionBinding { 
+                    reference_type: ReferenceType::ReturnsMonad,
+                    definition:     Arc::new(FunctionDefinition::Closure(closure))
+                };
 
                 // Closure needs to be called to create the actual function
-                (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*MONAD_ATOM).into(), AtomId(*CLOSURE_ATOM).into(), closure.into()])))
+                (bindings, Ok(Some(closure)))
             } else {
-                let closure     = Box::new(closure);
-                let closure     = SafasCell::FrameMonad(closure);
+                let closure     = FunctionBinding { 
+                    reference_type: ReferenceType::Value,
+                    definition:     Arc::new(FunctionDefinition::Closure(closure))
+                };
 
                 // Closure needs to be called to create the actual function
-                (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*LAMBDA_ATOM).into(), AtomId(*CLOSURE_ATOM).into(), closure.into()])))
+                (bindings, Ok(Some(closure)))
             }
         } else {
             // No imports, so return a straight lambda
             let lambda          = Lambda::new(actions.to_actions().collect::<Vec<_>>(), num_cells, num_args);
             if monadic_function {
-                let lambda      = Box::new(ReturnsMonad(lambda));
-                let lambda      = SafasCell::FrameMonad(lambda);
+                let lambda      = FunctionBinding { 
+                    reference_type: ReferenceType::ReturnsMonad,
+                    definition:     Arc::new(FunctionDefinition::Lambda(lambda))
+                };
 
                 // Lambda can just be executed directly
-                (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*MONAD_ATOM).into(), AtomId(*LAMBDA_ATOM).into(), lambda.into()])))
+                (bindings, Ok(Some(lambda)))
             } else {
-                let lambda      = Box::new(lambda);
-                let lambda      = SafasCell::FrameMonad(lambda);
+                let lambda      = FunctionBinding { 
+                    reference_type: ReferenceType::Value,
+                    definition:     Arc::new(FunctionDefinition::Lambda(lambda))
+                };
 
                 // Lambda can just be executed directly
-                (bindings, Ok(SafasCell::list_with_cells(vec![AtomId(*LAMBDA_ATOM).into(), AtomId(*LAMBDA_ATOM).into(), lambda.into()])))
+                (bindings, Ok(Some(lambda)))
             }
         }
     }

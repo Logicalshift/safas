@@ -10,6 +10,7 @@ use std::sync::*;
 /// 
 /// Functions are called by putting their arguments in cell 0 (as a list) before resolving the monad
 ///
+#[derive(Clone)]
 pub struct Lambda<Action: FrameMonad> {
     /// Monad describing the actions to perform in this function
     action: Action,
