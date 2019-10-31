@@ -68,11 +68,7 @@ impl SyntaxSymbol {
         // This syntax should have a monad reference type if any of its statements have a monad reference type 
         let mut reference_type = ReferenceType::Value;
 
-        println!("Make syntax symbol");
-
         for (_, _, partially_bound) in patterns.iter() {
-            println!("  {:?}", partially_bound.to_string());
-
             if reference_type_for_partially_bound_statements(partially_bound) == ReferenceType::Monad {
                 // If any of the definitions for a symbol returns a monad, then assume they all do
                 reference_type = ReferenceType::Monad;

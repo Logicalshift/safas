@@ -31,33 +31,60 @@ pub fn fun_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             let function_def        = bound_value.clone();
             let substitute_function = bound_value.clone();
 
-            // Compilation function is re-used when substituting values
-            let compile             = Arc::new(|function_def: &FunctionBinding| {
-                // Create the cell that contains the function
-                let fun = match (function_def.reference_type, &*function_def.definition) {
-                    (ReferenceType::ReturnsMonad, FunctionDefinition::Lambda(fun))  => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
-                    (ReferenceType::ReturnsMonad, FunctionDefinition::Closure(fun)) => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
-                    (_, FunctionDefinition::Lambda(fun))                            => SafasCell::FrameMonad(Box::new(fun.clone())),
-                    (_, FunctionDefinition::Closure(fun))                           => SafasCell::FrameMonad(Box::new(fun.clone()))
-                };
-
-                // Closures need to be called to bind their values before the function can be called
-                match &*function_def.definition {
-                    FunctionDefinition::Lambda(_)       => Ok(smallvec![Action::Value(fun.into())].into()),
-                    FunctionDefinition::Closure(_)      => Ok(smallvec![Action::Value(fun.into()), Action::Call].into())
-                }
-            });
-
             Ok(SyntaxCompiler::custom(
-                move || { (compile)(&function_def) },
-
-                |map_cell| { unimplemented!() },
+                move || { compile_function(&function_def) },
+                move |map_cell| { subtitute_function_references(&substitute_function, map_cell) },
                 bound_value.reference_type
             ))
         } else {
             Err(BindError::ArgumentsWereNotSupplied)
         }
     })
+}
+
+///
+/// Compiles a function definition to the corresponding actions
+///
+fn compile_function(function_def: &FunctionBinding) -> Result<CompiledActions, BindError> {
+    // Create the cell that contains the function
+    let fun = match (function_def.reference_type, &*function_def.definition) {
+        (ReferenceType::ReturnsMonad, FunctionDefinition::Lambda(fun))  => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
+        (ReferenceType::ReturnsMonad, FunctionDefinition::Closure(fun)) => SafasCell::FrameMonad(Box::new(ReturnsMonad(fun.clone()))),
+        (_, FunctionDefinition::Lambda(fun))                            => SafasCell::FrameMonad(Box::new(fun.clone())),
+        (_, FunctionDefinition::Closure(fun))                           => SafasCell::FrameMonad(Box::new(fun.clone()))
+    };
+
+    // Closures need to be called to bind their values before the function can be called
+    match &*function_def.definition {
+        FunctionDefinition::Lambda(_)       => Ok(smallvec![Action::Value(fun.into())].into()),
+        FunctionDefinition::Closure(_)      => Ok(smallvec![Action::Value(fun.into()), Action::Call].into())
+    }
+}
+
+///
+/// Substitutes the values in a function reference
+///
+fn subtitute_function_references(function_def: &FunctionBinding, substitute: &mut dyn FnMut(FrameReference) -> Option<CellRef>) -> SyntaxCompiler {
+    // Rebind the function. Lambdas require no rebinding, but closures might require new bindings from the substitution function
+    let new_binding = match &*function_def.definition {
+        FunctionDefinition::Lambda(lambda)      => FunctionDefinition::Lambda(lambda.clone()),
+        FunctionDefinition::Closure(closure)    => FunctionDefinition::Closure(closure.substitute_frame_references(substitute))
+    };
+
+    // Create two copies of the definition for the compiler and the substitution routine
+    let function_def        = FunctionBinding {
+        reference_type: function_def.reference_type,
+        definition:     Arc::new(new_binding)
+    };
+    let substitute_function = function_def.clone();
+    let reference_type      = function_def.reference_type;
+
+    // Create the new syntax for this function
+    SyntaxCompiler::custom(
+        move || { compile_function(&function_def) },
+        move |map_cell| { subtitute_function_references(&substitute_function, map_cell) },
+        reference_type
+    )
 }
 
 ///
