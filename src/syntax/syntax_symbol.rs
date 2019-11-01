@@ -161,7 +161,8 @@ impl BindingMonad for Arc<SyntaxSymbol> {
                 // Some values will defined within the macro; these are left unbound after the binding has completed and
                 // we assign new cells to them after binding everything else
 
-                let mut substitutions = HashMap::new();
+                let mut substitutions       = HashMap::new();
+                let mut has_monad_parameter = false;
 
                 for arg_idx in 0..pattern_cells.len() {
                     // The pattern cell is expected to always be a frame reference
@@ -180,19 +181,30 @@ impl BindingMonad for Arc<SyntaxSymbol> {
                     };
                     bindings = new_bindings;
 
+                    // Note if the parameter is a monad
+                    if bound_val.reference_type() == ReferenceType::Monad {
+                        has_monad_parameter = true;
+                    }
+
                     // Store as a substitution
                     substitutions.insert(cell_id, bound_val);
                 }
 
-                // Perform the substititions
-                let (bound, bindings) = substitute_cells(bindings, &mut HashMap::new(), partially_bound, &move |cell_id| {
-                    substitutions.get(&cell_id)
-                        .or_else(|| self.imported_bindings.get(&cell_id))
-                        .cloned()
-                });
+                // Substitute the arguments into the macro statements
+                if !has_monad_parameter {
+                    // If none of the parameters are monads, we can just substitute straight into the macro
+                    let (bound, bindings) = substitute_cells(bindings, &mut HashMap::new(), partially_bound, &move |cell_id| {
+                        substitutions.get(&cell_id)
+                            .or_else(|| self.imported_bindings.get(&cell_id))
+                            .cloned()
+                    });
 
-                // This is the result
-                return (bindings, Ok(bound));
+                    // This is the result
+                    return (bindings, Ok(bound));
+                } else {
+                    // We need to call FlatMap on any parameter that has a monad value and import any cells used by the bindings
+                    unimplemented!("Monads in macros not implemented yet")
+                }
             }
         }
 
