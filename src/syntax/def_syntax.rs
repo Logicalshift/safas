@@ -339,12 +339,26 @@ mod test {
     }
 
     #[test]
-    fn syntax_monad() {
+    fn syntax_monad_1() {
         let val = eval(
             "(def_syntax some_syntax (
                 (make_list <x>) ((list 1 x))
             ))
             (some_syntax (make_list (wrap 2)))"
+            ).unwrap();
+
+        println!("{:?}", val.to_string());
+
+        assert!(val.reference_type() == ReferenceType::Monad);
+    }
+
+    #[test]
+    fn syntax_monad_2() {
+        let val = eval(
+            "(def_syntax some_syntax (
+                (make_list <x> <y>) ((list 1 x y))
+            ))
+            (some_syntax (make_list (wrap 2) (wrap 3)))"
             ).unwrap();
 
         println!("{:?}", val.to_string());

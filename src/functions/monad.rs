@@ -110,6 +110,14 @@ mod test {
     }
 
     #[test]
+    fn monad_value_from_list_call_3() {
+        let val = eval(
+                "(list 1 (wrap 2) (wrap 3))"
+            ).unwrap().to_string();
+        assert!(val == "monad#()#(flat_map: ##wrap((1 2 3)))".to_string());
+    }
+
+    #[test]
     fn def_monad() {
         // (def foo (wrap 1)) should produce a value that works like (wrap 1) (ie, which we see as a monad)
         let val = eval(

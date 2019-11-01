@@ -94,7 +94,7 @@ impl SyntaxSymbol {
                 let mut first   = true;
 
                 for statement in args.to_vec().unwrap_or_else(|| vec![]) {
-                    // Perform basic compilation
+                    // Compile the statement
                     actions.extend(compile_statement(statement.clone())?);
 
                     // Map between values if the value is a monad
