@@ -163,7 +163,6 @@ impl BindingMonad for Arc<SyntaxSymbol> {
                 // we assign new cells to them after binding everything else
 
                 let mut substitutions       = vec![];
-                let mut has_monad_parameter = false;
 
                 for arg_idx in 0..pattern_cells.len() {
                     // The pattern cell is expected to always be a frame reference
@@ -182,32 +181,12 @@ impl BindingMonad for Arc<SyntaxSymbol> {
                     };
                     bindings = new_bindings;
 
-                    // Note if the parameter is a monad
-                    if bound_val.reference_type() == ReferenceType::Monad {
-                        has_monad_parameter = true;
-                    }
-
                     // Store as a substitution
                     substitutions.push((cell_id, bound_val));
                 }
 
                 // Substitute the arguments into the macro statements
-                if !has_monad_parameter {
-                    // If none of the parameters are monads, we can just substitute straight into the macro
-                    let substitutions = substitutions.into_iter().collect::<HashMap<_, _>>();
-
-                    let (bound, bindings) = substitute_cells(bindings, &mut HashMap::new(), partially_bound, &move |cell_id| {
-                        substitutions.get(&cell_id)
-                            .or_else(|| self.imported_bindings.get(&cell_id))
-                            .cloned()
-                    });
-
-                    // This is the result
-                    return (bindings, Ok(bound));
-                } else {
-                    // We need to call FlatMap on any parameter that has a monad value and import any cells used by the bindings
-                    unimplemented!("Monads in macros not implemented yet")
-                }
+                return bind_syntax_monad(bindings, substitutions, partially_bound, &self.imported_bindings);
             }
         }
 
@@ -315,5 +294,32 @@ fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: Symbol
 
         // Other cell types have no binding to do
         _ => (pos.clone(), bindings)
+    }
+}
+
+///
+/// If the specified set of substitutions contains a monad, rebinds with a flat_map to generate the final expression
+///
+fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRef)>, partially_bound: &CellRef, imported_bindings: &Arc<HashMap<usize, CellRef>>) -> (SymbolBindings, Result<CellRef, BindError>) {
+    // Iterate through the substitutions. We're looking for the first one that has a monad reference type
+    let mut monad_index = (0..substitutions.len()).into_iter()
+        .filter(|index| substitutions[*index].1.reference_type() == ReferenceType::Monad)
+        .nth(0);
+
+    if let Some(monad_index) = monad_index {
+        // Replace the monad with the parameter of a stack closure and try again
+        unimplemented!("Can't rewrite monads yet: {}", monad_index)
+    } else {
+        // If none of the parameters are monads, we can just substitute straight into the macro
+        let substitutions = substitutions.into_iter().collect::<HashMap<_, _>>();
+
+        let (bound, bindings) = substitute_cells(bindings, &mut HashMap::new(), partially_bound, &move |cell_id| {
+            substitutions.get(&cell_id)
+                .or_else(|| imported_bindings.get(&cell_id))
+                .cloned()
+        });
+
+        // This is the result
+        (bindings, Ok(bound))
     }
 }
