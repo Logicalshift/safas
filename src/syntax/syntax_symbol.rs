@@ -186,7 +186,7 @@ impl BindingMonad for Arc<SyntaxSymbol> {
                 }
 
                 // Substitute the arguments into the macro statements
-                return bind_syntax_monad(bindings, substitutions, partially_bound, &self.imported_bindings);
+                return bind_syntax_monad(bindings, substitutions, self.reference_type, partially_bound, Arc::clone(&self.imported_bindings));
             }
         }
 
@@ -300,7 +300,7 @@ fn substitute_cells<SubstituteFn: Fn(usize) -> Option<CellRef>>(bindings: Symbol
 ///
 /// If the specified set of substitutions contains a monad, rebinds with a flat_map to generate the final expression
 ///
-fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRef)>, partially_bound: &CellRef, imported_bindings: &Arc<HashMap<usize, CellRef>>) -> (SymbolBindings, Result<CellRef, BindError>) {
+fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRef)>, symbol_reference_type: ReferenceType, partially_bound: &CellRef, imported_bindings: Arc<HashMap<usize, CellRef>>) -> (SymbolBindings, Result<CellRef, BindError>) {
     // Iterate through the substitutions. We're looking for the first one that has a monad reference type
     let mut monad_index = (0..substitutions.len()).into_iter()
         .filter(|index| substitutions[*index].1.reference_type() == ReferenceType::Monad)
@@ -308,8 +308,113 @@ fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRe
 
     if let Some(monad_index) = monad_index {
         // Replace the monad with the parameter of a stack closure and try again
+
+        // Create an interior frame
+        let mut interior_bindings   = bindings.push_interior_frame();
+
+        // The monad parameter becomes argument one of the closure
+        let monad_value_cell        = interior_bindings.alloc_cell();
+
+        // Other substitutions are passed in as parameters to the closure we're generating
+        let mut new_substitutions   = vec![];
+        let mut import_cells        = vec![];
+
+        for substitution_index in 0..substitutions.len() {
+            let (bound_cell_id, value) = &substitutions[substitution_index];
+
+            if substitution_index != monad_index {
+                // Cell value will be captured by the closure
+                let closure_cell    = interior_bindings.alloc_cell();
+                let reference_type  = value.reference_type();
+                import_cells.push(closure_cell);
+
+                new_substitutions.push((*bound_cell_id, CellRef::new(SafasCell::FrameReference(closure_cell, 0, reference_type))));
+            } else {
+                // Monad value cell (ie, the flat_map argument)
+                new_substitutions.push((*bound_cell_id, CellRef::new(SafasCell::FrameReference(monad_value_cell, 0, ReferenceType::Value))));
+            }
+        }
+
+        // Bring in the imported bindings
+        let (interior_bindings, new_imported_bindings) = rebind_imported_bindings(imported_bindings.clone(), interior_bindings, 1);
+        let imported_bindings   = new_imported_bindings.unwrap_or(imported_bindings);
+
+        // Create the closure implementation by binding again (if there are more monad arguments, they'll get rebound here)
+        let (interior_bindings, closure_binding) = bind_syntax_monad(interior_bindings, new_substitutions, symbol_reference_type, partially_bound, imported_bindings);
+        let closure_binding     = match closure_binding { 
+            Ok(bound_value) => bound_value, 
+            Err(err)        => {
+                let (bindings, _import) = interior_bindings.pop();
+                return (bindings, Err(err));
+            }
+        };
+
+        // Compile the closure (TODO: nearly the same as the compile implementation above, extract to its own method)
+        let is_monad    = symbol_reference_type == ReferenceType::Monad;
+
+        let mut actions = CompiledActions::empty();
+        let mut first   = true;
+        let mut pos     = &*closure_binding;
+
+        while let SafasCell::List(statement, next) = pos {
+            // Compile the statement
+            let compiled_actions = compile_statement(statement.clone());
+            let compiled_actions = match compiled_actions {
+                Ok(actions) => actions,
+                Err(err)    => {
+                    let (bindings, _import) = interior_bindings.pop();
+                    return (bindings, Err(err));
+                }
+            };
+
+            // Add the compiled statements to the actions for the closure
+            actions.extend(compiled_actions);
+
+            // Map between values if the value is a monad
+            if is_monad {
+                if statement.reference_type() != ReferenceType::Monad {
+                    // Wrap the statement if it doesn't return a monad
+                    actions.push(Action::Wrap);
+                }
+
+                if first {
+                    // First monad is just pushed onto the stack
+                    actions.push(Action::Push);
+                } else {
+                    // Others are mapped using the next function
+                    actions.push(Action::Next);
+                }
+            }
+
+            first   = false;
+            pos     = next;
+        }
+
+        if is_monad && !first {
+            // Pop the monad value if we're in monad
+            actions.push(Action::Pop);
+        } else {
+            // Wrap the result value to create a monad for the flat_map return value
+            // TODO: if there are multiple closures, this will incorrectly wrap the result twice (we need to add a way to find the type of thing being returned by the recursive call)
+            actions.push(Action::Wrap);
+        }
+
+        // Pop the interior frame
+        let interior_frame_size = interior_bindings.num_cells;
+        let (bindings, imports) = interior_bindings.pop();
+
+        for (_cell_value, cell_id) in imports.iter() {
+            import_cells.push(*cell_id);
+        }
+
+        // Generate the closure that gets passed to flat_map
+        let actions = actions.to_actions().collect::<Vec<_>>();
+        let closure = StackClosure::new(actions, import_cells, interior_frame_size, 1);
+
         unimplemented!("Can't rewrite monads yet: {}", monad_index)
+
     } else {
+
         // If none of the parameters are monads, we can just substitute straight into the macro
         let substitutions = substitutions.into_iter().collect::<HashMap<_, _>>();
 
