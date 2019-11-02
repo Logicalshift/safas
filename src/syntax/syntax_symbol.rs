@@ -162,7 +162,7 @@ impl BindingMonad for Arc<SyntaxSymbol> {
                 // Some values will defined within the macro; these are left unbound after the binding has completed and
                 // we assign new cells to them after binding everything else
 
-                let mut substitutions       = HashMap::new();
+                let mut substitutions       = vec![];
                 let mut has_monad_parameter = false;
 
                 for arg_idx in 0..pattern_cells.len() {
@@ -188,12 +188,14 @@ impl BindingMonad for Arc<SyntaxSymbol> {
                     }
 
                     // Store as a substitution
-                    substitutions.insert(cell_id, bound_val);
+                    substitutions.push((cell_id, bound_val));
                 }
 
                 // Substitute the arguments into the macro statements
                 if !has_monad_parameter {
                     // If none of the parameters are monads, we can just substitute straight into the macro
+                    let substitutions = substitutions.into_iter().collect::<HashMap<_, _>>();
+
                     let (bound, bindings) = substitute_cells(bindings, &mut HashMap::new(), partially_bound, &move |cell_id| {
                         substitutions.get(&cell_id)
                             .or_else(|| self.imported_bindings.get(&cell_id))
