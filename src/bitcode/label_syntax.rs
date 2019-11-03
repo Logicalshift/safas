@@ -425,13 +425,29 @@ mod test {
     }
 
     #[test]
-    fn label_uses_label_value_function() {
+    fn label_uses_label_value_returnsmonad_function() {
         let result          = eval("
             (def label_value 
                 (fun (_) 
                     (* (bit_pos) 8)
                 )
             )
+
+            (d 5u8) (label foo) foo"
+        ).unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (val, _bitcode) = assemble(&monad).unwrap();
+        println!("{:?}", val.to_string());
+
+        assert!(val.to_string() == "$40u64".to_string());
+    }
+
+    #[test]
+    fn label_uses_label_value_function_monad() {
+        let result          = eval("
+            (def ip (* (bit_pos) 8))
+            (def label_value ip)
 
             (d 5u8) (label foo) foo"
         ).unwrap();
