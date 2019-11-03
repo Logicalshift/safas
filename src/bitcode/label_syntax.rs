@@ -19,8 +19,14 @@ lazy_static! {
     /// The read_label_value flat_map function
     static ref READ_LABEL_VALUE: CellRef = read_label_value();
 
-    /// The set_label_value flat_map function
-    static ref SET_LABEL_VALUE: CellRef = set_label_value();
+    /// Function that creates a set_label_value flat_map function given the label
+    static ref CREATE_SET_LABEL_VALUE: CellRef = create_set_label_value();
+
+    /// The read_bit_pos flat_map function
+    static ref READ_BIT_POS: CellRef = read_bit_pos();
+
+    /// The ID of the atom containing the standard bit-position to label value function
+    static ref LABEL_VALUE_FUNCTION: u64 = get_id_for_atom_with_name("label_value");
 }
 
 ///
@@ -46,7 +52,7 @@ fn read_label_value() -> CellRef {
     // Called on a monad that will return a label ID cell
     let read_label_value = FnMonad::from(|(label_id, ): (CellRef, )| {
         let label_value = BitCodeMonad::read_label_value(label_id);
-        let label_value = SafasCell::Any(Box::new(label_value)).into();     
+        let label_value = SafasCell::Any(Box::new(label_value)).into();
 
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
@@ -59,26 +65,52 @@ fn read_label_value() -> CellRef {
 }
 
 ///
-/// Creates a 'set label value' flat_map function
+/// Creates a 'read bit position' flat_map function
 ///
-fn set_label_value() -> CellRef {
-    // Called on a monad that will return a label ID cell
-    let read_label_value = FnMonad::from(|(label_id, ): (CellRef, )| {
-        // Create a monad that will read the current position
-        let bit_pos         = BitCodeMonad::read_bit_pos();
-
-        // Flat_map to store the position read by the bit_pos monad
-        let read_and_set    = bit_pos.flat_map(move |bit_pos| Ok(BitCodeMonad::set_label_value(label_id.clone(), bit_pos))).unwrap();
-        let read_and_set    = SafasCell::Any(Box::new(read_and_set)).into();
+fn read_bit_pos() -> CellRef {
+    let read_bit_pos = FnMonad::from(|(_, ): (CellRef, )| {
+        let bit_pos     = BitCodeMonad::read_bit_pos();
+        let bit_pos     = SafasCell::Any(Box::new(bit_pos)).into();
 
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
-        SafasCell::Monad(read_and_set, monad_type).into()
+        SafasCell::Monad(bit_pos, monad_type).into()
     });
-    let read_label_value = ReturnsMonad(read_label_value);
-    let read_label_value = SafasCell::FrameMonad(Box::new(read_label_value));
+    let read_bit_pos    = ReturnsMonad(read_bit_pos);
+    let read_bit_pos    = SafasCell::FrameMonad(Box::new(read_bit_pos));
 
-    read_label_value.into()
+    read_bit_pos.into()
+}
+
+///
+/// Creates a 'set label value' closure function (this is a function that receives a label ID and returns a flat_map function that sets that label)
+///
+fn create_set_label_value() -> CellRef {
+    // Called on a monad that will return a label ID cell
+    let create_set_label_flat_map = FnMonad::from(|(label_id_monad, ): (CellRef, )| {
+        let label_id = BitCodeMonad::from_cell(&label_id_monad).expect("Label ID is not a monad");
+
+        // Create the flat_map function
+        let set_label_value = FnMonad::from(move |(label_value, ): (CellRef, )| {
+            // Flat_map to store the position read by the bit_pos monad
+            let set_label_value = label_id.clone().flat_map(move |label_id| { 
+                Ok(BitCodeMonad::set_label_value(label_id, label_value.clone())) 
+            }).expect("Failed to map set_label_value");
+            let set_label_value = SafasCell::Any(Box::new(set_label_value)).into();
+
+            let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
+
+            SafasCell::Monad(set_label_value, monad_type).into()
+        });
+        let set_label_value = ReturnsMonad(set_label_value);
+
+        // Return as a framemonad
+        SafasCell::FrameMonad(Box::new(set_label_value)).into()
+    });
+
+    let create_set_label_flat_map = SafasCell::FrameMonad(Box::new(create_set_label_flat_map));
+
+    create_set_label_flat_map.into()
 }
 
 ///
@@ -190,14 +222,21 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             // Parse out the arguments
             let ListTuple((AtomId(atom_id), )) = args;
 
-            BindingFn(move |bindings| {
-                // Binding function (just the atom that's assigned to this label)
+            BindingFn(move |mut bindings| {
+                // Fetch the label value function
+                let label_value_fn = if let Some(label_value) = bindings.look_up_and_import(*LABEL_VALUE_FUNCTION) {
+                    label_value
+                } else {
+                    NIL.clone()
+                };
+
+                // Fetch the value assigned to the atom that represents the label
                 let reference = bindings.look_up(atom_id);
                 let reference = match reference { Some((reference, 0)) => reference.clone(), _ => return (bindings, Err(BindError::UnknownSymbol(name_for_atom_with_id(atom_id)))) };
 
                 // TODO: check that we've got the reference we allocated in the pre-binding (if it's been rebound the label is invalid)
 
-                let result = SafasCell::list_with_cells(iter::once(reference.into()));
+                let result = SafasCell::list_with_cells(vec![reference.into(), label_value_fn]);
                 (bindings, Ok(result))
             },
 
@@ -221,7 +260,7 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             // Compiling function: labels bind themselves to a monad that allocates/retrieves the label value at the start of the code block and just bind to the label value later on 
             let compiler = |value: CellRef| -> Result<_, BindError> {
                 // Results of the bindings is the cell reference
-                let ListTuple((label_action, )): ListTuple<(CellRef, )> = value.clone().try_into()?;
+                let ListTuple((label_action, calculate_value)): ListTuple<(CellRef, CellRef)> = value.clone().try_into()?;
 
                 // The label should be bound to a syntax item, with the frame cell as the parameter
                 let cell_reference = match &*label_action { SafasCell::Syntax(_, cell_reference) => Ok(cell_reference.clone()), _ => Err(BindError::MissingArgument) }?;
@@ -242,11 +281,37 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
                     Action::StoreCell(cell_id)
                 ]);
 
+                // Evaluate the value calculation
+                let mut value_reference_type = calculate_value.reference_type();
+                if calculate_value.is_nil() {
+                    // Read the current bit position
+                    value_reference_type = ReferenceType::ReturnsMonad;
+                    actions.actions.extend(vec![
+                        Action::Value(READ_BIT_POS.clone()),
+                    ])
+                } else {
+                    // Calculate a value
+                    actions.extend(compile_statement(calculate_value)?);
+                }
+
+                // Map the value reference type
+                match value_reference_type {
+                    ReferenceType::Value        => actions.actions.push(Action::Wrap),
+                    ReferenceType::ReturnsMonad => actions.actions.push(Action::Call),
+                    ReferenceType::Monad        => { }
+                }
+
                 // To evaluate the label syntax itself, we fetch the label and flat_map via SET_LABEL_VALUE
                 actions.actions.extend(vec![
-                    Action::CellValue(cell_id),
+                    // Push the monad containing the label value
                     Action::Push,
-                    Action::Value(SET_LABEL_VALUE.clone()),
+
+                    // Call the closure that generates the set_label_value function from the cell value monad
+                    Action::PushValue(CREATE_SET_LABEL_VALUE.clone()),
+                    Action::PushCell(cell_id),
+                    Action::PopCall(1),
+
+                    // FlatMap the result with the label value monad we pushed earlier
                     Action::FlatMap
                 ]);
 
