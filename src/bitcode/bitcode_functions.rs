@@ -301,6 +301,46 @@ mod test {
     }
 
     #[test]
+    fn read_bit_pos_in_syntax_1() {
+        let result          = eval("
+            (def_syntax foo_syntax (
+                    (val <x>) ((d x))
+                )
+            )
+            (foo_syntax
+                (set_bit_pos $8000) 
+                (label foo) 
+                (val foo) 
+                (bit_pos)
+            )").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (value, _)      = assemble(&monad).unwrap();
+
+        assert!(value.number_value() == Some(SafasNumber::BitNumber(64, 0x8040)));
+    }
+
+    #[test]
+    fn read_bit_pos_in_syntax_2() {
+        let result          = eval("
+            (def_syntax foo_syntax (
+                    (val <x>) ((a 0 8) (d x))
+                )
+            )
+            (foo_syntax
+                (set_bit_pos $8000) 
+                (label foo) 
+                (val foo) 
+                (bit_pos)
+            )").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (value, _)      = assemble(&monad).unwrap();
+
+        assert!(value.number_value() == Some(SafasNumber::BitNumber(64, 0x8040)));
+    }
+
+    #[test]
     fn write_three_bytes_in_one_operation() {
         let result          = eval("((fun () (d $9fu8 $1c42u16)))").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
