@@ -80,8 +80,7 @@ impl Assembler {
             // Already know the value of this label
             Ok(label_value.clone())
         } else {
-            // Will need more passes to evaluate this label
-            self.changed_labels.insert(label);
+            // Will need more passes to evaluate this label. We use NIL as a placeholder for these labels.
             Ok(NIL.clone())
         }
     }
@@ -96,6 +95,9 @@ impl Assembler {
         // If the label already has a value, check if it's the same as the existing value
         if let Some(last_value) = self.label_values.get(&label) {
             // TODO!
+        } else {
+            // First time the label has been set, so mark it as changed
+            self.changed_labels.insert(label);
         }
 
         // Update the label value
