@@ -156,9 +156,10 @@ impl<Action: 'static+FrameMonad<Binding=RuntimeResult>> FrameMonad for StackClos
     type Binding = RuntimeResult;
 
     fn description(&self) -> String {
-        let args = (0..self.arg_count).into_iter().map(|_| "_").collect::<Vec<_>>().join(" ");
+        let args            = (0..self.arg_count).into_iter().map(|_| "_").collect::<Vec<_>>().join(" ");
+        let import_cells    = self.import_cells.iter().map(|cell_id| cell_id.to_string()).collect::<Vec<_>>().join(", ");
 
-        format!("(closure ({}) {})", args, self.action.description())
+        format!("(closure ({}) ({}) {})", args, import_cells, self.action.description())
     }
 
     fn execute(&self, frame: Frame) -> (Frame, RuntimeResult) {
