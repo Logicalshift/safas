@@ -501,7 +501,25 @@ fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRe
         let actions = actions.to_actions().collect::<Vec<_>>();
         let closure = StackClosure::new(actions, import_cells, interior_frame_size, 1);
 
-        unimplemented!("Can't rewrite monads yet: {}", monad_index)
+        // Generate the closure expression: a list starting with the closure, followed by its arguments
+        let mut closure_expression = vec![CellRef::new(SafasCell::FrameMonad(Box::new(closure)))];
+
+        // Substitution values first (everything except the monad we're flat_mapping)
+        for substitution_index in 0..substitutions.len() {
+            if substitution_index != monad_index {
+                let (_, defn) = &substitutions[substitution_index];
+                closure_expression.push(defn.clone());
+            }
+        }
+
+        // Next, any cells we wound up importing
+        for (cell_value, _cell_id) in imports {
+            closure_expression.push(cell_value);
+        }
+
+        // Generate a flatmap syntax result
+        let (_, monad_defn) = &substitutions[monad_index];
+        (bindings, Ok(SyntaxBindingResult::FlatMap(monad_defn.clone(), SafasCell::list_with_cells(closure_expression).into())))
 
     } else {
 
