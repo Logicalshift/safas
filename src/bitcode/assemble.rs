@@ -177,8 +177,8 @@ impl Assembler {
                 // Loop until the labels in the flat_mapped section acquire stable values
                 let initial_bit_pos     = self.bit_pos;
                 let initial_code_len    = self.bitcode.len();
+                let mut passes          = 0;
                 let mut value;
-                let mut passes = 0;
                 loop {
                     // The initial value comes from the initial monad
                     value               = self.assemble(monad)?;
@@ -191,6 +191,9 @@ impl Assembler {
 
                     // If there are no changed labels, stop running passes
                     if self.changed_labels.len() == 0 { break; }
+
+                    // Any labels changed here should be merged into our_labels
+                    our_labels.extend(self.changed_labels.iter().cloned());
 
                     // Limit the number of passes we can perform
                     passes += 1;
