@@ -520,7 +520,15 @@ fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRe
             }
 
             SyntaxBindingResult::FlatMap(monad_value, closure_value) => {
-                unimplemented!()
+                let flat_map_actions = compile_flat_map(monad_value, closure_value);
+                let flat_map_actions = match flat_map_actions {
+                    Ok(actions) => actions,
+                    Err(err)    => {
+                        let (bindings, _import) = interior_bindings.pop();
+                        return (bindings, Err(err));
+                    }
+                };
+                actions.extend(flat_map_actions);
             }
         }
 
