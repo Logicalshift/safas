@@ -425,6 +425,25 @@ mod test {
     }
 
     #[test]
+    fn label_uses_label_value_function() {
+        let result          = eval("
+            (def label_value 
+                (fun (_) 
+                    (* (bit_pos) 8)
+                )
+            )
+
+            (d 5u8) (label foo) foo"
+        ).unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (val, _bitcode) = assemble(&monad).unwrap();
+        println!("{:?}", val.to_string());
+
+        assert!(val.to_string() == "$40u64".to_string());
+    }
+
+    #[test]
     fn label_requiring_multiple_passes_1() {
         let result          = eval("(d foo) (label foo) foo").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
