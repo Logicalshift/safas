@@ -384,6 +384,59 @@ mod test {
     }
 
     #[test]
+    fn syntax_monad_4() {
+        let val = eval(
+            "(def_syntax some_syntax (
+                (make_list <x> <y>) ((list 1 x y))
+            ))
+            (some_syntax 
+                (make_list 1 (wrap 2))
+                (make_list 2 (wrap 3))
+            )"
+            ).unwrap();
+
+        println!("{:?}", val.to_string());
+
+        assert!(val.reference_type() == ReferenceType::Monad);
+        assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2 3)))".to_string());
+    }
+
+    #[test]
+    fn syntax_monad_5() {
+        let val = eval(
+            "(def_syntax some_syntax (
+                (make_list <x> <y>) ((wrap (list 1 x y)))
+            ))
+            (some_syntax 
+                (make_list 2 (wrap 3))
+            )"
+            ).unwrap();
+
+        println!("{:?}", val.to_string());
+
+        assert!(val.reference_type() == ReferenceType::Monad);
+        assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2 3)))".to_string());
+    }
+
+    #[test]
+    fn syntax_monad_6() {
+        let val = eval(
+            "(def_syntax some_syntax (
+                (make_list <x> <y>) ((wrap (list 1 x y)))
+            ))
+            (some_syntax 
+                (make_list 1 (wrap 2))
+                (make_list 2 (wrap 3))
+            )"
+            ).unwrap();
+
+        println!("{:?}", val.to_string());
+
+        assert!(val.reference_type() == ReferenceType::Monad);
+        assert!(val.to_string() == "monad#()#(flat_map: ##wrap((1 2 3)))".to_string());
+    }
+
+    #[test]
     fn bind_to_value_outside_syntax() {
         let val = eval(
             "(def y 123)
