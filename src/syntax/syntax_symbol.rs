@@ -427,7 +427,7 @@ fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRe
         // Replace the monad with the parameter of a stack closure and try again
 
         // Create an interior frame
-        let mut interior_bindings   = bindings.push_interior_frame();
+        let mut interior_bindings   = bindings.push_new_frame();
 
         // The monad parameter becomes argument one of the closure
         let monad_value_cell        = interior_bindings.alloc_cell();
