@@ -127,6 +127,7 @@ impl From<RuntimeError> for BindError {
             NotALabel(_)                        |
             CannotAllocateLabelsDuringAssembly  |
             BeforeStartOfFile                   |
+            TooManyPasses(_)                    |
             NotEnoughArguments(_)               => BindError::RuntimeError
         }
     }

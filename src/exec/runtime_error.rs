@@ -66,7 +66,10 @@ pub enum RuntimeError {
     BeforeStartOfFile,
 
     /// An IO error occurred (we would have known the io::Error at the time but it's not compatible with RuntimeError as it can't be compared or cloned)
-    IOError
+    IOError,
+
+    /// Assembly did not stabilise in the specified number of passes
+    TooManyPasses(usize)
 }
 
 /// The result of a runtime operation (most common binding type of a frame monad)

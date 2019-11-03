@@ -8,6 +8,9 @@ use crate::exec::*;
 use std::mem;
 use std::collections::{HashMap, HashSet};
 
+/// The maximum number of assembly passes we should attempt before deciding that a bitcode monad cannot be evaluated
+const DEFAULT_MAX_PASSES: usize = 1000;
+
 ///
 /// Represents an assembler that is running
 ///
@@ -25,7 +28,10 @@ struct Assembler {
     bit_pos: u64,
 
     /// The current offset, added to bit_pos when generating label values
-    bit_offset: i64
+    bit_offset: i64,
+
+    /// The maximum number of passes we should attempt
+    max_passes: usize
 }
 
 impl Assembler {
@@ -38,7 +44,8 @@ impl Assembler {
             changed_labels: HashSet::new(),
             bitcode:        vec![],
             bit_pos:        0,
-            bit_offset:     0
+            bit_offset:     0,
+            max_passes:     DEFAULT_MAX_PASSES
         }
     }
 
@@ -169,6 +176,7 @@ impl Assembler {
                 let initial_bit_pos     = self.bit_pos;
                 let initial_code_len    = self.bitcode.len();
                 let mut value;
+                let mut passes = 0;
                 loop {
                     // The initial value comes from the initial monad
                     value               = self.assemble(monad)?;
@@ -181,6 +189,12 @@ impl Assembler {
 
                     // If there are no changed labels, stop running passes
                     if self.changed_labels.len() == 0 { break; }
+
+                    // Limit the number of passes we can perform
+                    passes += 1;
+                    if passes > self.max_passes {
+                        return Err(RuntimeError::TooManyPasses(self.max_passes));
+                    }
 
                     // Reset for the next pass
                     self.changed_labels = HashSet::new();
