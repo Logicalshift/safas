@@ -41,6 +41,62 @@ mod test {
     }
 
     #[test]
+    fn fun_wrap_ref_type_1() {
+        let val = eval(
+                "(fun (y) (wrap y))"
+            ).unwrap();
+        assert!(val.reference_type() == ReferenceType::ReturnsMonad);
+    }
+
+    /* -- fails, as ReturnsMonad needs a ClosureReturnsMonad equivalent...
+    #[test]
+    fn fun_wrap_ref_type_2() {
+        let val = eval(
+                "(def x (fun (y) (wrap y)))
+                (fun () (+ (x 1) 2))"
+            ).unwrap();
+        println!("{:?} {:?}", val.to_string(), val.reference_type());
+        assert!(val.reference_type() == ReferenceType::ReturnsMonad);
+    }
+    */
+
+    #[test]
+    fn fun_wrap_ref_type_2a() {
+        let val = eval(
+                "(def x (fun (y) (wrap y)))
+                (def z (fun () (+ (x 1) 2)))
+                (+ (z) 1)"
+            ).unwrap();
+        assert!(val.to_string() == "monad#()#(flat_map: ##wrap(4))");
+    }
+
+    #[test]
+    fn fun_wrap_ref_type_2b() {
+        let val = eval(
+                "(def x (fun (y) (wrap y)))
+                x"
+            ).unwrap();
+        println!("{:?} {:?}", val.to_string(), val.reference_type());
+        assert!(val.reference_type() == ReferenceType::ReturnsMonad);
+    }
+
+    #[test]
+    fn fun_wrap_ref_type_3() {
+        let val = eval(
+                "(fun () (+ (wrap 1) 2))"
+            ).unwrap();
+        assert!(val.reference_type() == ReferenceType::ReturnsMonad);
+    }
+
+    #[test]
+    fn fun_wrap_ref_type_4() {
+        let val = eval(
+                "(fun () (+ (bit_pos) 2))"
+            ).unwrap();
+        assert!(val.reference_type() == ReferenceType::ReturnsMonad);
+    }
+
+    #[test]
     fn list_wrap_1() {
         let val = eval(
                 "(def y (fun (a b) (list a b) ))
