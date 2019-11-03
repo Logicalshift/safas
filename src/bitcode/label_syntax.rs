@@ -297,7 +297,7 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
                 // Map the value reference type
                 match value_reference_type {
                     ReferenceType::Value        => actions.actions.push(Action::Wrap),
-                    ReferenceType::ReturnsMonad => actions.actions.push(Action::Call),
+                    ReferenceType::ReturnsMonad => actions.actions.extend(vec![Action::Push, Action::PushValue(NIL.clone()), Action::PopCall(1)]),
                     ReferenceType::Monad        => { }
                 }
 
