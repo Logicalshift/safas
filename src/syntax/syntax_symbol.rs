@@ -82,8 +82,6 @@ impl SyntaxSymbol {
             }
         }
 
-        // TODO : we currently initialize the imported bindings to nothing, expecting to fill them in later but this has the
-        // issue that when using a macro from within another macro, it won't work properly
         SyntaxSymbol { patterns: patterns, imported_bindings: Arc::new(HashMap::new()), reference_type: reference_type }
     }
 
