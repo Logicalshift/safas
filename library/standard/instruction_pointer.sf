@@ -18,8 +18,8 @@
 ;;; Default label value mapping function
 ;;;
 (def label_value 
-    (fun (cur_bit_pos) 
-        (/ cur_bit_pos 8)
+    (fun (_) 
+        (/ (bit_pos) 8)
     )
 )
 
