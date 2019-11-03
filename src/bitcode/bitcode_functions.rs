@@ -390,7 +390,6 @@ mod test {
         assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x40)])
     }
 
-/* -- infinite loop
     #[test]
     fn reference_future_with_past_label() {
         let result          = eval("(d $42u32) (label bar) (d (bits 32 foo)) (label foo)").unwrap();
@@ -400,9 +399,7 @@ mod test {
 
         assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20)])
     }
-*/
 
-/* -- infinite loop
     #[test]
     fn reference_future_and_past_label() {
         let result          = eval("(d $42u32) (label bar) (d (bits 32 bar)) (d (bits 32 foo)) (label foo)").unwrap();
@@ -412,7 +409,6 @@ mod test {
 
         assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20), BitCode::Bits(32, 0x40)])
     }
-*/
 
     #[test]
     fn reference_future_label_in_syntax_block() {
@@ -492,7 +488,6 @@ mod test {
         assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20), BitCode::Bits(32, 0x00)])
     }
 
-/* -- infinite loop
     #[test]
     fn reference_two_future_labels_in_custom_syntax() {
         let result          = eval("
@@ -513,9 +508,7 @@ mod test {
 
         assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x40), BitCode::Bits(32, 0x60)])
     }
-*/
 
-/* -- infinite loop
     #[test]
     fn reference_future_and_past_label_in_custom_syntax() {
         let result          = eval("
@@ -536,5 +529,4 @@ mod test {
 
         assert!(&bitcode ==  &vec![BitCode::Align(32, 0, 8), BitCode::Bits(32, 0x42), BitCode::Align(32, 0, 8), BitCode::Bits(32, 0x60), BitCode::Align(32, 0, 8), BitCode::Bits(32, 0x20)])
     }
-*/
 }
