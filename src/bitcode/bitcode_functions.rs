@@ -392,6 +392,18 @@ mod test {
 
 /* -- infinite loop
     #[test]
+    fn reference_future_with_past_label() {
+        let result          = eval("(d $42u32) (label bar) (d (bits 32 foo)) (label foo)").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20)])
+    }
+*/
+
+/* -- infinite loop
+    #[test]
     fn reference_future_and_past_label() {
         let result          = eval("(d $42u32) (label bar) (d (bits 32 bar)) (d (bits 32 foo)) (label foo)").unwrap();
         let monad           = BitCodeMonad::from_cell(&result).unwrap();
