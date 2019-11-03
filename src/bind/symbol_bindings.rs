@@ -229,6 +229,26 @@ impl SymbolBindings {
             panic!("Import symbols must be a reference to a cell in a parent frame")
         }
     }
+
+    ///
+    /// Looks up a value, and makes sure it's imported into the local context if needed
+    ///
+    pub fn look_up_and_import(&mut self, symbol: u64) -> Option<CellRef> {
+        self.look_up(symbol)
+            .map(|(value, symbol_level)| {
+                match (&*value, symbol_level) {
+                    (SafasCell::FrameReference(_, _, _), 0)                             => value,
+                    (SafasCell::FrameReference(_cell_id, _depth, reference_type), _)    => {
+                        let reference_type  = *reference_type;
+                        let import_cell_id  = self.alloc_cell();
+                        self.import(value, import_cell_id);
+
+                        SafasCell::FrameReference(import_cell_id, 0, reference_type).into()
+                    },
+                    _                                                                   => value
+                }
+            })
+    }
 }
 
 #[cfg(test)]
