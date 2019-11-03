@@ -126,7 +126,7 @@ impl SyntaxSymbol {
                         }
 
                         if is_monad && !first {
-                            // Pop the monad value if we're in monad
+                            // Pop the monad value, if there's one on the stack
                             actions.push(Action::Pop);
                         }
                     },
@@ -508,14 +508,16 @@ fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRe
 
                     first   = false;
                     pos     = next;
+                }
 
-                    if is_monad && !first {
-                        // Pop the monad value if we're in monad
+                if is_monad {
+                    if !first {
+                        // Pop the monad value
                         actions.push(Action::Pop);
-                    } else {
-                        // Wrap the result value to create a monad for the flat_map return value
-                        actions.push(Action::Wrap);
                     }
+                } else {
+                    // Wrap the value to create a monad
+                    actions.push(Action::Wrap)
                 }
             }
 
