@@ -397,7 +397,7 @@ mod test {
 
         let (_, bitcode)    = assemble(&monad).unwrap();
 
-        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20)])
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x40)])
     }
 
     #[test]
@@ -407,7 +407,7 @@ mod test {
 
         let (_, bitcode)    = assemble(&monad).unwrap();
 
-        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20), BitCode::Bits(32, 0x40)])
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20), BitCode::Bits(32, 0x60)])
     }
 
     #[test]
