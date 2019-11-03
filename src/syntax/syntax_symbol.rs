@@ -132,7 +132,8 @@ impl SyntaxSymbol {
                     },
 
                     SyntaxBindingResult::FlatMap(monad, closure) => {
-                        unimplemented!()
+                        let flat_map_actions = compile_flat_map(monad, closure)?;
+                        actions.extend(flat_map_actions);
                     }
                 }
 
@@ -378,11 +379,47 @@ impl Default for SyntaxBindingResult {
 }
 
 ///
+/// Compiles a flat_map expression
+/// 
+/// monad_expr is the monad to be mapped. map_expr is a stack closure expression (called with its set of expressions)
+///
+fn compile_flat_map(monad_expr: CellRef, map_expr: CellRef) -> Result<CompiledActions, BindError> {
+    // Start by pushing the result of the monad expression
+    let mut result  = CompiledActions::empty();
+
+    // Compile the monad expression and push it onto the stack
+    let monad       = compile_statement(monad_expr)?;
+    result.extend(monad);
+    result.push(Action::Push);
+
+    // Need to evaluate the closure to generate the stack closure
+    let map_expr = map_expr.to_vec().expect("Stack closure expression");
+
+    // Arguments are loaded in reverse order
+    for closure_expr_index in (1..map_expr.len()).into_iter().rev() {
+        let closure_expr = map_expr[closure_expr_index].clone();
+        let closure_expr = compile_statement(closure_expr)?;
+
+        result.extend(closure_expr);
+        result.push(Action::Push);
+    }
+
+    // Call the closure
+    result.push(Action::Value(map_expr[0].clone()));
+    result.push(Action::Call);
+
+    // Now have the monad on the stack and the flat_map function as the result
+    result.push(Action::FlatMap);
+
+    Ok(result)
+}
+
+///
 /// If the specified set of substitutions contains a monad, rebinds with a flat_map to generate the final expression
 ///
 fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRef)>, symbol_reference_type: ReferenceType, partially_bound: &CellRef, imported_bindings: Arc<HashMap<usize, CellRef>>) -> (SymbolBindings, Result<SyntaxBindingResult, BindError>) {
     // Iterate through the substitutions. We're looking for the first one that has a monad reference type
-    let mut monad_index = (0..substitutions.len()).into_iter()
+    let monad_index = (0..substitutions.len()).into_iter()
         .filter(|index| substitutions[*index].1.reference_type() == ReferenceType::Monad)
         .nth(0);
 
