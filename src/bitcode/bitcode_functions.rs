@@ -369,4 +369,160 @@ mod test {
 
         assert!(&bitcode ==  &vec![BitCode::Align(32, 0xbeeff00d, 64)])
     }
+
+    #[test]
+    fn reference_previous_label() {
+        let result          = eval("(d $42u32) (label foo) (d (bits 32 foo))").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20)])
+    }
+
+    #[test]
+    fn reference_future_label() {
+        let result          = eval("(d $42u32) (d (bits 32 foo)) (label foo)").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x40)])
+    }
+
+/* -- infinite loop
+    #[test]
+    fn reference_future_and_past_label() {
+        let result          = eval("(d $42u32) (label bar) (d (bits 32 bar)) (d (bits 32 foo)) (label foo)").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20), BitCode::Bits(32, 0x40)])
+    }
+*/
+
+    #[test]
+    fn reference_future_label_in_syntax_block() {
+        let result          = eval("
+            (def_syntax foo_syntax (
+                    (val <x>) ((d x))
+                )
+            )
+            (foo_syntax
+                (d $42u32)
+                (d (bits 32 foo))
+                (label foo)
+            )").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x40)])
+    }
+
+    #[test]
+    fn reference_future_label_in_custom_syntax() {
+        let result          = eval("
+            (def_syntax foo_syntax (
+                    (val <x>) ((d x))
+                )
+            )
+            (foo_syntax
+                (val $42u32)
+                (val (bits 32 foo))
+                (label foo)
+            )").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x40)])
+    }
+
+    #[test]
+    fn reference_past_label_in_custom_syntax() {
+        let result          = eval("
+            (def_syntax foo_syntax (
+                    (val <x>) ((d x))
+                )
+            )
+            (foo_syntax
+                (val $42u32)
+                (label foo)
+                (val (bits 32 foo))
+            )").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20)])
+    }
+
+    #[test]
+    fn reference_two_past_labels_in_custom_syntax() {
+        let result          = eval("
+            (def_syntax foo_syntax (
+                    (val <x>) ((d x))
+                )
+            )
+            (foo_syntax
+                (label bar)
+                (val $42u32)
+                (label foo)
+                (val (bits 32 foo))
+                (val (bits 32 bar))
+            )").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x20), BitCode::Bits(32, 0x00)])
+    }
+
+/* -- infinite loop
+    #[test]
+    fn reference_two_future_labels_in_custom_syntax() {
+        let result          = eval("
+            (def_syntax foo_syntax (
+                    (val <x>) ((d x))
+                )
+            )
+            (foo_syntax
+                (val $42u32)
+                (val (bits 32 foo))
+                (label foo)
+                (val (bits 32 bar))
+                (label bar)
+            )").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Bits(32, 0x42), BitCode::Bits(32, 0x40), BitCode::Bits(32, 0x60)])
+    }
+*/
+
+/* -- infinite loop
+    #[test]
+    fn reference_future_and_past_label_in_custom_syntax() {
+        let result          = eval("
+            (def_syntax foo_syntax (
+                    (val <x>) ((a 0u32 8) (d x))
+                )
+            )
+            (foo_syntax
+                (val $42u32)
+                (label bar)
+                (val (bits 32 foo))
+                (val (bits 32 bar))
+                (label foo)
+            )").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Align(32, 0, 8), BitCode::Bits(32, 0x42), BitCode::Align(32, 0, 8), BitCode::Bits(32, 0x60), BitCode::Align(32, 0, 8), BitCode::Bits(32, 0x20)])
+    }
+*/
 }
