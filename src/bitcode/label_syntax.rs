@@ -27,6 +27,9 @@ lazy_static! {
 
     /// The ID of the atom containing the standard bit-position to label value function
     static ref LABEL_VALUE_FUNCTION: u64 = get_id_for_atom_with_name("label_value");
+
+    /// A function that takes a value mapping function and returns a bitcode flat_map function
+    static ref MAP_TO_FLAT_MAP: CellRef = map_to_flat_map_fn();
 }
 
 ///
@@ -129,6 +132,45 @@ fn wrap_value() -> CellRef {
     let wrap_value = SafasCell::FrameMonad(Box::new(wrap_value));
 
     wrap_value.into()
+}
+
+struct MapAndWrap(pub CellRef);
+
+impl FrameMonad for MapAndWrap {
+    type Binding = RuntimeResult;
+
+    fn execute(&self, frame: Frame) -> (Frame, RuntimeResult) {
+        // Call the mapping function (we're called with a value parameter, which will be passed on to the mapping function here)
+        let map_fn          = &self.0;
+        let (frame, result) = match &**map_fn {
+            SafasCell::FrameMonad(map_fn)   => map_fn.execute(frame),
+            _                               => (frame, Err(RuntimeError::NotAFunction(map_fn.clone())))
+        };
+
+        // Wrap as a bitcode monad value
+        let result          = match result { Ok(result) => result, Err(err) => return (frame, Err(err)) };
+        let result          = BitCodeMonad::with_value(result);
+        let result          = SafasCell::Any(Box::new(result)).into();
+        let monad_type      = MonadType::new(BITCODE_FLAT_MAP.clone());
+
+        (frame, Ok(SafasCell::Monad(result, monad_type).into()))
+    }
+
+    fn description(&self) -> String { format!("(map_and_wrap {})", self.0.to_string()) }
+
+    fn returns_monad(&self) -> bool { true }
+}
+
+///
+/// Creates a `map_to_flat_map` function, which receives a function `a -> b` and returns a function `a -> BitCodeMonad b`
+///
+fn map_to_flat_map_fn() -> CellRef {
+    let map_to_flat_map_fn = FnMonad::from(|(map_fn, ): (CellRef, )| {
+        let map_and_wrap = MapAndWrap(map_fn);
+        SafasCell::FrameMonad(Box::new(map_and_wrap)).into()
+    });
+
+    SafasCell::FrameMonad(Box::new(map_to_flat_map_fn)).into()
 }
 
 ///
@@ -291,12 +333,27 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
                     ])
                 } else {
                     // Calculate a value
+                    if value_reference_type == ReferenceType::Value {
+                        // Create the bit_pos monad on the stack
+                        actions.actions.extend(vec![
+                            // Bit_pos monad
+                            Action::PushValue(READ_BIT_POS.clone()),
+                            Action::PushValue(NIL.clone()),
+                            Action::PopCall(1),
+                            Action::Push,
+
+                            // Function conversion routine (we call this to generate a flatmap method, then call flatmap on the monad we just created)
+                            Action::PushValue(MAP_TO_FLAT_MAP.clone())
+                        ])
+                    }
+
+                    // Get the value of the label_value function
                     actions.extend(compile_statement(calculate_value)?);
                 }
 
                 // Map the value reference type
                 match value_reference_type {
-                    ReferenceType::Value        => actions.actions.extend(vec![Action::Call, Action::Wrap]),
+                    ReferenceType::Value        => actions.actions.extend(vec![Action::Push, Action::PopCall(1), Action::FlatMap]),
                     ReferenceType::ReturnsMonad => actions.actions.extend(vec![Action::Push, Action::PushValue(NIL.clone()), Action::PopCall(1)]),
                     ReferenceType::Monad        => { }
                 }
@@ -444,10 +501,29 @@ mod test {
     }
 
     #[test]
-    fn label_uses_label_value_function_monad() {
+    fn label_uses_label_value_monad() {
         let result          = eval("
             (def ip (* (bit_pos) 8))
             (def label_value ip)
+
+            (d 5u8) (label foo) foo"
+        ).unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (val, _bitcode) = assemble(&monad).unwrap();
+        println!("{:?}", val.to_string());
+
+        assert!(val.to_string() == "$40u64".to_string());
+    }
+
+    #[test]
+    fn label_uses_label_value_value_function() {
+        let result          = eval("
+            (def label_value 
+                (fun (cur_bit_pos) 
+                    (* cur_bit_pos 8)
+                )
+            )
 
             (d 5u8) (label foo) foo"
         ).unwrap();
