@@ -48,17 +48,16 @@ mod test {
         assert!(val.reference_type() == ReferenceType::ReturnsMonad);
     }
 
-    /* -- fails, as ReturnsMonad needs a ClosureReturnsMonad equivalent...
     #[test]
     fn fun_wrap_ref_type_2() {
         let val = eval(
                 "(def x (fun (y) (wrap y)))
                 (fun () (+ (x 1) 2))"
             ).unwrap();
+        println!("-");
         println!("{:?} {:?}", val.to_string(), val.reference_type());
         assert!(val.reference_type() == ReferenceType::ReturnsMonad);
     }
-    */
 
     #[test]
     fn fun_wrap_ref_type_2a() {

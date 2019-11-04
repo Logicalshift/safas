@@ -245,7 +245,7 @@ impl BindingMonad for FunBinder {
             }
 
             // Return the closure
-            let closure         = Closure::new(actions.to_actions().collect::<Vec<_>>(), cell_imports, num_cells, num_args);
+            let closure         = Closure::new(actions.to_actions().collect::<Vec<_>>(), cell_imports, num_cells, num_args, monadic_function);
             if monadic_function {
                 let closure     = FunctionBinding { 
                     reference_type: ReferenceType::ReturnsMonad,

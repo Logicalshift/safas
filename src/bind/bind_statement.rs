@@ -374,7 +374,7 @@ fn bind_monad(args_so_far: Vec<CellRef>, monad: CellRef, remaining_args: CellRef
 
     // Bind to a closure
     let monad_flat_map                      = monad_flat_map.to_actions().collect::<Vec<_>>();
-    let monad_flat_map                      = StackClosure::new(monad_flat_map, other_arguments, interior_frame_size, 1);
+    let monad_flat_map                      = StackClosure::new(monad_flat_map, other_arguments, interior_frame_size, 1, true);
 
     // Convert things to the final result
     let args_so_far                         = SafasCell::list_with_cells(args_so_far);

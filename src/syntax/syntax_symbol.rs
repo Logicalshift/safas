@@ -544,7 +544,7 @@ fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRe
 
         // Generate the closure that gets passed to flat_map
         let actions = actions.to_actions().collect::<Vec<_>>();
-        let closure = StackClosure::new(actions, import_cells, interior_frame_size, 1);
+        let closure = StackClosure::new(actions, import_cells, interior_frame_size, 1, true);
 
         // Generate the closure expression: a list starting with the closure, followed by its arguments
         let mut closure_expression = vec![CellRef::new(SafasCell::FrameMonad(Box::new(closure)))];
