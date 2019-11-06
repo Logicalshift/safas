@@ -87,20 +87,37 @@ pub fn bitcode_flat_map_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 /// `(d $ffu8)` generates a bitcode monad that writes out a single byte
 /// 
 pub fn d_fn() -> impl FrameMonad<Binding=RuntimeResult> {
-    ReturnsMonad(FnMonad::from(|numbers: Vec<SafasNumber>| {
+    ReturnsMonad(FnMonad::from(|values: Vec<CellRef>| {
         use self::SafasNumber::*;
         use self::BitCode::Bits;
 
         // Generate the bitcode
-        let bitcode = numbers.into_iter().map(|num| match num {
-            Plain(val)                      => Bits(32, val),
-            BitNumber(bit_count, val)       => Bits(bit_count, val),
-            SignedBitNumber(bit_count, val) => Bits(bit_count, val as u128)
-        });
+        let bitcode = values.into_iter().map(|value| {
+            match &*value {
+                SafasCell::Number(num) => {
+                    match *num {
+                        Plain(val)                      => Ok(vec![Bits(32, val)]),
+                        BitNumber(bit_count, val)       => Ok(vec![Bits(bit_count, val)]),
+                        SignedBitNumber(bit_count, val) => Ok(vec![Bits(bit_count, val as u128)])
+                    }
+                },
+
+                SafasCell::String(string) => {
+                    Ok(iter::once(BitCode::Align(8, 0, 8))
+                        .chain(string.bytes()
+                            .map(|byte| Bits(8, byte as u128)))
+                        .collect())
+                },
+
+                SafasCell::Nil => { Ok(vec![Bits(32, 0)]) },
+
+                _ => Err(RuntimeError::NotANumber(value))
+            }
+        }).collect::<Result<Vec<_>, _>>()?;
 
         // Create a bitcode monad cell
-        let bitcode_monad   = BitCodeMonad::write_bitcode(bitcode);
-        bitcode_monad.to_cell()
+        let bitcode_monad   = BitCodeMonad::write_bitcode(bitcode.into_iter().flatten());
+        Ok(bitcode_monad.to_cell())
     }))
 }
 
@@ -528,5 +545,17 @@ mod test {
         let (_, bitcode)    = assemble(&monad).unwrap();
 
         assert!(&bitcode ==  &vec![BitCode::Align(32, 0, 8), BitCode::Bits(32, 0x42), BitCode::Align(32, 0, 8), BitCode::Bits(32, 0x60), BitCode::Align(32, 0, 8), BitCode::Bits(32, 0x20)])
+    }
+
+    #[test]
+    fn string_data() {
+        let result          = eval("
+            (d \"Hello\")
+        ").unwrap();
+        let monad           = BitCodeMonad::from_cell(&result).unwrap();
+
+        let (_, bitcode)    = assemble(&monad).unwrap();
+
+        assert!(&bitcode ==  &vec![BitCode::Align(8, 0, 8), BitCode::Bits(8, 0x48), BitCode::Bits(8, 0x65), BitCode::Bits(8, 0x6c), BitCode::Bits(8, 0x6c), BitCode::Bits(8, 0x6f)])
     }
 }
