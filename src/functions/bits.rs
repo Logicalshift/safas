@@ -14,7 +14,7 @@ pub fn bits_fn() -> impl FrameMonad<Binding=RuntimeResult> {
         };
         let number  = number & mask;
 
-        SafasCell::Number(SafasNumber::BitNumber(bits, number)).into()
+        CellRef::new(SafasCell::Number(SafasNumber::BitNumber(bits, number)))
     })
 }
 
@@ -35,7 +35,7 @@ pub fn sbits_fn() -> impl FrameMonad<Binding=RuntimeResult> {
             number as i128
         };
 
-        SafasCell::Number(SafasNumber::SignedBitNumber(bits, number as i128)).into()
+        CellRef::new(SafasCell::Number(SafasNumber::SignedBitNumber(bits, number as i128)))
     })
 }
 

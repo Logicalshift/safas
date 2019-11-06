@@ -13,7 +13,7 @@ pub fn list_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 ///
 pub fn cons_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(car, cdr): (CellRef, CellRef)| {
-        SafasCell::List(car, cdr).into()
+        CellRef::new(SafasCell::List(car, cdr))
     })
 }
 

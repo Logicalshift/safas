@@ -59,7 +59,7 @@ fn read_label_value() -> CellRef {
 
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
-        SafasCell::Monad(label_value, monad_type).into()
+        CellRef::new(SafasCell::Monad(label_value, monad_type))
     });
     let read_label_value = ReturnsMonad(read_label_value);
     let read_label_value = SafasCell::FrameMonad(Box::new(read_label_value));
@@ -77,7 +77,7 @@ fn read_bit_pos() -> CellRef {
 
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
-        SafasCell::Monad(bit_pos, monad_type).into()
+        CellRef::new(SafasCell::Monad(bit_pos, monad_type))
     });
     let read_bit_pos    = ReturnsMonad(read_bit_pos);
     let read_bit_pos    = SafasCell::FrameMonad(Box::new(read_bit_pos));
@@ -103,12 +103,12 @@ fn create_set_label_value() -> CellRef {
 
             let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
-            SafasCell::Monad(set_label_value, monad_type).into()
+            CellRef::new(SafasCell::Monad(set_label_value, monad_type))
         });
         let set_label_value = ReturnsMonad(set_label_value);
 
         // Return as a framemonad
-        SafasCell::FrameMonad(Box::new(set_label_value)).into()
+        CellRef::new(SafasCell::FrameMonad(Box::new(set_label_value)))
     });
 
     let create_set_label_flat_map = SafasCell::FrameMonad(Box::new(create_set_label_flat_map));
@@ -126,7 +126,7 @@ fn wrap_value() -> CellRef {
         let wrapped     = SafasCell::Any(Box::new(wrapped)).into();
         let monad_type  = MonadType::new(BITCODE_FLAT_MAP.clone());
 
-        SafasCell::Monad(wrapped, monad_type).into()
+        CellRef::new(SafasCell::Monad(wrapped, monad_type))
     });
     let wrap_value = ReturnsMonad(wrap_value);
     let wrap_value = SafasCell::FrameMonad(Box::new(wrap_value));
@@ -167,7 +167,7 @@ impl FrameMonad for MapAndWrap {
 fn map_to_flat_map_fn() -> CellRef {
     let map_to_flat_map_fn = FnMonad::from(|(map_fn, ): (CellRef, )| {
         let map_and_wrap = MapAndWrap(map_fn);
-        SafasCell::FrameMonad(Box::new(map_and_wrap)).into()
+        CellRef::new(SafasCell::FrameMonad(Box::new(map_and_wrap)))
     });
 
     SafasCell::FrameMonad(Box::new(map_to_flat_map_fn)).into()

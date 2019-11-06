@@ -18,6 +18,13 @@ pub trait FnArgs : Sized {
 }
 
 ///
+/// Trait implemented by things that can represent the result of a function monad
+///
+pub trait FnResult : Sized {
+    fn to_cell(self) -> Result<CellRef, RuntimeError>;
+}
+
+///
 /// FnMonad is the main way to import Rust closures into SAFAS
 /// 
 /// Implement the `FnArgs` trait on a type in order to interpret the raw cell into the arguments accepted
@@ -37,9 +44,10 @@ pub struct FnMonad<Fun, Args> {
     arguments:  PhantomData<Args>
 }
 
-impl<Fun, Args> From<Fun> for FnMonad<Fun, Args>
-where   Fun:    Send+Sync+Fn(Args) -> CellRef,
-        Args:   Send+Sync+FnArgs {
+impl<Fun, Args, Result> From<Fun> for FnMonad<Fun, Args>
+where   Fun:    Send+Sync+Fn(Args) -> Result,
+        Args:   Send+Sync+FnArgs,
+        Result: FnResult {
     fn from(fun: Fun) -> FnMonad<Fun, Args> {
         FnMonad {
             action:     fun,
@@ -48,9 +56,10 @@ where   Fun:    Send+Sync+Fn(Args) -> CellRef,
     }
 }
 
-impl<Fun, Args> FrameMonad for FnMonad<Fun, Args>
-where   Fun:    Send+Sync+Fn(Args) -> CellRef,
-        Args:   Send+Sync+FnArgs {
+impl<Fun, Args, Result> FrameMonad for FnMonad<Fun, Args>
+where   Fun:    Send+Sync+Fn(Args) -> Result,
+        Args:   Send+Sync+FnArgs,
+        Result: FnResult {
     type Binding = RuntimeResult;
 
     fn description(&self) -> String {
@@ -62,7 +71,7 @@ where   Fun:    Send+Sync+Fn(Args) -> CellRef,
         let args    = match args { Ok(args) => args, Err(err) => return (frame, Err(err)) };
         let result  = (self.action)(args);
 
-        (frame, Ok(result))
+        (frame, result.to_cell())
     }
 }
 
@@ -183,6 +192,18 @@ impl TryFrom<CellRef> for FlatMapArgs {
             SafasCell::List(car, cdr)   => Ok(FlatMapArgs { monad_value: car.clone(), map_fn: cdr.clone() }),
             _                           => Err(RuntimeError::NotAMonad(cell))
         }
+    }
+}
+
+impl FnResult for CellRef {
+    fn to_cell(self) -> Result<CellRef, RuntimeError> {
+        Ok(self)
+    }
+}
+
+impl FnResult for Result<CellRef, RuntimeError> {
+    fn to_cell(self) -> Result<CellRef, RuntimeError> {
+        self
     }
 }
 

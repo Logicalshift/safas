@@ -11,7 +11,7 @@ pub fn wrap_fn() -> impl FrameMonad<Binding=RuntimeResult> {
         let wrap_monad  = SafasCell::FrameMonad(Box::new(wrap_monad)).into();
         let wrap_monad  = SafasCell::Monad(NIL.clone(), MonadType::new(wrap_monad)).into();
 
-        wrap_monad
+        CellRef::new(wrap_monad)
     });
     let wrap_fn     = ReturnsMonad(wrap_fn);
 

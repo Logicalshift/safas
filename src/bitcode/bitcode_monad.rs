@@ -129,7 +129,7 @@ impl BitCodeMonad {
                     Some(result) 
                 } else {
                     // Call the map_fn to create a bitcode monad with the wrapped value
-                    let create_monad    = FnMonad::from(|args: FlatMapArgs| SafasCell::Any(Box::new(BitCodeMonad::with_value(args.monad_value))).into());
+                    let create_monad    = FnMonad::from(|args: FlatMapArgs| CellRef::new(SafasCell::Any(Box::new(BitCodeMonad::with_value(args.monad_value)))));
                     let create_monad    = SafasCell::FrameMonad(Box::new(create_monad));
                     let (_frame, monad) = monad_type.flat_map(cell.clone(), create_monad.into(), Frame::new(1, None));
 

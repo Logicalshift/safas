@@ -6,7 +6,7 @@ use crate::meta::*;
 ///
 pub fn add_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|items: Vec<SafasNumber>| {
-        SafasCell::Number(items.into_iter().fold(SafasNumber::Plain(0), |a, b| a+b)).into()
+        CellRef::new(SafasCell::Number(items.into_iter().fold(SafasNumber::Plain(0), |a, b| a+b)))
     })
 }
 
@@ -16,7 +16,7 @@ pub fn add_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 pub fn sub_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|items: Vec<SafasNumber>| {
         if items.len() == 0 {
-            SafasCell::Number(SafasNumber::Plain(0)).into()
+            CellRef::new(SafasCell::Number(SafasNumber::Plain(0)))
         } else if items.len() == 1 {
             SafasCell::Number(SafasNumber::SignedBitNumber(items[0].bits(), -items[0].to_i128())).into()
         } else {
@@ -32,7 +32,7 @@ pub fn sub_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 pub fn mul_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|items: Vec<SafasNumber>| {
         if items.len() == 0 {
-            SafasCell::Number(SafasNumber::Plain(0)).into()
+            CellRef::new(SafasCell::Number(SafasNumber::Plain(0)))
         } else {
             let initial = items[0];
             SafasCell::Number(items.into_iter().skip(1).fold(initial, |a, b| a*b)).into()
@@ -46,7 +46,7 @@ pub fn mul_fn() -> impl FrameMonad<Binding=RuntimeResult> {
 pub fn div_fn() -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|items: Vec<SafasNumber>| {
         if items.len() == 0 {
-            SafasCell::Number(SafasNumber::Plain(0)).into()
+            CellRef::new(SafasCell::Number(SafasNumber::Plain(0)))
         } else {
             let initial = items[0];
             SafasCell::Number(items.into_iter().skip(1).fold(initial, |a, b| a/b)).into()
