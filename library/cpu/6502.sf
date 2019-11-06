@@ -3,7 +3,7 @@
 ;;      * Indirect syntax not matching properly
 
 (def_syntax assemble_6502 (
-        (brk) ((a 0 8) (d $00u8))
+        (brk)                   ((a 0 8) (d $00u8))
 
         (bne <addr>)            ((a 0 8) (d $d0u8) (d (bits 8 (- addr ip 1))))
 
