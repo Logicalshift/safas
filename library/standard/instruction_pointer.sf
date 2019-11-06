@@ -17,11 +17,7 @@
 ;;;
 ;;; Default label value mapping function
 ;;;
-(def label_value 
-    (fun (_) 
-        (/ (bit_pos) 8)
-    )
-)
+(def label_value ip)
 
 (export label_value)
 (export set_ip)
