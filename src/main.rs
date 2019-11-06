@@ -18,6 +18,8 @@ use crate::bitcode::*;
 use crate::interactive::*;
 
 use clap::{App, Arg};
+use std::io::{Write};
+use std::fs::{File};
 use std::process::{exit};
 
 fn main() {
@@ -145,7 +147,13 @@ fn main() {
         }
 
         let bytes = bitcode_to_bytes(bitcode);
-        println!("{}", hexdump(&bytes));
+
+        if let Some(output_file) = params.value_of("output") {
+            let mut output_file = File::create(output_file).unwrap();
+            output_file.write_all(&bytes).unwrap();
+        } else {
+            println!("{}", hexdump(&bytes));
+        }
     } else {
         println!("{}", output.to_string());
     }
