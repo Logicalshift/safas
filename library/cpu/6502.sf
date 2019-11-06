@@ -13,6 +13,8 @@
         (cpy #<immediate>)      ((a 0 8) (d $c0u8) (d (bits 8 immediate)))
         (cpy <absolute>)        ((a 0 8) (d $ccu8) (d (bits 16 absolute)))
 
+        (inx)                   ((a 0 8) (d $e8u8))
+
         (lda #<immediate>)      ((a 0 8) (d $a9u8) (d (bits 8 immediate)))
         (lda <absolute>)        ((a 0 8) (d $adu8) (d (bits 16 absolute)))
         (lda <absolute>, X)     ((a 0 8) (d $bdu8) (d (bits 16 absolute)))
