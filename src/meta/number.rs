@@ -126,8 +126,8 @@ impl Add for SafasNumber {
 
         match a {
             SignedBitNumber(bits, val)  => SignedBitNumber(u8::max(bits, b.bits()), val + b.to_i128()),
-            BitNumber(bits, val)        => BitNumber(u8::max(bits, b.bits()), val + b.to_u128()),
-            Plain(val)                  => Plain(val + b.to_u128())
+            BitNumber(bits, val)        => BitNumber(u8::max(bits, b.bits()), val.wrapping_add(b.to_u128())),
+            Plain(val)                  => Plain(val.wrapping_add(b.to_u128()))
         }
     }
 }
@@ -142,8 +142,8 @@ impl Sub for SafasNumber {
 
         match a {
             SignedBitNumber(bits, val)  => SignedBitNumber(u8::max(bits, b.bits()), val - b.to_i128()),
-            BitNumber(bits, val)        => BitNumber(u8::max(bits, b.bits()), val - b.to_u128()),
-            Plain(val)                  => Plain(val - b.to_u128())
+            BitNumber(bits, val)        => BitNumber(u8::max(bits, b.bits()), val.wrapping_sub(b.to_u128())),
+            Plain(val)                  => Plain(val.wrapping_sub(b.to_u128()))
         }
     }
 }
