@@ -94,7 +94,9 @@ impl Assembler {
 
         // If the label already has a value, check if it's the same as the existing value
         if let Some(last_value) = self.label_values.get(&label) {
-            // TODO!
+            if (&**last_value) != (&*value) {
+                self.changed_labels.insert(label);
+            }
         } else {
             // First time the label has been set, so mark it as changed
             self.changed_labels.insert(label);
