@@ -105,9 +105,18 @@ pub fn tokenize<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>,
                     let next = buffer.read_next();
                     if next.is_none() {
                         break;
-                    } else if next != Some(symbol) {
-                        buffer.push_back();
-                        break;
+                    } else if let Some(next) = next {
+                        if next != symbol {
+                            // Allow for some symbols to be longer than one character (eg >=)
+                            match next {
+                                '=' => { },
+
+                                _ => {
+                                    buffer.push_back();
+                                    break;
+                                }
+                            }
+                        }
                     }
 
                     symbol_string.push(symbol);
@@ -559,6 +568,11 @@ mod test {
     #[test]
     fn tokenize_symbol_3() {
         assert!(tokens_for("#atom") == vec![Token::Symbol('#'), Token::Atom]);
+    }
+
+    #[test]
+    fn tokenize_symbol_4() {
+        assert!(tokens_for(">=") == vec![Token::Atom]);
     }
 
     #[test]
