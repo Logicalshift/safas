@@ -43,6 +43,9 @@ pub enum SafasCell {
     /// An atom with a particular name
     Atom(u64),
 
+    /// A boolean value
+    Boolean(bool),
+
     /// A numeric value
     Number(SafasNumber),
 
@@ -194,6 +197,16 @@ impl SafasCell {
     }
 
     ///
+    /// If this is a boolean, the value of the boolean
+    ///
+    pub fn bool_value(&self) -> Option<bool> {
+        match self {
+            SafasCell::Boolean(val) => Some(*val),
+            _                       => None
+        }
+    }
+
+    ///
     /// If this is a list, returns the car and cdr cells
     ///
     pub fn list_value(&self) -> Option<(CellRef, CellRef)> {
@@ -222,6 +235,7 @@ impl SafasCell {
         match self {
             Nil                                                         => "()".to_string(),
             Atom(atom_id)                                               => name_for_atom_with_id(*atom_id),
+            Boolean(value)                                              => if *value { "#t" } else { "#f" }.to_string(),
             Number(number)                                              => number.to_string(),
             BitCode(bitcode)                                            => format!("{}", bitcode.iter().map(|bitcode| bitcode.to_string()).collect::<Vec<_>>().join("")),
             String(string_value)                                        => format!("\"{}\"", string_value),         // TODO: character quoting

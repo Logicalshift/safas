@@ -18,6 +18,9 @@ pub enum MatchSymbol {
     /// Match a string
     String(String),
 
+    /// Match a boolean value
+    Boolean(bool),
+
     /// Match a character
     Char(char),
 
@@ -217,6 +220,7 @@ impl PatternMatch {
                 }
 
                 SafasCell::Nil              => { symbols.push(MatchSymbol::Nil); }
+                SafasCell::Boolean(val)     => { symbols.push(MatchSymbol::Boolean(*val)); }
                 SafasCell::Number(number)   => { symbols.push(MatchSymbol::Number(number.clone())); }
                 SafasCell::String(string)   => { symbols.push(MatchSymbol::String(string.clone())); }
                 SafasCell::Char(chr)        => { symbols.push(MatchSymbol::Char(*chr)); }
@@ -256,6 +260,7 @@ impl PatternMatch {
                 String(string)              => { if car.string_value().as_ref() != Some(string)     { return Err(BindError::SyntaxMatchFailed); } },
                 Char(chr)                   => { if car.char_value() != Some(*chr)                  { return Err(BindError::SyntaxMatchFailed); } },
                 Number(number)              => { if car.number_value() != Some(*number)             { return Err(BindError::SyntaxMatchFailed); } },
+                Boolean(val)                => { if car.bool_value() != Some(*val)                  { return Err(BindError::SyntaxMatchFailed); } }
                 EndOfInput                  => { /* Matched implicitly */ },
 
                 StatementBinding(atom_id)   => { bindings.push(MatchBinding::Statement(*atom_id, Arc::clone(car))); }

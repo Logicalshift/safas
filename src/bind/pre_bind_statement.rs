@@ -29,6 +29,7 @@ pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> (SymbolB
                 match &*symbol_value {
                     Nil                     |
                     Any(_)                  |
+                    Boolean(_)              |
                     Number(_)               |
                     Atom(_)                 |
                     String(_)               |
@@ -78,6 +79,7 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                     // Constant values just load that value and call it
                     Nil                                         |
                     Any(_)                                      |
+                    Boolean(_)                                  |
                     Number(_)                                   |
                     Atom(_)                                     |
                     String(_)                                   |

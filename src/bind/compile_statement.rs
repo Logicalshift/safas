@@ -62,6 +62,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<CompiledActions,
         Nil                                                     |
         Any(_)                                                  |
         Number(_)                                               |
+        Boolean(_)                                              |
         Atom(_)                                                 |
         String(_)                                               |
         Char(_)                                                 |
