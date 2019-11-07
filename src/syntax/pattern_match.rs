@@ -333,6 +333,23 @@ mod test {
     }
 
     #[test]
+    fn pattern_match_with_symbol_in_list() {
+        let pattern         = eval("(quote (lda X, (<val>)))").unwrap();
+        let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
+        let match_against   = eval("(quote (lda X, (10)))").unwrap();
+
+        let bindings        = matcher.match_against(&match_against).unwrap();
+        assert!(bindings.len() == 1);
+
+        if let MatchBinding::Statement(atom_id, val) = &bindings[0] {
+            assert!(*atom_id == get_id_for_atom_with_name("val"));
+            assert!(val.number_value() == Some(SafasNumber::Plain(10)));
+        } else {
+            assert!(false)
+        }
+    }
+
+    #[test]
     fn pattern_match_binding_in_list() {
         let pattern         = eval("(quote (lda (#<val>)))").unwrap();
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
