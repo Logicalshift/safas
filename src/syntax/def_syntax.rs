@@ -339,6 +339,20 @@ mod test {
     }
 
     #[test]
+    fn nested_syntax() {
+        let val = eval(
+            "(def_syntax some_syntax (
+                (lda (<indirect>, X)) ((list indirect))
+            ))
+            (some_syntax (lda (2, X)))"
+            ).unwrap().to_string();
+
+        println!("{:?}", val);
+
+        assert!(val == "(2)");
+    }
+
+    #[test]
     fn syntax_monad_1() {
         let val = eval(
             "(def_syntax some_syntax (
