@@ -301,6 +301,32 @@ impl SafasCell {
     }
 }
 
+impl PartialEq for SafasCell {
+    fn eq(&self, rhs: &SafasCell) -> bool {
+        use self::SafasCell::*;
+
+        match (self, rhs) {
+            (Nil, Nil)                                          => true,
+            (Atom(a), Atom(b))                                  => a == b,
+            (Boolean(a), Boolean(b))                            => a == b,
+            (Number(a), Number(b))                              => a == b,
+            (BitCode(a), BitCode(b))                            => a == b,
+            (String(a), String(b))                              => a == b,
+            (Char(a), Char(b))                                  => a == b,
+            (List(a_car, a_cdr), List(b_car, b_cdr))            => a_car == b_car && a_cdr == b_cdr,
+            (Error(_), Error(_))                                => false,
+            (FrameReference(_, _, _), FrameReference(_, _, _))  => false,
+            (Monad(_, _), Monad(_, _))                          => false,
+            (FrameMonad(_), FrameMonad(_))                      => false,
+            (Syntax(_, _), Syntax(_, _))                        => false,
+            (BoundSyntax(_), BoundSyntax(_))                    => false,
+            (Any(_), Any(_))                                    => false,
+
+            (_, _)                                              => false
+        }
+    }
+}
+
 impl Default for SafasCell {
     fn default() -> SafasCell {
         SafasCell::Nil

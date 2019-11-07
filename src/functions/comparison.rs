@@ -79,14 +79,7 @@ pub fn le_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
 pub fn eq_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(a, b): (CellRef, CellRef)| {
 
-        if let (Some(a), Some(b)) = (a.number_value(), b.number_value()) {
-
-            let result = a == b;
-            Ok(CellRef::new(SafasCell::Boolean(result)))
-
-        } else {
-            Err(RuntimeError::CannotCompare(a, b))
-        }
+        Ok(CellRef::new(SafasCell::Boolean((&*a) == (&*b))))
 
     })
 }
@@ -97,14 +90,7 @@ pub fn eq_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
 pub fn ne_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(a, b): (CellRef, CellRef)| {
 
-        if let (Some(a), Some(b)) = (a.number_value(), b.number_value()) {
-
-            let result = a != b;
-            Ok(CellRef::new(SafasCell::Boolean(result)))
-
-        } else {
-            Err(RuntimeError::CannotCompare(a, b))
-        }
+        Ok(CellRef::new(SafasCell::Boolean((&*a) != (&*b))))
 
     })
 }
@@ -174,6 +160,14 @@ mod test {
     pub fn one_not_equals_two() {
         let val = eval(
                 "(!= 1 2)"
+            ).unwrap().to_string();
+        assert!(val == "=t".to_string());
+    }
+
+    #[test]
+    pub fn string_equals_string() {
+        let val = eval(
+                "(= \"hello\" \"hello\")"
             ).unwrap().to_string();
         assert!(val == "=t".to_string());
     }
