@@ -304,6 +304,8 @@ mod test {
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
         let match_against   = eval("(quote (lda #10))").unwrap();
 
+        assert!(matcher.bindings().len() == 1);
+
         let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
 
@@ -338,6 +340,8 @@ mod test {
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
         let match_against   = eval("(quote (lda X, (10)))").unwrap();
 
+        assert!(matcher.bindings().len() == 1);
+
         let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
 
@@ -352,8 +356,10 @@ mod test {
     #[test]
     fn pattern_match_with_symbol_in_list_2() {
         let pattern         = eval("(quote ((<val>, X)))").unwrap();
-        let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
+        let matcher         = PatternMatch::from_pattern_as_cells(pattern.clone()).unwrap();
         let match_against   = eval("(quote ((10, X)))").unwrap();
+
+        assert!(matcher.bindings().len() == 1);
 
         let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
@@ -371,6 +377,8 @@ mod test {
         let pattern         = eval("(quote (lda (#<val>)))").unwrap();
         let matcher         = PatternMatch::from_pattern_as_cells(pattern).unwrap();
         let match_against   = eval("(quote (lda (#10)))").unwrap();
+
+        assert!(matcher.bindings().len() == 1);
 
         let bindings        = matcher.match_against(&match_against).unwrap();
         assert!(bindings.len() == 1);
