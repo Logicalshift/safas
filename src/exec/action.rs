@@ -90,6 +90,15 @@ impl Action {
                     window = (None, None, None, Some(Action::PopCall(arg_count)));
                 }
 
+                (action1, action2, Some(Action::Push), Some(Action::Pop)) => {
+                    window = (None, None, action1, action2);
+                },
+
+                (action1, action2, Some(Action::Pop), Some(Action::Push)) => {
+                    // Slight behaviour difference: the result is not the popped value after this
+                    window = (None, None, action1, action2);
+                },
+
                 (action1, action2, action3, action4) => {
                     // Actions leaving the window are added to the result
                     if let Some(action) = action1 { 
