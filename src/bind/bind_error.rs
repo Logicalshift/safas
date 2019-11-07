@@ -128,6 +128,7 @@ impl From<RuntimeError> for BindError {
             CannotAllocateLabelsDuringAssembly  |
             BeforeStartOfFile                   |
             TooManyPasses(_)                    |
+            CannotCompare(_, _)                 |
             NotEnoughArguments(_)               => BindError::RuntimeError
         }
     }

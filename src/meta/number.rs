@@ -1,5 +1,6 @@
 use radix_fmt::*;
 
+use std::cmp::{Ordering};
 use std::ops::{Add, Sub, Mul, Div};
 
 ///
@@ -176,6 +177,20 @@ impl Div for SafasNumber {
             SignedBitNumber(bits, val)  => SignedBitNumber(u8::max(bits, b.bits()), val / b.to_i128()),
             BitNumber(bits, val)        => BitNumber(u8::max(bits, b.bits()), val / b.to_u128()),
             Plain(val)                  => Plain(val / b.to_u128())
+        }
+    }
+}
+
+impl PartialOrd for SafasNumber {
+    fn partial_cmp(&self, rhs: &SafasNumber) -> Option<Ordering> {
+        use self::SafasNumber::*;
+
+        let (a, b) = self.coerce(*rhs);
+
+        match a {
+            SignedBitNumber(_bits, val) => val.partial_cmp(&b.to_i128()),
+            BitNumber(_bits, val)       => val.partial_cmp(&b.to_u128()),
+            Plain(val)                  => val.partial_cmp(&b.to_u128())
         }
     }
 }

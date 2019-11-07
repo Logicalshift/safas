@@ -69,7 +69,10 @@ pub enum RuntimeError {
     IOError,
 
     /// Assembly did not stabilise in the specified number of passes
-    TooManyPasses(usize)
+    TooManyPasses(usize),
+
+    /// Two cells cannot be compared
+    CannotCompare(CellRef, CellRef)
 }
 
 /// The result of a runtime operation (most common binding type of a frame monad)
