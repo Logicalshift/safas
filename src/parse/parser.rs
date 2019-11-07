@@ -58,6 +58,7 @@ fn parse_cell_from_token<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<
         Token::BitNumber    => { (Ok((Some(bit_number(&token_text, &original_location)?.into()), location))) }
         Token::HexNumber    => { (Ok((Some(hex_number(&token_text, &original_location)?.into()), location))) }
         Token::IntNumber    => { (Ok((Some(int_number(&token_text, &original_location)?.into()), location))) }
+        Token::Boolean      => { Ok((Some(SafasCell::Boolean(token_text.chars().nth(1) == Some('t')).into()), location)) }
         Token::Atom         => { Ok((Some(SafasCell::Atom(get_id_for_atom_with_name(&token_text)).into()), location)) }
         Token::Symbol(_)    => { Ok((Some(SafasCell::Atom(get_id_for_atom_with_name(&token_text)).into()), location)) }
         Token::CloseParen   => { Err(ParseError::UnexpectedCloseParen(original_location)) }
@@ -391,6 +392,20 @@ mod test {
         let mut buf         = TokenReadBuffer::new("(1 (2 3) 4)".chars());
         let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
         assert!(parse_result == "((1 (2 3) 4))".to_string());
+    }
+
+    #[test]
+    fn parse_bool_1() {
+        let mut buf         = TokenReadBuffer::new("#t".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "(#t)".to_string());
+    }
+
+    #[test]
+    fn parse_bool_2() {
+        let mut buf         = TokenReadBuffer::new("#f".chars());
+        let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
+        assert!(parse_result == "(#f)".to_string());
     }
 
     #[test]

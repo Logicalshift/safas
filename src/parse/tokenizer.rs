@@ -36,6 +36,9 @@ pub enum Token {
     /// $1234 or $1234u1 or similar
     HexNumber,
 
+    /// #t or #f
+    Boolean,
+
     /// 1101b4 or similar
     BitNumber,
 
@@ -76,6 +79,17 @@ pub fn tokenize<Chars: Iterator<Item=char>>(buffer: &mut TokenReadBuffer<Chars>,
         Some('\'')      => read_character(buffer, location),
         Some('\"')      => read_string(buffer, location),
         Some('$')       => read_hex_number(buffer, location),
+        Some('#')       => {
+            let next_char = buffer.read_next();
+            if next_char == Some('t') || next_char == Some('f') {
+                (Token::Boolean, buffer.read_characters(), buffer.update_location(location))
+            } else {
+                if next_char.is_some() {
+                    buffer.push_back();
+                }
+                (Token::Symbol('#'), buffer.read_characters(), buffer.update_location(location))
+            }
+        },
 
         Some(symbol)    => {
             if symbol.is_alphabetic() || symbol == '_' {
@@ -545,6 +559,16 @@ mod test {
     #[test]
     fn tokenize_symbol_3() {
         assert!(tokens_for("#atom") == vec![Token::Symbol('#'), Token::Atom]);
+    }
+
+    #[test]
+    fn tokenize_boolean_1() {
+        assert!(tokens_for("#t") == vec![Token::Boolean]);
+    }
+
+    #[test]
+    fn tokenize_boolean_2() {
+        assert!(tokens_for("#f") == vec![Token::Boolean]);
     }
 
     #[test]
