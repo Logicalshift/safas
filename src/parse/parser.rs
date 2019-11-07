@@ -396,16 +396,16 @@ mod test {
 
     #[test]
     fn parse_bool_1() {
-        let mut buf         = TokenReadBuffer::new("#t".chars());
+        let mut buf         = TokenReadBuffer::new("=t".chars());
         let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
-        assert!(parse_result == "(#t)".to_string());
+        assert!(parse_result == "(=t)".to_string());
     }
 
     #[test]
     fn parse_bool_2() {
-        let mut buf         = TokenReadBuffer::new("#f".chars());
+        let mut buf         = TokenReadBuffer::new("=f".chars());
         let parse_result    = parse_safas(&mut buf, FileLocation::new("test")).unwrap().to_string();
-        assert!(parse_result == "(#f)".to_string());
+        assert!(parse_result == "(=f)".to_string());
     }
 
     #[test]

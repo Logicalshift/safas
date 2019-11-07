@@ -235,7 +235,7 @@ impl SafasCell {
         match self {
             Nil                                                         => "()".to_string(),
             Atom(atom_id)                                               => name_for_atom_with_id(*atom_id),
-            Boolean(value)                                              => if *value { "#t" } else { "#f" }.to_string(),
+            Boolean(value)                                              => if *value { "=t" } else { "=f" }.to_string(),
             Number(number)                                              => number.to_string(),
             BitCode(bitcode)                                            => format!("{}", bitcode.iter().map(|bitcode| bitcode.to_string()).collect::<Vec<_>>().join("")),
             String(string_value)                                        => format!("\"{}\"", string_value),         // TODO: character quoting

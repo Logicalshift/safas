@@ -119,7 +119,7 @@ mod test {
         let val = eval(
                 "(> 2 1)"
             ).unwrap().to_string();
-        assert!(val == "#t".to_string());
+        assert!(val == "=t".to_string());
     }
 
     #[test]
@@ -127,7 +127,7 @@ mod test {
         let val = eval(
                 "(> 1 2)"
             ).unwrap().to_string();
-        assert!(val == "#f".to_string());
+        assert!(val == "=f".to_string());
     }
 
     #[test]
@@ -135,7 +135,7 @@ mod test {
         let val = eval(
                 "(> 2 2)"
             ).unwrap().to_string();
-        assert!(val == "#f".to_string());
+        assert!(val == "=f".to_string());
     }
 
     #[test]
@@ -143,7 +143,7 @@ mod test {
         let val = eval(
                 "(>= 2 2)"
             ).unwrap().to_string();
-        assert!(val == "#t".to_string());
+        assert!(val == "=t".to_string());
     }
 
     #[test]
@@ -151,7 +151,7 @@ mod test {
         let val = eval(
                 "(< 1 2)"
             ).unwrap().to_string();
-        assert!(val == "#t".to_string());
+        assert!(val == "=t".to_string());
     }
 
     #[test]
@@ -159,7 +159,7 @@ mod test {
         let val = eval(
                 "(<= 2 2)"
             ).unwrap().to_string();
-        assert!(val == "#t".to_string());
+        assert!(val == "=t".to_string());
     }
 
     #[test]
@@ -167,7 +167,7 @@ mod test {
         let val = eval(
                 "(= 2 2)"
             ).unwrap().to_string();
-        assert!(val == "#t".to_string());
+        assert!(val == "=t".to_string());
     }
 
     #[test]
@@ -175,6 +175,6 @@ mod test {
         let val = eval(
                 "(!= 1 2)"
             ).unwrap().to_string();
-        assert!(val == "#t".to_string());
+        assert!(val == "=t".to_string());
     }
 }
