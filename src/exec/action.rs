@@ -54,7 +54,13 @@ pub enum Action {
 
     /// Calls flat_map on the monad on top of the stack with a function that returns the current value, pushing the result
     /// back onto the stack
-    Next
+    Next,
+
+    /// Move ahead or behind x actions
+    Jump(isize),
+
+    /// If the value on top of the stack is not true (ie, any value other than =t), move ahead/behind x actions
+    JumpIfFalse(isize)
 }
 
 impl Action {
@@ -141,10 +147,17 @@ impl FrameMonad for Vec<Action> {
         // Initial state
         let mut frame   = frame;
         let mut result  = NIL.clone();
+        let mut ip      = 0;
 
         // Perform each action in turn
-        for action in self.iter() {
+        loop {
             use self::Action::*;
+
+            // Stop when we get past the end
+            if ip >= self.len() { break; }
+
+            // Read the next action
+            let action = &self[ip];
 
             match action {
                 Push                        => { frame.stack.push(Arc::clone(&result)); },
@@ -298,8 +311,23 @@ impl FrameMonad for Vec<Action> {
 
                         _ => return (frame, Err(RuntimeError::NotAMonad(Arc::clone(&monad))))
                     }
+                },
+
+                Jump(offset) => {
+                    ip = ((ip as isize) + offset) as usize;
+                    continue;
+                },
+
+                JumpIfFalse(offset) => {
+                    if let SafasCell::Boolean(true) = &*result {
+                        ip = ((ip as isize) + offset) as usize;
+                        continue;
+                    }
                 }
             }
+
+            // Next instruction
+            ip += 1;
         }
 
         (frame, Ok(result))
