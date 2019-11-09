@@ -31,6 +31,12 @@ pub enum ReferenceType {
     ReturnsMonad
 }
 
+impl Default for ReferenceType {
+    fn default() -> Self {
+        ReferenceType::Value
+    }
+}
+
 ///
 /// A SAFAS cell represents a single value: for example 'D' or '24'
 /// 

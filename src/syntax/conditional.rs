@@ -7,22 +7,25 @@ use std::convert::{TryInto};
 ///
 /// Binds a list of statements
 ///
-fn bind_several_statements(statements: CellRef, bindings: SymbolBindings) -> BindResult<CellRef> {
+fn bind_several_statements(statements: CellRef, bindings: SymbolBindings) -> BindResult<(CellRef, ReferenceType)> {
     // Build up the list of results
-    let mut result      = vec![];
-    let mut pos         = &*statements;
-    let mut bindings    = bindings;
+    let mut result          = vec![];
+    let mut pos             = &*statements;
+    let mut bindings        = bindings;
+    let mut return_ref_type = ReferenceType::Value;
 
     // Bind the statements one at a time from the list
     while let SafasCell::List(statement, next) = pos {
         let (bound_statement, new_bindings) = bind_statement(statement.clone(), bindings)?;
+        if return_ref_type != ReferenceType::Monad { return_ref_type = bound_statement.reference_type(); }
+
         bindings                            = new_bindings;
         result.push(bound_statement);
 
         pos = next;
     }
 
-    Ok((SafasCell::list_with_cells(result).into(), bindings))
+    Ok(((SafasCell::list_with_cells(result).into(), return_ref_type), bindings))
 }
 
 ///
@@ -30,15 +33,50 @@ fn bind_several_statements(statements: CellRef, bindings: SymbolBindings) -> Bin
 ///
 fn compile_several_statements(statements: CellRef) -> Result<CompiledActions, BindError> {
     // Start with an empty set of actions
-    let mut result  = CompiledActions::empty();
+    let mut result          = CompiledActions::empty();
+
+    // Work out the reference type of the set of statements
+    let mut return_ref_type = ReferenceType::Value;
+    let mut pos             = &*statements;
+    while let SafasCell::List(statement, next) = pos {
+        // Monad statements end up being flat-mapped together: for other types we end up with the reference type of the last statement
+        if return_ref_type != ReferenceType::Monad { return_ref_type = statement.reference_type() }
+
+        pos = next;
+    }
 
     // Compile the list of statements
-    let mut pos     = &*statements;
+    let mut pos         = &*statements;
+    let mut first       = true;
     while let SafasCell::List(statement, next) = pos {
+        // Compile the next statement
         let next_statement = compile_statement(statement.clone())?;
         result.extend(next_statement);
 
-        pos = next;
+        // Flat_map monads together
+        if return_ref_type == ReferenceType::Monad {
+            let statement_ref_type = statement.reference_type();
+
+            // Wrap statements that don't have a monad return value
+            if statement_ref_type != ReferenceType::Monad {
+                result.push(Action::Wrap);
+            }
+
+            // Push the first value, call next on the future ones
+            if first {
+                result.push(Action::Push);
+            } else {
+                result.push(Action::Next);
+            }
+        }
+
+        pos     = next;
+        first   = false;
+    }
+
+    // Finally, pop the monad if the return type is a monad
+    if !first && return_ref_type == ReferenceType::Monad {
+        result.push(Action::Pop);
     }
 
     Ok(result)
@@ -52,20 +90,42 @@ pub fn if_keyword()  -> impl BindingMonad<Binding=SyntaxCompiler> {
     get_expression_arguments().and_then(|ListTuple((conditional, if_true, if_false)): ListTuple<(CellRef, CellRef, CellRef)>| {
         BindingFn::from_binding_fn(move |bindings| {
             // Bind the statements
-            let (bindings, conditional) = match bind_several_statements(conditional.clone(), bindings)  { Ok((result, bindings)) => (bindings, result), Err((err, bindings)) => return (bindings, Err(err)) };
-            let (bindings, if_true)     = match bind_several_statements(if_true.clone(), bindings)      { Ok((result, bindings)) => (bindings, result), Err((err, bindings)) => return (bindings, Err(err)) };
-            let (bindings, if_false)    = match bind_several_statements(if_false.clone(), bindings)     { Ok((result, bindings)) => (bindings, result), Err((err, bindings)) => return (bindings, Err(err)) };
+            let (bindings, (conditional, conditional_ref_type)) = match bind_several_statements(conditional.clone(), bindings)  { Ok((result, bindings)) => (bindings, result), Err((err, bindings)) => return (bindings, Err(err)) };
+            let (bindings, (if_true, if_true_ref_type))         = match bind_several_statements(if_true.clone(), bindings)      { Ok((result, bindings)) => (bindings, result), Err((err, bindings)) => return (bindings, Err(err)) };
+            let (bindings, (if_false, if_false_ref_type))       = match bind_several_statements(if_false.clone(), bindings)     { Ok((result, bindings)) => (bindings, result), Err((err, bindings)) => return (bindings, Err(err)) };
 
-            (bindings, Ok((conditional, if_true, if_false)))
+            (bindings, Ok((conditional, if_true, if_false, conditional_ref_type, if_true_ref_type, if_false_ref_type)))
         })
-    }).map_result(|(conditional, if_true, if_false)| {
-        let compiler = |statements: CellRef| -> Result<_, BindError> {
+    }).map_result(|(conditional, if_true, if_false, conditional_ref_type, if_true_ref_type, if_false_ref_type)| {
+        // The return reference type is a monad if either the if_true or if_false types are monads (or the conditional is one)
+        let return_ref_type = if conditional_ref_type == ReferenceType::Monad || if_true_ref_type == ReferenceType::Monad || if_false_ref_type == ReferenceType::Monad {
+            ReferenceType::Monad
+        } else {
+            if if_true_ref_type == ReferenceType::ReturnsMonad && if_false_ref_type == ReferenceType::ReturnsMonad {
+                ReferenceType::ReturnsMonad
+            } else {
+                ReferenceType::Value
+            }
+        };
+
+        let compiler = move |statements: CellRef| -> Result<_, BindError> {
             let ListTuple((conditional, if_true, if_false)) = statements.try_into()?;
 
             // Compile the statements
             let mut conditional_actions = compile_several_statements(conditional)?;
             let mut if_true             = compile_several_statements(if_true)?;
-            let if_false                = compile_several_statements(if_false)?;
+            let mut if_false            = compile_several_statements(if_false)?;
+
+            // Wrap the results if they need to be
+            if return_ref_type == ReferenceType::Monad {
+                if if_true_ref_type != ReferenceType::Monad {
+                    if_true.push(Action::Wrap);
+                }
+
+                if if_false_ref_type != ReferenceType::Monad {
+                    if_false.push(Action::Wrap);
+                }
+            }
 
             // Add the jump commands: if_true ends by jumping over the if_false statements, and the conditional actions jump over if_true when the condition is false
             if_true.push(Action::Jump((if_false.actions.len()+1) as isize));
@@ -79,7 +139,7 @@ pub fn if_keyword()  -> impl BindingMonad<Binding=SyntaxCompiler> {
             Ok(result)
         };
 
-        Ok(SyntaxCompiler::with_compiler(compiler, SafasCell::list_with_cells(vec![conditional, if_true, if_false]).into()))
+        Ok(SyntaxCompiler::with_compiler_and_reftype(compiler, SafasCell::list_with_cells(vec![conditional, if_true, if_false]).into(), return_ref_type))
     })
 }
 
@@ -109,5 +169,27 @@ mod test {
     fn if_with_false_condition() {
         let val = eval("(if ((< 2 1)) (1) (2) )").unwrap().to_string();
         assert!(val == "2".to_string());
+    }
+
+    #[test]
+    fn if_with_monad_result() {
+        let val = eval("
+            (if (=f) 
+                ((list 2 3)) 
+                ((list 1 (wrap 2))) 
+            )
+        ").unwrap().to_string();
+        assert!(val == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
+    }
+
+    #[test]
+    fn if_with_monad_result_on_opposing_side() {
+        let val = eval("
+            (if (=t) 
+                ((list 1 2)) 
+                ((list 2 (wrap 3))) 
+            )
+        ").unwrap().to_string();
+        assert!(val == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
 }
