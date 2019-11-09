@@ -192,4 +192,26 @@ mod test {
         ").unwrap().to_string();
         assert!(val == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
     }
+
+    #[test]
+    fn if_with_monad_as_the_condition() {
+        let val = eval("
+            (if ((wrap =t)) 
+                ((list 1 2)) 
+                ((list 2 3)) 
+            )
+        ").unwrap().to_string();
+        assert!(val == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
+    }
+
+    #[test]
+    fn if_with_monad_as_the_condition_and_the_result() {
+        let val = eval("
+            (if ((wrap =t)) 
+                ((list 1 (wrap 2))) 
+                ((list 2 3)) 
+            )
+        ").unwrap().to_string();
+        assert!(val == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
+    }
 }
