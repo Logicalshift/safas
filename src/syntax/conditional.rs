@@ -172,7 +172,7 @@ mod test {
     }
 
     #[test]
-    fn if_with_monad_result() {
+    fn if_with_monad_result_false() {
         let val = eval("
             (if (=f) 
                 ((list 2 3)) 
@@ -183,11 +183,33 @@ mod test {
     }
 
     #[test]
-    fn if_with_monad_result_on_opposing_side() {
+    fn if_with_monad_result_true() {
+        let val = eval("
+            (if (=t) 
+                ((list 1 (wrap 2))) 
+                ((list 2 3)) 
+            )
+        ").unwrap().to_string();
+        assert!(val == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
+    }
+
+    #[test]
+    fn if_with_monad_result_on_opposing_side_true() {
         let val = eval("
             (if (=t) 
                 ((list 1 2)) 
                 ((list 2 (wrap 3))) 
+            )
+        ").unwrap().to_string();
+        assert!(val == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
+    }
+
+    #[test]
+    fn if_with_monad_result_on_opposing_side_false() {
+        let val = eval("
+            (if (=f) 
+                ((list 2 (wrap 3))) 
+                ((list 1 2)) 
             )
         ").unwrap().to_string();
         assert!(val == "monad#()#(flat_map: ##wrap((1 2)))".to_string());
