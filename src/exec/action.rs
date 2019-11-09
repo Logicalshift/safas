@@ -320,6 +320,9 @@ impl FrameMonad for Vec<Action> {
 
                 JumpIfFalse(offset) => {
                     if let SafasCell::Boolean(true) = &*result {
+                        // True values continue as normal
+                    } else {
+                        // False values take the branch
                         ip = ((ip as isize) + offset) as usize;
                         continue;
                     }
