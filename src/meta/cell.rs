@@ -198,6 +198,7 @@ impl SafasCell {
     pub fn number_value(&self) -> Option<SafasNumber> {
         match self {
             SafasCell::Number(number)   => Some(*number),
+            SafasCell::Nil              => Some(SafasNumber::Plain(0)),
             _                           => None
         }
     }

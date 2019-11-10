@@ -157,6 +157,14 @@ mod test {
     }
 
     #[test]
+    pub fn one_gt_nil() {
+        let val = eval(
+                "(> 1 ())"
+            ).unwrap().to_string();
+        assert!(val == "=t".to_string());
+    }
+
+    #[test]
     pub fn one_not_equals_two() {
         let val = eval(
                 "(!= 1 2)"
