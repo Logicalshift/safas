@@ -117,7 +117,7 @@ impl SyntaxCompiler {
 ///
 /// Substitutes frame references in a CellRef binding
 ///
-fn substitute_frame_refs(original: CellRef, get_new_frame_ref: &mut dyn FnMut(FrameReference) -> Option<CellRef>) -> CellRef {
+pub fn substitute_frame_refs(original: CellRef, get_new_frame_ref: &mut dyn FnMut(FrameReference) -> Option<CellRef>) -> CellRef {
     match &*original {
         SafasCell::FrameReference(cell, frame, ref_type)    => if let Some(substitute) = get_new_frame_ref(FrameReference(*cell, *frame, *ref_type)) { substitute } else { original },
         SafasCell::BoundSyntax(syntax)                      => SafasCell::BoundSyntax(syntax.substitute_frame_refs(get_new_frame_ref)).into(),

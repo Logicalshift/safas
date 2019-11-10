@@ -96,51 +96,78 @@ pub fn if_keyword()  -> impl BindingMonad<Binding=SyntaxCompiler> {
 
             (bindings, Ok((conditional, if_true, if_false, conditional_ref_type, if_true_ref_type, if_false_ref_type)))
         })
-    }).map_result(|(conditional, if_true, if_false, conditional_ref_type, if_true_ref_type, if_false_ref_type)| {
-        // The return reference type is a monad if either the if_true or if_false types are monads (or the conditional is one)
-        let return_ref_type = if conditional_ref_type == ReferenceType::Monad || if_true_ref_type == ReferenceType::Monad || if_false_ref_type == ReferenceType::Monad {
-            ReferenceType::Monad
+
+    }).and_then(|(conditional, if_true, if_false, conditional_ref_type, if_true_ref_type, if_false_ref_type)| -> Box<dyn BindingMonad<Binding=SyntaxCompiler>> {
+
+        if conditional_ref_type == ReferenceType::Monad {
+
+            // If the monad is a reftype, we need to flat_map it with the conditional values
+            unimplemented!("Monad conditionals not supported yet")
+
         } else {
-            if if_true_ref_type == ReferenceType::ReturnsMonad && if_false_ref_type == ReferenceType::ReturnsMonad {
-                ReferenceType::ReturnsMonad
-            } else {
-                ReferenceType::Value
-            }
-        };
 
-        let compiler = move |statements: CellRef| -> Result<_, BindError> {
-            let ListTuple((conditional, if_true, if_false)) = statements.try_into()?;
+            // Standard values are just compiled as a straight 'if' function
+            Box::new(BindingFn::from_binding_fn(move |bindings| {
+                let result = compile_if_with_value_conditional(conditional.clone(), if_true.clone(), if_false.clone(), if_true_ref_type, if_false_ref_type);
 
-            // Compile the statements
-            let mut conditional_actions = compile_several_statements(conditional)?;
-            let mut if_true             = compile_several_statements(if_true)?;
-            let mut if_false            = compile_several_statements(if_false)?;
-
-            // Wrap the results if they need to be
-            if return_ref_type == ReferenceType::Monad {
-                if if_true_ref_type != ReferenceType::Monad {
-                    if_true.push(Action::Wrap);
+                match result {
+                    Ok(result)  => (bindings, Ok(result)),
+                    Err(err)    => (bindings, Err(err))
                 }
+            }))
 
-                if if_false_ref_type != ReferenceType::Monad {
-                    if_false.push(Action::Wrap);
-                }
-            }
+        }
 
-            // Add the jump commands: if_true ends by jumping over the if_false statements, and the conditional actions jump over if_true when the condition is false
-            if_true.push(Action::Jump((if_false.actions.len()+1) as isize));
-            conditional_actions.push(Action::JumpIfFalse((if_true.actions.len()+1) as isize));
-
-            // Combine into the result
-            let mut result = conditional_actions;
-            result.extend(if_true);
-            result.extend(if_false);
-
-            Ok(result)
-        };
-
-        Ok(SyntaxCompiler::with_compiler_and_reftype(compiler, SafasCell::list_with_cells(vec![conditional, if_true, if_false]).into(), return_ref_type))
     })
+}
+
+///
+/// Given an if statement with a function that
+///
+fn compile_if_with_value_conditional(conditional: CellRef, if_true: CellRef, if_false: CellRef, if_true_reftype: ReferenceType, if_false_reftype: ReferenceType) -> Result<SyntaxCompiler, BindError> {
+    // The return reference type is a monad if either the if_true or if_false types are monads (or the conditional is one)
+    let return_ref_type = if if_true_reftype == ReferenceType::Monad || if_false_reftype == ReferenceType::Monad {
+        ReferenceType::Monad
+    } else {
+        if if_true_reftype == ReferenceType::ReturnsMonad && if_false_reftype == ReferenceType::ReturnsMonad {
+            ReferenceType::ReturnsMonad
+        } else {
+            ReferenceType::Value
+        }
+    };
+
+    let compiler = move |statements: CellRef| -> Result<_, BindError> {
+        let ListTuple((conditional, if_true, if_false)) = statements.try_into()?;
+
+        // Compile the statements
+        let mut conditional_actions = compile_several_statements(conditional)?;
+        let mut if_true             = compile_several_statements(if_true)?;
+        let mut if_false            = compile_several_statements(if_false)?;
+
+        // Wrap the results if they need to be due to the return value being a monad
+        if return_ref_type == ReferenceType::Monad {
+            if if_true_reftype != ReferenceType::Monad {
+                if_true.push(Action::Wrap);
+            }
+
+            if if_false_reftype != ReferenceType::Monad {
+                if_false.push(Action::Wrap);
+            }
+        }
+
+        // Add the jump commands: if_true ends by jumping over the if_false statements, and the conditional actions jump over if_true when the condition is false
+        if_true.push(Action::Jump((if_false.actions.len()+1) as isize));
+        conditional_actions.push(Action::JumpIfFalse((if_true.actions.len()+1) as isize));
+
+        // Combine into the result
+        let mut result = conditional_actions;
+        result.extend(if_true);
+        result.extend(if_false);
+
+        Ok(result)
+    };
+
+    Ok(SyntaxCompiler::with_compiler_and_reftype(compiler, SafasCell::list_with_cells(vec![conditional, if_true, if_false]).into(), return_ref_type))
 }
 
 #[cfg(test)]
