@@ -8,7 +8,12 @@
         (bne <addr>)            ((a 0 8) (d $d0u8) (d (bits 8 (- addr ip 1))))
 
         (cpx #<immediate>)      ((a 0 8) (d $e0u8) (d (bits 8 immediate)))
-        (cpx <absolute>)        ((a 0 8) (d $ecu8) (d (bits 16 absolute)))
+        (cpx <absolute>)        ((a 0 8) 
+                                    (if ((< absolute $100)) 
+                                        ((d $e4u8) (d (bits 8 absolute)))
+                                        ((d $ecu8) (d (bits 16 absolute)))
+                                    )
+                                )
 
         (cpy #<immediate>)      ((a 0 8) (d $c0u8) (d (bits 8 immediate)))
         (cpy <absolute>)        ((a 0 8) (d $ccu8) (d (bits 16 absolute)))
