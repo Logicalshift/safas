@@ -1,15 +1,11 @@
-;; TODO: 
-;;      * Zero-page instructions (absolute with value < 0)
-;;      * Indirect syntax not matching properly
-
 ;;;
 ;;; For instructions that have a zero-page variant, assembles the 8 or 16-bit version as required
 ;;;
 (def zero_page 
     (fun (absolute op8 op16)
-        (if ((< absolute $100))
-            ((d op8) (d (bits 8 absolute)))
-            ((d op16) (d (bits 16 absolute)))
+        (if ( (< absolute $100) )
+            ( (d op8) (d (bits 8 absolute)) )
+            ( (d op16) (d (bits 16 absolute)) )
         )
     )
 )
@@ -23,26 +19,26 @@
         (cpx <absolute>)        ((a 0 8) (zero_page absolute $e4u8 $ecu8))
 
         (cpy #<immediate>)      ((a 0 8) (d $c0u8) (d (bits 8 immediate)))
-        (cpy <absolute>)        ((a 0 8) (d $ccu8) (d (bits 16 absolute)))
+        (cpy <absolute>)        ((a 0 8) (zero_page absolute $c4u8 $ccu8))
 
         (inx)                   ((a 0 8) (d $e8u8))
 
         (lda #<immediate>)      ((a 0 8) (d $a9u8) (d (bits 8 immediate)))
-        (lda <absolute>)        ((a 0 8) (d $adu8) (d (bits 16 absolute)))
-        (lda <absolute>, X)     ((a 0 8) (d $bdu8) (d (bits 16 absolute)))
+        (lda <absolute>)        ((a 0 8) (zero_page absolute $a5u8 $adu8))
+        (lda <absolute>, X)     ((a 0 8) (zero_page absolute $b5u8 $bdu8))
         (lda <absolute>, Y)     ((a 0 8) (d $b9u8) (d (bits 16 absolute)))
         (lda (<indirect>, X))   ((a 0 8) (d $a1u8) (d (bits 8 indirect)))
         (lda (<indirect>), Y)   ((a 0 8) (d $b1u8) (d (bits 8 indirect)))
 
         (ldx #<immediate>)      ((a 0 8) (d $a2u8) (d (bits 8 immediate)))
-        (ldx <absolute>)        ((a 0 8) (d $aeu8) (d (bits 16 absolute)))
-        (ldx <absolute>, Y)     ((a 0 8) (d $beu8) (d (bits 16 absolute)))
+        (ldx <absolute>)        ((a 0 8) (zero_page absolute $a6u8 $aeu8))
+        (ldx <absolute>, Y)     ((a 0 8) (zero_page absolute $b6u8 $beu8))
 
         (jsr <addr>)            ((a 0 8) (d $20u8) (d (bits 16 addr)))
 
         (ora #<immediate>)      ((a 0 8) (d $09u8) (d (bits 8 immediate)))
-        (ora <absolute>)        ((a 0 8) (d $0du8) (d (bits 16 absolute)))
-        (ora <absolute>, X)     ((a 0 8) (d $1du8) (d (bits 16 absolute)))
+        (ora <absolute>)        ((a 0 8) (zero_page absolute $05u8 $0du8))
+        (ora <absolute>, X)     ((a 0 8) (zero_page absolute $15u8 $1du8))
         (ora <absolute>, Y)     ((a 0 8) (d $19u8) (d (bits 16 absolute)))
         (ora (<indirect>, X))   ((a 0 8) (d $01u8) (d (bits 8 indirect)))
         (ora (<indirect>), Y)   ((a 0 8) (d $11u8) (d (bits 8 indirect)))
