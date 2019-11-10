@@ -158,7 +158,7 @@ impl<Action: 'static+FrameMonad> StackClosure<Action> {
     /// 
     /// The cell IDs are in the form of (source, target)
     ///
-    pub fn new<CellIter: IntoIterator<Item=(usize)>>(action: Action, import_cells: CellIter, num_cells: usize, arg_count: usize, returns_monad: bool) -> StackClosure<Action> {
+    pub fn new<CellIter: IntoIterator<Item=usize>>(action: Action, import_cells: CellIter, num_cells: usize, arg_count: usize, returns_monad: bool) -> StackClosure<Action> {
         StackClosure {
             action:         Arc::new(action),
             import_cells:   import_cells.into_iter().collect(),
