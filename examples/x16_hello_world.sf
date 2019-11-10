@@ -27,6 +27,7 @@
 
     ;; The 'hello world text'
     (label hello_world)
-        (d "HELLO, WORLD" 13u8)
+        (d $0fu8)
+        (d "Hello, World" 13u8)
     (label hello_world_end)
 )
