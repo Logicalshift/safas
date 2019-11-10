@@ -5,6 +5,7 @@ use super::runtime_error::*;
 use crate::meta::*;
 
 use smallvec::*;
+use std::collections::{HashMap};
 use std::sync::*;
 use std::iter::{FromIterator};
 
@@ -68,11 +69,16 @@ impl Action {
     /// Performs simple peephole optimisation on a series of actions, combining operations that are easy to combine
     ///
     pub fn peephole_optimise<ActionIter: IntoIterator<Item=Action>, Target: FromIterator<Action>>(actions: ActionIter) -> Target {
-        let mut actions = actions.into_iter().fuse();
+        let mut actions = actions.into_iter().enumerate().fuse();
 
         // The window represents the instructions we're inspecting
-        let mut window = (None, None, None, actions.next());
-        let mut result = vec![];
+        let mut original_len    = 0;
+        let next                = actions.next();
+        if next.is_some() {
+            original_len += 1;
+        }
+        let mut window          = (None, None, None, next);
+        let mut result          = vec![];
         
         // Actions are read in from the right of the window, and are 
         loop {
@@ -82,25 +88,25 @@ impl Action {
             }
 
             match window {
-                (action1, action2, Some(Action::Value(val)), Some(Action::Push)) => {
+                (action1, action2, Some((pos1, Action::Value(val))), Some((_pos2, Action::Push))) => {
                     // Value, Push => PushValue
-                    window = (None, action1, action2, Some(Action::PushValue(val)));
+                    window = (None, action1, action2, Some((pos1, Action::PushValue(val))));
                 }
 
-                (action1, action2, Some(Action::CellValue(cell_id)), Some(Action::Push)) => {
+                (action1, action2, Some((pos1, Action::CellValue(cell_id))), Some((_pos2, Action::Push))) => {
                     // CellValue, Push => PushCell
-                    window = (None, action1, action2, Some(Action::PushCell(cell_id)));
+                    window = (None, action1, action2, Some((pos1, Action::PushCell(cell_id))));
                 }
 
-                (Some(Action::PopList(arg_count)), Some(Action::StoreCell(0)), Some(Action::Pop), Some(Action::Call)) => {
-                    window = (None, None, None, Some(Action::PopCall(arg_count)));
+                (Some((pos1, Action::PopList(arg_count))), Some((_pos2, Action::StoreCell(0))), Some((_pos3, Action::Pop)), Some((_pos4, Action::Call))) => {
+                    window = (None, None, None, Some((pos1, Action::PopCall(arg_count))));
                 }
 
-                (action1, action2, Some(Action::Push), Some(Action::Pop)) => {
+                (action1, action2, Some((_pos1, Action::Push)), Some((_pos2, Action::Pop))) => {
                     window = (None, None, action1, action2);
                 },
 
-                (action1, action2, Some(Action::Pop), Some(Action::Push)) => {
+                (action1, action2, Some((_pos1, Action::Pop)), Some((_pos2, Action::Push))) => {
                     // Slight behaviour difference: the result is not the popped value after this
                     window = (None, None, action1, action2);
                 },
@@ -112,13 +118,53 @@ impl Action {
                     }
 
                     // Update the window
-                    window = (action2, action3, action4, actions.next());
+                    let next = actions.next();
+                    if next.is_some() {
+                        original_len += 1;
+                    }
+                    window = (action2, action3, action4, next);
+                }
+            }
+        }
+
+        // Create a map of old offsets to offsets after optimisation
+        let mut new_pos_for_old = result.iter().enumerate()
+            .map(|(new_pos, (old_pos, _action))| (*old_pos, new_pos))
+            .collect::<HashMap<_, _>>();
+
+        // Final position in the original is an offset too
+        new_pos_for_old.insert(original_len, result.len());
+
+        // Fix up the jumps so their offsets are in terms of the new code
+        for action_num in 0..result.len() {
+            // TODO: the code here for Jump and JumpIfFalse is just the same thing repeated, we can probably do away with the repetition
+            if let (old_pos, Action::Jump(offset)) = result[action_num] {
+                // Work out the old target pos
+                let old_target = ((old_pos as isize) + offset) as usize;
+
+                // Try mapping against the position table
+                if let Some(new_pos) = new_pos_for_old.get(&old_target) {
+                    let new_offset = (*new_pos as isize) - (action_num as isize);
+                    result[action_num] = (old_pos, Action::Jump(new_offset));
+                } else {
+                    panic!("Cannot map jump target");
+                }
+            } else if let (old_pos, Action::JumpIfFalse(offset)) = result[action_num] {
+                // Work out the old target pos
+                let old_target = ((old_pos as isize) + offset) as usize;
+
+                // Try mapping against the position table
+                if let Some(new_pos) = new_pos_for_old.get(&old_target) {
+                    let new_offset = (*new_pos as isize) - (action_num as isize);
+                    result[action_num] = (old_pos, Action::JumpIfFalse(new_offset));
+                } else {
+                    panic!("Cannot map jump target");
                 }
             }
         }
 
         // Convert the result back into a series of actions
-        result.into_iter().collect()
+        result.into_iter().map(|(_pos, action)| action).collect()
     }
 }
 
