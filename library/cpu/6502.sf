@@ -10,8 +10,17 @@
     )
 )
 
+;;;
+;;; Performs branch offset calculation
+;;;
+(def branch
+    (fun (address opcode)
+        (d opcode (bits 8 (- address ip 1)))
+    )
+)
+
 (def_syntax assemble_6502 (
-        (brk)                   ((a 0 8) (d $00u8))
+        (brk)                   ( (a 0 8) (d $00u8) )
 
         (adc #<immediate>)      ( (a 0 8) (d $69u8 (bits 8 immediate)) )
         (adc <absolute>)        ( (a 0 8) (zero_page absolute $65u8 $6du8) )
@@ -27,7 +36,35 @@
         (and (<indirect>, X))   ( (a 0 8) (d $21u8 (bits 8 indirect)) )
         (and (<indirect>), Y)   ( (a 0 8) (d $31u8 (bits 8 indirect)) )
 
-        (bne <addr>)            ( (a 0 8) (d $d0u8 (bits 8 (- addr ip 1))) )
+        (asl A)                 ( (a 0 8) (d $0au8) )
+        (asl <absolute>)        ( (a 0 8) (zero_page absolute $06u8 $0eu8) )
+        (asl <absolute>, X)     ( (a 0 8) (zero_page absolute $16u8 $1eu8) )
+
+        (bit <absolute>)        ( (a 0 8) (zero_page absolute $24u8 $2cu8) )
+
+        (bpl <addr>)            ( (a 0 8) (branch addr $10u8) )
+        (bmi <addr>)            ( (a 0 8) (branch addr $30u8) )
+        (bvc <addr>)            ( (a 0 8) (branch addr $50u8) )
+        (bvs <addr>)            ( (a 0 8) (branch addr $70u8) )
+        (bcc <addr>)            ( (a 0 8) (branch addr $90u8) )
+        (bcs <addr>)            ( (a 0 8) (branch addr $b0u8) )
+        (bne <addr>)            ( (a 0 8) (branch addr $d0u8) )
+        (beq <addr>)            ( (a 0 8) (branch addr $f0u8) )
+
+        (clc)                   ( (a 0 8) (d $18u8) )
+        (sec)                   ( (a 0 8) (d $38u8) )
+        (cli)                   ( (a 0 8) (d $58u8) )
+        (sei)                   ( (a 0 8) (d $78u8) )
+        (clv)                   ( (a 0 8) (d $b8u8) )
+        (cld)                   ( (a 0 8) (d $d8u8) )
+        (sed)                   ( (a 0 8) (d $f8u8) )
+
+        (cmp #<immediate>)      ( (a 0 8) (d $c9u8 (bits 8 immediate)) )
+        (cmp <absolute>)        ( (a 0 8) (zero_page absolute $c5u8 $cdu8) )
+        (cmp <absolute>, X)     ( (a 0 8) (zero_page absolute $d5u8 $ddu8) )
+        (cmp <absolute>, Y)     ( (a 0 8) (d $d9u8 (bits 16 absolute)) )
+        (cmp (<indirect>, X))   ( (a 0 8) (d $c1u8 (bits 8 indirect)) )
+        (cmp (<indirect>), Y)   ( (a 0 8) (d $d1u8 (bits 8 indirect)) )
 
         (cpx #<immediate>)      ( (a 0 8) (d $e0u8 (bits 8 immediate)) )
         (cpx <absolute>)        ( (a 0 8) (zero_page absolute $e4u8 $ecu8) )
@@ -35,7 +72,25 @@
         (cpy #<immediate>)      ( (a 0 8) (d $c0u8 (bits 8 immediate)) )
         (cpy <absolute>)        ( (a 0 8) (zero_page absolute $c4u8 $ccu8) )
 
+        (dec <absolute>)        ( (a 0 8) (zero_page absolute $c6u8 $ceu8) )
+        (dec <absolute>, X)     ( (a 0 8) (zero_page absolute $d6u8 $deu8) )
+
+        (eor #<immediate>)      ( (a 0 8) (d $49u8 (bits 8 immediate)) )
+        (eor <absolute>)        ( (a 0 8) (zero_page absolute $45u8 $4du8) )
+        (eor <absolute>, X)     ( (a 0 8) (zero_page absolute $55u8 $5du8) )
+        (eor <absolute>, Y)     ( (a 0 8) (d $59u8 (bits 16 absolute)) )
+        (eor (<indirect>, X))   ( (a 0 8) (d $41u8 (bits 8 indirect)) )
+        (eor (<indirect>), Y)   ( (a 0 8) (d $51u8 (bits 8 indirect)) )
+
+        (inc <absolute>)        ( (a 0 8) (zero_page absolute $e6u8 $eeu8) )
+        (inc <absolute>, X)     ( (a 0 8) (zero_page absolute $f6u8 $feu8) )
+
+        (dex)                   ( (a 0 8) (d $cau8))
+        (dey)                   ( (a 0 8) (d $88u8))
         (inx)                   ( (a 0 8) (d $e8u8))
+        (iny)                   ( (a 0 8) (d $c8u8))
+
+        (jsr <addr>)            ( (a 0 8) (d $20u8 (bits 16 addr)))
 
         (lda #<immediate>)      ( (a 0 8) (d $a9u8 (bits 8 immediate)) )
         (lda <absolute>)        ( (a 0 8) (zero_page absolute $a5u8 $adu8) )
@@ -48,7 +103,15 @@
         (ldx <absolute>)        ( (a 0 8) (zero_page absolute $a6u8 $aeu8) )
         (ldx <absolute>, Y)     ( (a 0 8) (zero_page absolute $b6u8 $beu8) )
 
-        (jsr <addr>)            ( (a 0 8) (d $20u8 (bits 16 addr)))
+        (ldy #<immediate>)      ( (a 0 8) (d $a0u8 (bits 8 immediate)) )
+        (ldy <absolute>)        ( (a 0 8) (zero_page absolute $a4u8 $acu8) )
+        (ldy <absolute>, X)     ( (a 0 8) (zero_page absolute $b4u8 $bcu8) )
+
+        (lsr A)                 ( (a 0 8) (d $4au8) )
+        (lsr <absolute>)        ( (a 0 8) (zero_page absolute $46u8 $4eu8) )
+        (lsr <absolute>, X)     ( (a 0 8) (zero_page absolute $56u8 $5eu8) )
+
+        (nop)                   ( (a 0 8) (d $eau8) )
 
         (ora #<immediate>)      ( (a 0 8) (d $09u8 (bits 8 immediate)) )
         (ora <absolute>)        ( (a 0 8) (zero_page absolute $05u8 $0du8) )
@@ -57,7 +120,47 @@
         (ora (<indirect>, X))   ( (a 0 8) (d $01u8 (bits 8 indirect)) )
         (ora (<indirect>), Y)   ( (a 0 8) (d $11u8 (bits 8 indirect)) )
 
+        (rol A)                 ( (a 0 8) (d $2au8) )
+        (rol <absolute>)        ( (a 0 8) (zero_page absolute $26u8 $2eu8) )
+        (rol <absolute>, X)     ( (a 0 8) (zero_page absolute $36u8 $3eu8) )
+
+        (ror A)                 ( (a 0 8) (d $6au8) )
+        (ror <absolute>)        ( (a 0 8) (zero_page absolute $66u8 $6eu8) )
+        (ror <absolute>, X)     ( (a 0 8) (zero_page absolute $76u8 $7eu8) )
+
+        (rti)                   ( (a 0 8) (d $40u8) )
         (rts)                   ( (a 0 8) (d $60u8) )
+
+        (sbc #<immediate>)      ( (a 0 8) (d $e9u8 (bits 8 immediate)) )
+        (sbc <absolute>)        ( (a 0 8) (zero_page absolute $e5u8 $edu8) )
+        (sbc <absolute>, X)     ( (a 0 8) (zero_page absolute $f5u8 $fdu8) )
+        (sbc <absolute>, Y)     ( (a 0 8) (d $39u8 (bits 16 absolute)) )
+        (sbc (<indirect>, X))   ( (a 0 8) (d $e1u8 (bits 8 indirect)) )
+        (sbc (<indirect>), Y)   ( (a 0 8) (d $f1u8 (bits 8 indirect)) )
+
+        (sta <absolute>)        ( (a 0 8) (zero_page absolute $85u8 $8du8) )
+        (sta <absolute>, X)     ( (a 0 8) (zero_page absolute $95u8 $9du8) )
+        (sta <absolute>, Y)     ( (a 0 8) (d $99u8 (bits 16 absolute)) )
+        (sta (<indirect>, X))   ( (a 0 8) (d $81u8 (bits 8 indirect)) )
+        (sta (<indirect>), Y)   ( (a 0 8) (d $91u8 (bits 8 indirect)) )
+
+        (stx <absolute>)        ( (a 0 8) (zero_page absolute $86u8 $8eu8) )
+        (stx <zero_page>, Y)    ( (a 0 8) (d $96u8 (bits 8 zero_page)) )
+
+        (sty <absolute>)        ( (a 0 8) (zero_page absolute $84u8 $8cu8) )
+        (sty <zero_page>, X)    ( (a 0 8) (d $94u8 (bits 8 zero_page)) )
+
+        (tax)                   ( (a 0 8) (d $aau8) )
+        (tay)                   ( (a 0 8) (d $a8u8) )
+        (txa)                   ( (a 0 8) (d $8au8) )
+        (tya)                   ( (a 0 8) (d $98u8) )
+
+        (txs)                   ( (a 0 8) (d $9au8) )
+        (tsx)                   ( (a 0 8) (d $bau8) )
+        (pha)                   ( (a 0 8) (d $48u8) )
+        (pla)                   ( (a 0 8) (d $68u8) )
+        (php)                   ( (a 0 8) (d $08u8) )
+        (plp)                   ( (a 0 8) (d $28u8) )
     )
 )
 
