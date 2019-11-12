@@ -1,0 +1,103 @@
+(import "cpu/6502")
+
+;;;
+;;; For instructions that have a zero-page variant, assembles the 8 or 16-bit version as required
+;;;
+(def zero_page 
+    (fun (absolute op8 op16)
+        (if ( (< absolute $100) )
+            ( (d op8 (bits 8 absolute)) )
+            ( (d op16 (bits 16 absolute)) )
+        )
+    )
+)
+
+;;;
+;;; Performs branch offset calculation
+;;;
+(def branch
+    (fun (address opcode)
+        (d opcode (bits 8 (- address ip 1)))
+    )
+)
+
+;;;
+;;; The 65c02 introduced some new opcodes like STZ and also a new zero-page indirect addressing mode.
+;;;
+(extend_syntax assemble_6502 assemble_65c02 (
+        ;; New zero-page indirect mode
+        (ora (zero_page))           ( (a 0 8) (d $12u8 (bits 8 zero_page)) )
+        (and (zero_page))           ( (a 0 8) (d $32u8 (bits 8 zero_page)) )
+        (eor (zero_page))           ( (a 0 8) (d $52u8 (bits 8 zero_page)) )
+        (adc (zero_page))           ( (a 0 8) (d $72u8 (bits 8 zero_page)) )
+        (sta (zero_page))           ( (a 0 8) (d $92u8 (bits 8 zero_page)) )
+        (lda (zero_page))           ( (a 0 8) (d $b2u8 (bits 8 zero_page)) )
+        (cmp (zero_page))           ( (a 0 8) (d $d2u8 (bits 8 zero_page)) )
+        (sbc (zero_page))           ( (a 0 8) (d $f2u8 (bits 8 zero_page)) )
+
+        ;; New control instructions
+        (wai)                       ( (a 0 8) (d $cbu8) )
+        (stp)                       ( (a 0 8) (d $dbu8) )
+        (bra <addr>)                ( (a 0 8) (branch addr $80u8) )
+
+        ;; New stack instructions
+        (plx)                       ( (a 0 8) (d $fau8) )
+        (phx)                       ( (a 0 8) (d $dau8) )
+        (ply)                       ( (a 0 8) (d $7au8) )
+        (phy)                       ( (a 0 8) (d $5au8) )
+
+        ;; Bit has a new addressing mode
+        (bit <absolute>, X)         ( (a 0 8) (zero_page absolute $34u8 #3cu8) )
+
+        ;; Jmp has a new addressing mode
+        (jmp (<indirect>, X))       ( (a 0 8) (d $7cu8 (bits 16 indirect)) )
+
+        ;; STore Zero
+        (stz <absolute>)            ( (a 0 8) (zero_page absolute $64u8 $9cu8) )
+        (stz <absolute>, X)         ( (a 0 8) (zero_page absolute $74u8 $9eu8) )
+
+        ;; New test/set bit instructions
+        (tsb <absolute>)            ( (a 0 8) (zero_page absolute $04u8 $0cu8) )
+        (trb <absolute>)            ( (a 0 8) (zero_page absolute $14u8 $1cu8) )
+
+        ;; Reset/set bit instructions
+        (rmb0 <zero_page>)          ( (a 0 8) (d $07u8 (bits 8 zero_page)) )
+        (rmb1 <zero_page>)          ( (a 0 8) (d $17u8 (bits 8 zero_page)) )
+        (rmb2 <zero_page>)          ( (a 0 8) (d $27u8 (bits 8 zero_page)) )
+        (rmb3 <zero_page>)          ( (a 0 8) (d $37u8 (bits 8 zero_page)) )
+        (rmb4 <zero_page>)          ( (a 0 8) (d $47u8 (bits 8 zero_page)) )
+        (rmb5 <zero_page>)          ( (a 0 8) (d $57u8 (bits 8 zero_page)) )
+        (rmb6 <zero_page>)          ( (a 0 8) (d $67u8 (bits 8 zero_page)) )
+        (rmb7 <zero_page>)          ( (a 0 8) (d $77u8 (bits 8 zero_page)) )
+
+        (smb0 <zero_page>)          ( (a 0 8) (d $87u8 (bits 8 zero_page)) )
+        (smb1 <zero_page>)          ( (a 0 8) (d $97u8 (bits 8 zero_page)) )
+        (smb2 <zero_page>)          ( (a 0 8) (d $a7u8 (bits 8 zero_page)) )
+        (smb3 <zero_page>)          ( (a 0 8) (d $b7u8 (bits 8 zero_page)) )
+        (smb4 <zero_page>)          ( (a 0 8) (d $c7u8 (bits 8 zero_page)) )
+        (smb5 <zero_page>)          ( (a 0 8) (d $d7u8 (bits 8 zero_page)) )
+        (smb6 <zero_page>)          ( (a 0 8) (d $e7u8 (bits 8 zero_page)) )
+        (smb7 <zero_page>)          ( (a 0 8) (d $f7u8 (bits 8 zero_page)) )
+
+        ;; Branch if bit set/reset instructions
+        (bbr0 <zero_page> <addr>)   ( (a 0 8) (branch addr $0fu8) )
+        (bbr1 <zero_page> <addr>)   ( (a 0 8) (branch addr $1fu8) )
+        (bbr2 <zero_page> <addr>)   ( (a 0 8) (branch addr $2fu8) )
+        (bbr3 <zero_page> <addr>)   ( (a 0 8) (branch addr $3fu8) )
+        (bbr4 <zero_page> <addr>)   ( (a 0 8) (branch addr $4fu8) )
+        (bbr5 <zero_page> <addr>)   ( (a 0 8) (branch addr $5fu8) )
+        (bbr6 <zero_page> <addr>)   ( (a 0 8) (branch addr $6fu8) )
+        (bbr7 <zero_page> <addr>)   ( (a 0 8) (branch addr $7fu8) )
+
+        (bbs0 <zero_page> <addr>)   ( (a 0 8) (branch addr $8fu8) )
+        (bbs1 <zero_page> <addr>)   ( (a 0 8) (branch addr $9fu8) )
+        (bbs2 <zero_page> <addr>)   ( (a 0 8) (branch addr $afu8) )
+        (bbs3 <zero_page> <addr>)   ( (a 0 8) (branch addr $bfu8) )
+        (bbs4 <zero_page> <addr>)   ( (a 0 8) (branch addr $cfu8) )
+        (bbs5 <zero_page> <addr>)   ( (a 0 8) (branch addr $dfu8) )
+        (bbs6 <zero_page> <addr>)   ( (a 0 8) (branch addr $efu8) )
+        (bbs7 <zero_page> <addr>)   ( (a 0 8) (branch addr $ffu8) )
+    )
+)
+
+(export assemble_65c02)
