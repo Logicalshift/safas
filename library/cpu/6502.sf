@@ -85,12 +85,15 @@
         (inc <absolute>)        ( (a 0 8) (zero_page absolute $e6u8 $eeu8) )
         (inc <absolute>, X)     ( (a 0 8) (zero_page absolute $f6u8 $feu8) )
 
-        (dex)                   ( (a 0 8) (d $cau8))
-        (dey)                   ( (a 0 8) (d $88u8))
-        (inx)                   ( (a 0 8) (d $e8u8))
-        (iny)                   ( (a 0 8) (d $c8u8))
+        (dex)                   ( (a 0 8) (d $cau8) )
+        (dey)                   ( (a 0 8) (d $88u8) )
+        (inx)                   ( (a 0 8) (d $e8u8) )
+        (iny)                   ( (a 0 8) (d $c8u8) )
 
-        (jsr <addr>)            ( (a 0 8) (d $20u8 (bits 16 addr)))
+        (jmp <absolute>)        ( (a 0 8) (d $4c (bits 16 absolute)) )
+        (jmp (<indirect>))      ( (a 0 8) (d $6c (bits 16 indirect)) )
+
+        (jsr <addr>)            ( (a 0 8) (d $20u8 (bits 16 addr)) )
 
         (lda #<immediate>)      ( (a 0 8) (d $a9u8 (bits 8 immediate)) )
         (lda <absolute>)        ( (a 0 8) (zero_page absolute $a5u8 $adu8) )
