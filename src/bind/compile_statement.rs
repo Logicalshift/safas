@@ -67,6 +67,7 @@ fn compile_list_statement(car: CellRef, cdr: CellRef) -> Result<CompiledActions,
         String(_)                                               |
         Char(_)                                                 |
         BitCode(_)                                              |
+        BTree(_, _)                                             |
         Monad(_, _)                                             |
         Error(_)                                                |
         Syntax(_, _)                                            |

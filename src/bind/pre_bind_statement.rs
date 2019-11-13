@@ -34,6 +34,7 @@ pub fn pre_bind_statement(source: CellRef, bindings: SymbolBindings) -> (SymbolB
                     Atom(_)                 |
                     String(_)               |
                     BitCode(_)              |
+                    BTree(_, _)             |
                     Char(_)                 |
                     List(_, _)              |
                     Monad(_, _)             |
@@ -84,6 +85,7 @@ fn pre_bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings)
                     Atom(_)                                     |
                     String(_)                                   |
                     BitCode(_)                                  |
+                    BTree(_, _)                                 |
                     Char(_)                                     |
                     Monad(_, _)                                 |
                     Error(_)                                    |

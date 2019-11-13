@@ -71,6 +71,9 @@ pub enum SafasCell {
     /// A runtime error returned as a result
     Error(RuntimeError),
 
+    /// A cell representing a node in a b-tree map (values are the key/value pairs and the child nodes)
+    BTree(Vec<(CellRef, CellRef)>, Vec<CellRef>),
+
     /// A reference to a value on the frame
     FrameReference(usize, u32, ReferenceType),
 
@@ -257,6 +260,7 @@ impl SafasCell {
             BoundSyntax(syntax)                                         => format!("bound_syntax#{:p}", syntax),
             Any(val)                                                    => format!("any#{:p}", val),
             Error(err)                                                  => format!("error#{:?}", err),
+            BTree(key_values, child_nodes)                              => format!("btree#({:?}, {:?})", key_values, child_nodes),
             List(first, second)                                         => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;

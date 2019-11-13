@@ -67,6 +67,7 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
                     String(_)                                   |
                     BitCode(_)                                  |
                     Char(_)                                     |
+                    BTree(_, _)                                 |
                     List(_, _)                                  |
                     Monad(_, _)                                 |
                     Error(_)                                    |
@@ -159,6 +160,7 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
                     Atom(_)                                     |
                     String(_)                                   |
                     BitCode(_)                                  |
+                    BTree(_, _)                                 |
                     Char(_)                                     |
                     Monad(_, _)                                 |
                     Error(_)                                    |
