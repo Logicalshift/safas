@@ -344,6 +344,8 @@ impl PartialOrd for SafasCell {
             (Atom(a), Atom(b))                                  => a.partial_cmp(b),
             (Boolean(a), Boolean(b))                            => a.partial_cmp(b),
             (Number(a), Number(b))                              => a.partial_cmp(b),
+            (Nil, Number(b))                                    => SafasNumber::Plain(0).partial_cmp(b),
+            (Number(a), Nil)                                    => a.partial_cmp(&SafasNumber::Plain(0)),
             (BitCode(_), BitCode(_))                            => None,
             (String(a), String(b))                              => a.partial_cmp(b),
             (Char(a), Char(b))                                  => a.partial_cmp(b),
