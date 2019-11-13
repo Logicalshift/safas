@@ -11,6 +11,7 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::cmp::{Ordering};
 use std::any::*;
+use smallvec::*;
 
 lazy_static! {
     /// A cellref representing the general 'nil' value
@@ -72,7 +73,7 @@ pub enum SafasCell {
     Error(RuntimeError),
 
     /// A cell representing a node in a b-tree map (values are the key/value pairs and the child nodes)
-    BTree(Vec<(CellRef, CellRef)>, Vec<CellRef>),
+    BTree(SmallVec<[(CellRef, CellRef); 4]>, SmallVec<[CellRef; 4]>),
 
     /// A reference to a value on the frame
     FrameReference(usize, u32, ReferenceType),

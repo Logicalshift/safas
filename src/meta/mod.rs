@@ -5,6 +5,7 @@
 
 mod cell;
 mod cell_conversion;
+mod btree;
 mod number;
 mod number_conversion;
 mod atom;
@@ -14,6 +15,7 @@ mod monad_type;
 
 pub use self::cell::*;
 pub use self::cell_conversion::*;
+pub use self::btree::*;
 pub use self::number::*;
 pub use self::number_conversion::*;
 pub use self::atom::*;

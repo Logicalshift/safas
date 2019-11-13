@@ -123,6 +123,7 @@ impl From<RuntimeError> for BindError {
             TooManyArguments(_)                 |
             NotAMonad(_)                        |
             NotAString(_)                       |
+            NotABTree(_)                        |
             MismatchedMonad(_)                  |
             NotALabel(_)                        |
             CannotAllocateLabelsDuringAssembly  |

@@ -53,6 +53,9 @@ pub enum RuntimeError {
     /// A value that was expected to be a label wasn't
     NotALabel(CellRef),
 
+    /// An operation that was expecting a btree 
+    NotABTree(CellRef),
+
     /// Labels should be allocated prior to assembly
     CannotAllocateLabelsDuringAssembly,
 
