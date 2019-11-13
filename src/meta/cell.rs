@@ -9,6 +9,7 @@ use crate::bitcode::*;
 use std::sync::*;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
+use std::cmp::{Ordering};
 use std::any::*;
 
 lazy_static! {
@@ -330,6 +331,38 @@ impl PartialEq for SafasCell {
             (Any(_), Any(_))                                    => false,
 
             (_, _)                                              => false
+        }
+    }
+}
+
+impl PartialOrd for SafasCell {
+    fn partial_cmp(&self, rhs: &SafasCell) -> Option<Ordering> {
+        use self::SafasCell::*;
+
+        match (self, rhs) {
+            (Nil, Nil)                                          => Some(Ordering::Equal),
+            (Atom(a), Atom(b))                                  => a.partial_cmp(b),
+            (Boolean(a), Boolean(b))                            => a.partial_cmp(b),
+            (Number(a), Number(b))                              => a.partial_cmp(b),
+            (BitCode(_), BitCode(_))                            => None,
+            (String(a), String(b))                              => a.partial_cmp(b),
+            (Char(a), Char(b))                                  => a.partial_cmp(b),
+            (List(a_car, a_cdr), List(b_car, b_cdr))            => {
+                match a_car.partial_cmp(b_car) {
+                    None                    => None,
+                    Some(Ordering::Equal)   => a_cdr.partial_cmp(b_cdr),
+                    Some(order)             => Some(order)
+                }
+            },
+            (Error(_), Error(_))                                => None,
+            (FrameReference(_, _, _), FrameReference(_, _, _))  => None,
+            (Monad(_, _), Monad(_, _))                          => None,
+            (FrameMonad(_), FrameMonad(_))                      => None,
+            (Syntax(_, _), Syntax(_, _))                        => None,
+            (BoundSyntax(_), BoundSyntax(_))                    => None,
+            (Any(_), Any(_))                                    => None,
+
+            (_, _)                                              => None
         }
     }
 }

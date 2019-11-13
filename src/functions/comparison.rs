@@ -1,17 +1,16 @@
 use crate::exec::*;
 use crate::meta::*;
 
+use std::cmp::{Ordering};
+
 ///
 /// `(> a b)` -> TRUE/FALSE
 ///
 pub fn gt_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(a, b): (CellRef, CellRef)| {
 
-        if let (Some(a), Some(b)) = (a.number_value(), b.number_value()) {
-
-            let result = a > b;
-            Ok(CellRef::new(SafasCell::Boolean(result)))
-
+        if let Some(order) = (&*a).partial_cmp(&*b) {
+            Ok(CellRef::new(SafasCell::Boolean(order == Ordering::Greater)))
         } else {
             Err(RuntimeError::CannotCompare(a, b))
         }
@@ -25,11 +24,8 @@ pub fn gt_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
 pub fn ge_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(a, b): (CellRef, CellRef)| {
 
-        if let (Some(a), Some(b)) = (a.number_value(), b.number_value()) {
-
-            let result = a >= b;
-            Ok(CellRef::new(SafasCell::Boolean(result)))
-
+        if let Some(order) = (&*a).partial_cmp(&*b) {
+            Ok(CellRef::new(SafasCell::Boolean(order == Ordering::Greater || order == Ordering::Equal)))
         } else {
             Err(RuntimeError::CannotCompare(a, b))
         }
@@ -43,11 +39,8 @@ pub fn ge_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
 pub fn lt_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(a, b): (CellRef, CellRef)| {
 
-        if let (Some(a), Some(b)) = (a.number_value(), b.number_value()) {
-
-            let result = a < b;
-            Ok(CellRef::new(SafasCell::Boolean(result)))
-
+        if let Some(order) = (&*a).partial_cmp(&*b) {
+            Ok(CellRef::new(SafasCell::Boolean(order == Ordering::Less)))
         } else {
             Err(RuntimeError::CannotCompare(a, b))
         }
@@ -61,11 +54,8 @@ pub fn lt_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
 pub fn le_fn()  -> impl FrameMonad<Binding=RuntimeResult> {
     FnMonad::from(|(a, b): (CellRef, CellRef)| {
 
-        if let (Some(a), Some(b)) = (a.number_value(), b.number_value()) {
-
-            let result = a <= b;
-            Ok(CellRef::new(SafasCell::Boolean(result)))
-
+        if let Some(order) = (&*a).partial_cmp(&*b) {
+            Ok(CellRef::new(SafasCell::Boolean(order == Ordering::Less || order == Ordering::Equal)))
         } else {
             Err(RuntimeError::CannotCompare(a, b))
         }
