@@ -108,7 +108,38 @@ pub fn locate_import_file(filename: &str, bindings: &SymbolBindings, allow_relat
     };
 
     if let Some(file_path) = file_path {
+        // Found as an actual file
         ImportFile::FromPath(file_path)
+    } else if let Some((built_ins, _)) = built_ins {
+        // Search the built-ins from the bindings (try with an extra .sf suffix if necessary)
+        let built_in = btree_search(built_ins.clone(), CellRef::new(SafasCell::String(filename.to_string())));
+        let built_in = if let Ok(built_in) = built_in {
+            if built_in.is_nil() {
+                // Try with a .sf extension
+                btree_search(built_ins, CellRef::new(SafasCell::String(format!("{}.sf", filename))))
+            } else {
+                // Already found
+                Ok(built_in)
+            }
+        } else {
+            // Error
+            built_in
+        };
+
+        // If a match was found in the b-tree then use that as the file to load
+        match built_in {
+            Ok(definition) => {
+                if let SafasCell::String(definition) = &*definition {
+                    ImportFile::BuiltIn(filename.to_string(), definition.clone())
+                } else {
+                    ImportFile::NotFound
+                }
+            },
+
+            Err(_) => {
+                ImportFile::NotFound
+            }
+        }
     } else {
         ImportFile::NotFound
     }
@@ -123,18 +154,26 @@ pub fn import_file(filename: &str, bindings: SymbolBindings, frame: Frame, allow
     let file_path = locate_import_file(filename, &bindings, allow_relative);
 
     // Read the file contents
-    let (file_content, file_path) = if let ImportFile::FromPath(file_path) = file_path {
-        let content = fs::read_to_string(file_path.as_path());
-        let content = match content { Ok(content) => content, Err(_err) => { return (RuntimeError::IOError.into(), bindings, frame); } };
+    let (file_content, file_path) = match file_path {
+        ImportFile::FromPath(file_path) => {
+            let content = fs::read_to_string(file_path.as_path());
+            let content = match content { Ok(content) => content, Err(_err) => { return (RuntimeError::IOError.into(), bindings, frame); } };
 
-        (content, file_path)
-    } else {
-        // File not found (TODO: search through the builtins)
-        return (RuntimeError::FileNotFound(filename.to_string()).into(), bindings, frame);
+            (content, String::from(file_path.to_string_lossy()))
+        },
+
+        ImportFile::BuiltIn(file_path, content) => {
+            (content, file_path)
+        },
+
+        ImportFile::NotFound => {
+            // File not found
+            return (RuntimeError::FileNotFound(filename.to_string()).into(), bindings, frame);
+        }
     };
 
     // Parse the file
-    let file_content = parse_safas(&mut TokenReadBuffer::new(file_content.chars()), FileLocation::new(&file_path.to_string_lossy()));
+    let file_content = parse_safas(&mut TokenReadBuffer::new(file_content.chars()), FileLocation::new(&file_path));
     let file_content = match file_content { Ok(content) => content, Err(err) => { return (RuntimeError::ParseError(err).into(), bindings, frame); } };
 
     // Evaluate the file
@@ -258,4 +297,16 @@ pub fn import_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
 
         SyntaxCompiler::with_compiler(compile, binding)
     })
+}
+
+#[cfg(test)]
+mod test {
+    use crate::interactive::*;
+
+    #[test]
+    fn load_builtin_library() {
+        eval(
+            "(import \"standard/default.sf\")"
+        ).unwrap();
+    }
 }
