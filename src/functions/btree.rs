@@ -61,4 +61,35 @@ mod test {
 
         assert!(val.to_string() == "btree#(\n  a -> b\n  c -> d\n)".to_string());
     }
+
+    #[test]
+    fn insert_in_btree() {
+        let val = eval(
+                "(def some_btree (btree))
+                (def some_btree (btree_insert some_btree (quote a) (quote b)))
+                some_btree"
+            ).unwrap();
+
+        assert!(val.to_string() == "btree#(\n  a -> b\n)".to_string());
+    }
+
+    #[test]
+    fn lookup_in_btree() {
+        let val = eval(
+                "(def some_btree (btree (quote (a b)) (quote (c d))))
+                (btree_lookup some_btree (quote c))"
+            ).unwrap();
+
+        assert!(val.to_string() == "d".to_string());
+    }
+
+    #[test]
+    fn lookup_in_btree_missing_val() {
+        let val = eval(
+                "(def some_btree (btree (quote (a b)) (quote (c d))))
+                (btree_lookup some_btree (quote e))"
+            ).unwrap();
+
+        assert!(val.to_string() == "()".to_string());
+    }
 }
