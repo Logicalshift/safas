@@ -266,6 +266,8 @@ mod test {
     use super::*;
     use crate::meta::*;
 
+    use rand::prelude::*;
+
     #[test]
     fn insert_and_search_100_nodes() {
         let mut btree = new_btree();
@@ -277,6 +279,53 @@ mod test {
             let value       = SafasCell::Number(SafasNumber::Plain(num + 100));
             let value       = CellRef::new(value);
             
+            btree           = btree_insert(btree, (key.clone(), value.clone())).unwrap();
+
+            let lookup_val  = btree_search(btree.clone(), key.clone()).unwrap();
+            assert!(lookup_val == value);
+        }
+    }
+
+    #[test]
+    fn insert_and_search_100_nodes_random_keys() {
+        let mut btree   = new_btree();
+        let mut rng     = StdRng::seed_from_u64(42);
+
+        for num in 0..100 {
+            let key         = SafasCell::Number(SafasNumber::Plain(rng.gen_range(0, 1000)));
+            let key         = CellRef::new(key);
+
+            let value       = SafasCell::Number(SafasNumber::Plain(num + 100));
+            let value       = CellRef::new(value);
+            
+            btree           = btree_insert(btree, (key.clone(), value.clone())).unwrap();
+
+            let lookup_val  = btree_search(btree.clone(), key.clone()).unwrap();
+            assert!(lookup_val == value);
+        }
+    }
+
+    #[test]
+    fn insert_replace_and_search_100_nodes() {
+        let mut btree = new_btree();
+
+        for num in 0..100 {
+            let key         = SafasCell::Number(SafasNumber::Plain(num));
+            let key         = CellRef::new(key);
+
+            let value       = SafasCell::Number(SafasNumber::Plain(num + 100));
+            let value       = CellRef::new(value);
+            
+            btree           = btree_insert(btree, (key.clone(), value.clone())).unwrap();
+        }
+
+        for num in 0..100 {
+            let key         = SafasCell::Number(SafasNumber::Plain(num));
+            let key         = CellRef::new(key);
+
+            let value       = SafasCell::Number(SafasNumber::Plain(num + 200));
+            let value       = CellRef::new(value);
+
             btree           = btree_insert(btree, (key.clone(), value.clone())).unwrap();
 
             let lookup_val  = btree_search(btree.clone(), key.clone()).unwrap();
