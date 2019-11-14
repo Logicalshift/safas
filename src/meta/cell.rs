@@ -249,7 +249,7 @@ impl SafasCell {
                 if child_nodes.len() > 0 {
                     // Left values, median value, right values
                     for idx in 0..=key_values.len() {
-                        write!(result, "{}", child_nodes[idx].to_string()).ok();
+                        write!(result, "{}", child_nodes[idx].btree_to_string()).ok();
 
                         if idx < key_values.len() {
                             write!(result, "\n  {} -> {}", key_values[idx].0.to_string(), key_values[idx].1.to_string()).ok();
