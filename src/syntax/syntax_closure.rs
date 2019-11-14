@@ -27,6 +27,9 @@ pub struct SyntaxClosure {
     /// The syntax symbols to import into this closure (as the SyntaxSymbols they were derived from)
     syntax_symbols: Vec<(u64, Arc<SyntaxSymbol>)>,
 
+    /// The value of the special 'syntax' symbol that can be used to retrieve the symbols defined for this syntax
+    syntax_btree: CellRef,
+
     /// The imported bindings used for the current set of symbols
     imported_bindings: Arc<HashMap<usize, CellRef>>
 }
@@ -37,7 +40,7 @@ impl SyntaxClosure {
     ///
     pub fn new<SymbolList: IntoIterator<Item=(AtomId, Arc<SyntaxSymbol>)>>(syntax_symbols: SymbolList, imported_bindings: Arc<HashMap<usize, CellRef>>) -> SyntaxClosure {
         // Add the imported bindings into each syntax symbol to generate the syntax symbols list
-        let mut bound_symbols   = vec![];
+        let mut bound_symbols: Vec<(u64, CellRef)>   = vec![];
         let mut all_symbols     = vec![];
 
         for (AtomId(symbol_id), symbol) in syntax_symbols.into_iter() {
@@ -54,10 +57,17 @@ impl SyntaxClosure {
             all_symbols.push((symbol_id, symbol));
         }
 
+        // Generate the syntax b-tree
+        let mut syntax_btree = new_btree();
+        for (symbol_id, value) in bound_symbols.iter() {
+            syntax_btree = btree_insert(syntax_btree, (SafasCell::Atom(*symbol_id).into(), value.clone())).expect("Valid BTree");
+        }
+
         // Generate the closure
         SyntaxClosure {
             syntax_cells:       bound_symbols, 
             syntax_symbols:     all_symbols, 
+            syntax_btree:       syntax_btree,
             imported_bindings:  imported_bindings
         }
     }
@@ -146,6 +156,7 @@ impl BindingMonad for SyntaxClosure {
         for (atom_id, symbol) in self.syntax_cells.iter() {
             interior_bindings.symbols.insert(*atom_id, symbol.clone());
         }
+        interior_bindings.symbols.insert(get_id_for_atom_with_name("syntax"), self.syntax_btree.clone());
 
         // The arguments are the statements for these macros: compile them one after the other
         let mut pos                 = &*args;

@@ -20,6 +20,10 @@ use std::convert::*;
 /// <name> becomes a syntax item in the binding. We can use the new syntax like this:
 /// 
 /// ```(<name> <statements>)```
+/// 
+/// Every syntax we define contains a special `syntax` keyword that can be used to retrieve the
+/// bindings it contains (so it's possible to extend it). This can be accessed like this: 
+/// `(<name> syntax)`
 ///
 pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
     get_expression_arguments().map_result(|args: ListWithTail<(AtomId, CellRef), CellRef>| {
@@ -483,5 +487,21 @@ mod test {
         println!("{:?}", val);
 
         assert!(val == "(123 2)".to_string());
+    }
+
+
+    #[test]
+    fn retrieve_syntax_btree() {
+        let val = eval(
+            "(def y 123)
+            (def_syntax some_syntax (
+                (make_list <x>) ((list y x))
+            ))
+            (some_syntax syntax)"
+            ).unwrap().to_string();
+
+        println!("{:?}", val);
+
+        assert!(val == "btree#(\n  make_list -> compile###syntax###()\n)".to_string());
     }
 }
