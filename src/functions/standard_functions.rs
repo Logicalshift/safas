@@ -1,5 +1,6 @@
 use super::list::*;
 use super::bits::*;
+use super::btree::*;
 use super::monad::*;
 use super::arithmetic::*;
 use super::comparison::*;
@@ -62,6 +63,13 @@ pub fn standard_functions() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> 
     let functions   = flat_map_binding_actions(move || define_function("cons",          cons_fn()), functions);
     let functions   = flat_map_binding_actions(move || define_function("car",           car_fn()), functions);
     let functions   = flat_map_binding_actions(move || define_function("cdr",           cdr_fn()), functions);
+
+    let functions: Box<dyn BindingMonad<Binding=_>> = Box::new(functions);
+
+    // BTree functions
+    let functions   = flat_map_binding_actions(move || define_function("btree",          btree_fn()), functions);
+    let functions   = flat_map_binding_actions(move || define_function("btree_insert",   btree_insert_fn()), functions);
+    let functions   = flat_map_binding_actions(move || define_function("btree_lookup",   btree_lookup_fn()), functions);
 
     let functions: Box<dyn BindingMonad<Binding=_>> = Box::new(functions);
 

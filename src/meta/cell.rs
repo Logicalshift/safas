@@ -8,7 +8,7 @@ use crate::bitcode::*;
 
 use std::sync::*;
 use std::fmt;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Formatter, Write};
 use std::cmp::{Ordering};
 use std::any::*;
 
@@ -238,6 +238,37 @@ impl SafasCell {
     }
 
     ///
+    /// Creates a 'a -> b' type string for displaying the contents of a B-Tree
+    ///
+    fn btree_to_string(&self) -> String {
+        match self {
+            SafasCell::BTree(key_values, child_nodes) => {
+                // Start with the empty string
+                let mut result = String::from("");
+
+                if child_nodes.len() > 0 {
+                    // Left values, median value, right values
+                    for idx in 0..=key_values.len() {
+                        write!(result, "{}", child_nodes[idx].to_string()).ok();
+
+                        if idx < key_values.len() {
+                            write!(result, "\n  {} -> {}", key_values[idx].0.to_string(), key_values[idx].1.to_string()).ok();
+                        }
+                    }
+                } else {
+                    // Just the values from the leaf node
+                    for (key, value) in key_values.iter() {
+                        write!(result, "\n  {} -> {}", key.to_string(), value.to_string()).ok();
+                    }
+                }
+
+                result
+            },
+            _ => "?? -> ??".to_string()
+        }
+    }
+
+    ///
     /// Converts this cell to a string
     ///
     pub fn to_string(&self) -> String {
@@ -260,7 +291,7 @@ impl SafasCell {
             BoundSyntax(syntax)                                         => format!("bound_syntax#{:p}", syntax),
             Any(val)                                                    => format!("any#{:p}", val),
             Error(err)                                                  => format!("error#{:?}", err),
-            BTree(key_values, child_nodes)                              => format!("btree#({:?}, {:?})", key_values, child_nodes),
+            BTree(_, _)                                                 => format!("btree#({}\n)", self.btree_to_string()),
             List(first, second)                                         => {
                 let mut result  = format!("({}", first.to_string());
                 let mut next    = second;
