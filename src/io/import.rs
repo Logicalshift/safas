@@ -309,4 +309,22 @@ mod test {
             "(import \"standard/default.sf\")"
         ).unwrap();
     }
+
+    #[test]
+    fn load_6502() {
+        eval(
+            "(import \"standard/default.sf\")
+            (import \"cpu/6502\")"
+        ).unwrap();
+    }
+
+    /*
+    #[test]
+    fn load_65c02() {
+        eval(
+            "(import \"standard/default.sf\")
+            (import \"cpu/65c02\")"
+        ).unwrap();
+    }
+    */
 }
