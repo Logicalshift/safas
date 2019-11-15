@@ -101,3 +101,5 @@
 )
 
 (export assemble_65c02)
+
+"65c02 assembler"

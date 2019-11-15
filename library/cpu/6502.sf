@@ -168,3 +168,5 @@
 )
 
 (export assemble_6502)
+
+"6502 assembler"
