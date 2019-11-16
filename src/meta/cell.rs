@@ -150,6 +150,16 @@ impl SafasCell {
     }
 
     ///
+    /// Returns true if this cell is a btree
+    ///
+    pub fn is_btree(&self) -> bool {
+        match self {
+            SafasCell::BTree(_, _)  => true,
+            _                       => false
+        }
+    }
+
+    ///
     /// Returns the reference type for this cell
     ///
     pub fn reference_type(&self) -> ReferenceType {
