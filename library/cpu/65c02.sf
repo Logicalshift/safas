@@ -24,7 +24,7 @@
 ;;;
 ;;; The 65c02 introduced some new opcodes like STZ and also a new zero-page indirect addressing mode.
 ;;;
-(extend_syntax assemble_6502 assemble_65c02 (
+(extend_syntax assemble_65c02 assemble_6502 (
         ;; New zero-page indirect mode
         (ora (zero_page))           ( (a 0 8) (d $12u8 (bits 8 zero_page)) )
         (and (zero_page))           ( (a 0 8) (d $32u8 (bits 8 zero_page)) )

@@ -14,7 +14,7 @@ use std::convert::{TryFrom};
 /// Takes an existing syntax (anything that binds the `syntax` keyword to a btree) and extends it with a new syntax
 ///
 pub fn extend_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
-    get_expression_arguments().and_then(|ListWithTail((existing_syntax_name, new_name, patterns), statements): ListWithTail<(AtomId, AtomId, CellRef), CellRef>| {
+    get_expression_arguments().and_then(|ListWithTail((new_name, existing_syntax_name, patterns), statements): ListWithTail<(AtomId, AtomId, CellRef), CellRef>| {
 
         BindingFn::from_binding_fn(move |bindings| {
             
@@ -144,7 +144,7 @@ mod test {
     fn evaluate_extension_macro() {
         let val = eval(
             "(def_syntax some_syntax ((lda #<x>) (x)))
-            (extend_syntax some_syntax more_syntax ((ldx #<x>) (x)))
+            (extend_syntax more_syntax some_syntax ((ldx #<x>) (x)))
             (more_syntax (ldx #42))"
             ).unwrap().to_string();
 
@@ -155,7 +155,7 @@ mod test {
     fn evaluate_original_macro() {
         let val = eval(
             "(def_syntax some_syntax ((lda #<x>) (x)))
-            (extend_syntax some_syntax more_syntax ((ldx #<x>) (x)))
+            (extend_syntax more_syntax some_syntax ((ldx #<x>) (x)))
             (more_syntax (lda #42))"
             ).unwrap().to_string();
 
