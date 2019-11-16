@@ -59,8 +59,8 @@ fn parse_cell_from_token<Chars: Iterator<Item=char>>(code: &mut TokenReadBuffer<
         Token::HexNumber    => { (Ok((Some(hex_number(&token_text, &original_location)?.into()), location))) }
         Token::IntNumber    => { (Ok((Some(int_number(&token_text, &original_location)?.into()), location))) }
         Token::Boolean      => { Ok((Some(SafasCell::Boolean(token_text.chars().nth(1) == Some('t')).into()), location)) }
-        Token::Atom         => { Ok((Some(SafasCell::Atom(get_id_for_atom_with_name(&token_text)).into()), location)) }
-        Token::Symbol(_)    => { Ok((Some(SafasCell::Atom(get_id_for_atom_with_name(&token_text)).into()), location)) }
+        Token::Atom         => { Ok((Some(SafasCell::atom(&token_text)), location)) }
+        Token::Symbol(_)    => { Ok((Some(SafasCell::atom(&token_text)), location)) }
         Token::CloseParen   => { Err(ParseError::UnexpectedCloseParen(original_location)) }
         Token::String       => { Ok((Some(SafasCell::String(unquote_string(token_text)).into()), location)) }
 

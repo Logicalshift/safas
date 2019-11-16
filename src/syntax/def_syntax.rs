@@ -175,10 +175,13 @@ pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             // Build a syntax closure from the arguments (these are currently bound to the current environment so they
             // can't be passed outside of the current function)
             let syntax_closure  = SyntaxClosure::new(symbol_syntax, Arc::new(cell_imports));
+            let mut btree       = new_btree();
+            btree               = btree_insert(btree, (SafasCell::atom("syntax"), syntax_closure.syntax_btree())).unwrap();
 
             // Bind to the name
             let AtomId(name_id) = name;
-            let syntax          = SafasCell::Syntax(Box::new(syntax_closure.syntax()), NIL.clone());
+
+            let syntax          = SafasCell::Syntax(Box::new(syntax_closure.syntax()), btree);
             bindings.symbols.insert(*name_id, syntax.into());
             bindings.export(*name_id);
 

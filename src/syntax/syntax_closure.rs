@@ -133,6 +133,13 @@ impl SyntaxClosure {
             SyntaxCompiler::with_compiler_and_reftype(generate_actions, bound_syntax, reference_type)
         })
     }
+
+    ///
+    /// Retrieves the syntax b-tree for this closure
+    ///
+    pub fn syntax_btree(&self) -> CellRef {
+        self.syntax_btree.clone()
+    }
 }
 
 impl BindingMonad for SyntaxClosure {

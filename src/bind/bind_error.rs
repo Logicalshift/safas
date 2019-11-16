@@ -83,6 +83,9 @@ pub enum BindError {
     /// An attempt was made to use a symbol that was not yet defined
     ForwardReferencesNotAllowed,
 
+    /// Tried to extend the syntax for something that's not an extendable syntax
+    CannotExtendSyntax(String),
+
     /// A file could not be found
     FileNotFound(String),
 

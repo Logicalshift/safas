@@ -18,19 +18,36 @@ pub fn extend_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             
             // Look up the existing syntax
             let AtomId(existing_syntax_id)  = existing_syntax_name;
-            let existing_syntax             = CellRef::new(SafasCell::Atom(existing_syntax_id));
+            let existing_syntax             = bindings.look_up(existing_syntax_id);
 
-            // Attempt to bind the 'syntax' atom
-            let syntax_atom                 = CellRef::new(SafasCell::Atom(get_id_for_atom_with_name("syntax")));
-            let bind_syntax                 = SafasCell::list_with_cells(vec![existing_syntax, syntax_atom]);
-
-            let (bindings, existing_syntax) = match bind_statement(bind_syntax.into(), bindings) {
-                Ok((existing_syntax, bindings)) => (bindings, existing_syntax),
-                Err((err, bindings))            => return (bindings, Err(err))
+            let existing_syntax             = match existing_syntax {
+                None                                    => return (bindings, Err(BindError::UnknownSymbol(name_for_atom_with_id(existing_syntax_id)))),
+                Some((existing_syntax, frame_depth))    => {
+                    // TODO: Rebind if necessary
+                    existing_syntax
+                }
             };
-            
+
+            // For syntax items, the parameter contains a btree with syntax bindings in it
+            let syntax_items = match &*existing_syntax {
+                SafasCell::Syntax(_binding, params) => {
+                    match btree_search(params.clone(), SafasCell::atom("syntax")) {
+                        Ok(syntax_items)    => syntax_items,
+                        Err(_)              => return (bindings, Err(BindError::CannotExtendSyntax(name_for_atom_with_id(existing_syntax_id))))
+                    }
+                },
+
+                _ => return (bindings, Err(BindError::CannotExtendSyntax(name_for_atom_with_id(existing_syntax_id))))
+            };
+
+            if syntax_items.is_nil() {
+                return (bindings, Err(BindError::CannotExtendSyntax(name_for_atom_with_id(existing_syntax_id))))
+            }
+
+            println!("{:?}", syntax_items);
+
             // Return the result
-            (bindings, Ok((existing_syntax, new_name, patterns.clone(), statements.clone())))
+            (bindings, Ok((syntax_items, new_name, patterns.clone(), statements.clone())))
         })
 
     })

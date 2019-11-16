@@ -133,6 +133,13 @@ impl SafasCell {
     }
 
     ///
+    /// Creates a cell containing an atom
+    ///
+    pub fn atom(name: &str) -> CellRef {
+        SafasCell::Atom(get_id_for_atom_with_name(name)).into()
+    }
+
+    ///
     /// Returns true if this cell is nil
     ///
     pub fn is_nil(&self) -> bool {
