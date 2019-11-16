@@ -233,40 +233,40 @@ impl BindingMonad for SyntaxClosure {
     fn rebind_from_outer_frame(&self, bindings: SymbolBindings, _parameter: CellRef, frame_depth: u32) -> (SymbolBindings, Option<(Box<dyn BindingMonad<Binding=Self::Binding>>, CellRef)>) {
         // Rebind the imported bindings to the new frame
         let (bindings, rebound_imported_bindings)   = rebind_imported_bindings(Arc::clone(&self.imported_bindings), bindings, frame_depth);
+        let rebound_imported_bindings               = rebound_imported_bindings.unwrap_or_else(|| self.imported_bindings.clone());
 
         // Regenerate the syntax symbols with the new imported bindings
-        if let Some(rebound_imported_bindings) = rebound_imported_bindings {
-            let new_syntax                  = self.syntax_symbols.iter()
-                .map(|(atom_id, symbol)| {
-                    let patterns    = symbol.patterns.clone();
-                    let new_symbol  = SyntaxSymbol {
-                        patterns:           patterns, 
-                        imported_bindings:  Arc::clone(&rebound_imported_bindings),
-                        reference_type:     symbol.reference_type
-                    };
-
-                    (AtomId(*atom_id), Arc::new(new_symbol))
-                })
-                .collect::<Vec<_>>();
-
-            // Rebind the syntax we're extending
-            let (bindings, extend_syntax) = match self.extend_syntax {
-                Some(ref extend_syntax) => {
-                    let (bindings, new_extend_syntax) = rebind_cell(extend_syntax, bindings, frame_depth);
-                    (bindings, Some(new_extend_syntax.unwrap_or_else(|| extend_syntax.clone())))
-                },
-                None                => (bindings, None)
+        let mut bindings                = bindings;
+        let mut new_syntax              = vec![];
+        for (atom_id, symbol) in self.syntax_symbols.iter() {
+            let (new_bindings, fallback) = match symbol.fallback_syntax { Some(ref fallback) => rebind_cell(fallback, bindings, frame_depth), None => (bindings, None) };
+            bindings            = new_bindings;
+            let patterns        = symbol.patterns.clone();
+            let new_symbol      = SyntaxSymbol {
+                patterns:           patterns, 
+                imported_bindings:  Arc::clone(&rebound_imported_bindings),
+                reference_type:     symbol.reference_type,
+                fallback_syntax:    fallback
             };
 
-            // Create a new syntax closure with these symbols
-            let new_syntax_closure  = SyntaxClosure::new(new_syntax, rebound_imported_bindings, extend_syntax);
-            let mut btree           = btree_new();
-            btree                   = btree_insert(btree, (SafasCell::atom("syntax"), new_syntax_closure.syntax_btree())).unwrap();
-
-            (bindings, Some((Box::new(new_syntax_closure), btree)))
-        } else {
-            (bindings, None)
+            new_syntax.push((AtomId(*atom_id), Arc::new(new_symbol)))
         }
+
+        // Rebind the syntax we're extending
+        let (bindings, extend_syntax) = match self.extend_syntax {
+            Some(ref extend_syntax) => {
+                let (bindings, new_extend_syntax) = rebind_cell(extend_syntax, bindings, frame_depth);
+                (bindings, Some(new_extend_syntax.unwrap_or_else(|| extend_syntax.clone())))
+            },
+            None                => (bindings, None)
+        };
+
+        // Create a new syntax closure with these symbols
+        let new_syntax_closure  = SyntaxClosure::new(new_syntax, rebound_imported_bindings, extend_syntax);
+        let mut btree           = btree_new();
+        btree                   = btree_insert(btree, (SafasCell::atom("syntax"), new_syntax_closure.syntax_btree())).unwrap();
+
+        (bindings, Some((Box::new(new_syntax_closure), btree)))
     }
 }
 

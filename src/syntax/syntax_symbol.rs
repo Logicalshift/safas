@@ -41,7 +41,10 @@ pub struct SyntaxSymbol {
     pub (super) imported_bindings: Arc<HashMap<usize, CellRef>>,
 
     /// The type of referernce for this syntax symbol
-    pub (super) reference_type: ReferenceType
+    pub (super) reference_type: ReferenceType,
+
+    /// A cell containing fallback syntax to try if there's no pattern match for this cell
+    pub (super) fallback_syntax: Option<CellRef>
 }
 
 ///
@@ -82,7 +85,7 @@ impl SyntaxSymbol {
             }
         }
 
-        SyntaxSymbol { patterns: patterns, imported_bindings: Arc::new(HashMap::new()), reference_type: reference_type }
+        SyntaxSymbol { patterns: patterns, imported_bindings: Arc::new(HashMap::new()), reference_type: reference_type, fallback_syntax: None }
     }
 
     ///
@@ -217,13 +220,15 @@ impl BindingMonad for Arc<SyntaxSymbol> {
     fn rebind_from_outer_frame(&self, bindings: SymbolBindings, parameter: CellRef, frame_depth: u32) -> (SymbolBindings, Option<(Box<dyn BindingMonad<Binding=Self::Binding>>, CellRef)>) {
         // Rebind the imported bindings to the new frame
         let (bindings, rebound_imported_bindings)   = rebind_imported_bindings(Arc::clone(&self.imported_bindings), bindings, frame_depth);
+        let (bindings, fallback_syntax)             = match self.fallback_syntax { Some(ref fallback) => rebind_cell(fallback, bindings, frame_depth), None => (bindings, None) };
 
         // Map to a new syntax symbol
         let rebound_syntax                          = rebound_imported_bindings.map(|rebound_imported_bindings| {
             SyntaxSymbol {
                 patterns:           self.patterns.clone(),
                 imported_bindings:  rebound_imported_bindings,
-                reference_type:     self.reference_type
+                reference_type:     self.reference_type,
+                fallback_syntax:    fallback_syntax
             }
         });
         let rebound_syntax                          = rebound_syntax.map(move |rebound_syntax| -> (Box<dyn BindingMonad<Binding=Self::Binding>>, _) { (Box::new(Arc::new(rebound_syntax)), parameter) });
