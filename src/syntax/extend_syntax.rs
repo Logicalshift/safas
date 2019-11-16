@@ -164,6 +164,28 @@ mod test {
     }
 
     #[test]
+    fn evaluate_extra_rule() {
+        let val = eval(
+            "(def_syntax some_syntax ((lda #<x>) (x)))
+            (extend_syntax more_syntax some_syntax ((lda (<x>)) ((+ x 1))))
+            (more_syntax (lda (42)))"
+            ).unwrap().to_string();
+
+        assert!(val == "43");
+    }
+
+    #[test]
+    fn evaluate_original_rule() {
+        let val = eval(
+            "(def_syntax some_syntax ((lda #<x>) (x)))
+            (extend_syntax more_syntax some_syntax ((lda (<x>)) ((+ x 1))))
+            (more_syntax (lda #42))"
+            ).unwrap().to_string();
+
+        assert!(val == "42");
+    }
+
+    #[test]
     fn fetch_syntax() {
         let val = eval(
             "(def_syntax some_syntax ((lda #<x>) (x)))
