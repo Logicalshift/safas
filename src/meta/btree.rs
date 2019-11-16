@@ -261,6 +261,90 @@ fn btree_insert_new_node_and_children(key_values: &mut Vec<(CellRef, CellRef)>, 
     }
 }
 
+///
+/// Creates an iterator for a btree
+///
+pub fn btree_iterate(btree: CellRef) -> impl Iterator<Item=(CellRef, CellRef)> {
+    BTreeIterator {
+        waiting: vec![BTreeIteratorStackItem::VisitLeft(btree, 0)]
+    }
+}
+
+enum BTreeIteratorStackItem {
+    VisitLeft(CellRef, usize),
+    VisitRight(CellRef, usize)
+}
+
+///
+/// Iterator that visits all of the nodes in a b-tree (in order)
+///
+struct BTreeIterator {
+    waiting: Vec<BTreeIteratorStackItem>
+}
+
+impl Iterator for BTreeIterator {
+    type Item = (CellRef, CellRef);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use self::BTreeIteratorStackItem::*;
+
+        loop {
+            match self.waiting.pop() {
+                None                            => { return None; }
+
+                Some(VisitLeft(btree, idx))     => { 
+                    if let SafasCell::BTree(key_values, child_nodes) = &*btree {
+                        if idx > key_values.len() {
+                            // Overran the end of the nodes
+                            continue;
+                        } else if child_nodes.len() == 0 {
+                            // No child nodes, so just visit our neighbour next
+                            self.waiting.push(VisitLeft(btree.clone(), idx+1));
+
+                            if idx < key_values.len() {
+                                return Some(key_values[idx].clone());
+                            } else {
+                                continue;
+                            }
+                        } else {
+                            // Visit the child nodes first, then revisit this node
+                            self.waiting.push(VisitRight(btree.clone(), idx));
+                            self.waiting.push(VisitLeft(child_nodes[idx].clone(), 0));
+
+                            continue;
+                        }
+                    } else {
+                        // Nothing to do here
+                        continue;
+                    }
+                }
+
+                Some(VisitRight(btree, idx))    => { 
+                    if let SafasCell::BTree(key_values, child_nodes) = &*btree {
+                        if child_nodes.len() == 0 {
+                            // No child nodes, so just visit the main node next
+                            return Some(key_values[idx].clone());
+                        } else {
+                            // Visit the node to the right in the list
+                            self.waiting.push(VisitLeft(btree.clone(), idx+1));
+
+                            // Return the parent node
+                            if idx < key_values.len() {
+                                return Some(key_values[idx].clone());
+                            } else {
+                                continue;
+                            }
+                        }
+                    } else {
+                        // Nothing to do here
+                        continue;
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -284,6 +368,37 @@ mod test {
             let lookup_val  = btree_search(btree.clone(), key.clone()).unwrap();
             assert!(lookup_val == value);
         }
+    }
+
+    #[test]
+    fn insert_and_iterate_100_nodes() {
+        let mut btree = btree_new();
+
+        for num in 0..100 {
+            let key         = SafasCell::Number(SafasNumber::Plain(num));
+            let key         = CellRef::new(key);
+
+            let value       = SafasCell::Number(SafasNumber::Plain(num + 100));
+            let value       = CellRef::new(value);
+            
+            btree           = btree_insert(btree, (key.clone(), value.clone())).unwrap();
+        }
+
+        let mut count = 0;
+        for (num, (key, value)) in btree_iterate(btree).enumerate() {
+            let num             = num as u128;
+            let key_expected    = SafasCell::Number(SafasNumber::Plain(num));
+            let key_expected    = CellRef::new(key_expected);
+
+            let value_expected  = SafasCell::Number(SafasNumber::Plain(num + 100));
+            let value_expected  = CellRef::new(value_expected);
+
+            assert!(key == key_expected);
+            assert!(value == value_expected);
+            count += 1;
+        }
+
+        assert!(count == 100);
     }
 
     #[test]
