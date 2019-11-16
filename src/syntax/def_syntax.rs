@@ -11,6 +11,117 @@ use std::collections::{HashMap};
 use std::convert::*;
 
 ///
+/// Given a partially parsed set of macro definitions, binds them and generates a full syntax closure
+///
+pub (super) fn syntax_closure_from_macro_definitions(bindings: SymbolBindings, macros: &Vec<(u64, Vec<(Arc<PatternMatch>, CellRef)>)>) -> (SymbolBindings, Result<SyntaxClosure, BindError>) {
+    // Bind the macros in an inner frame
+    let mut evaluation_bindings     = bindings.push_new_frame();
+    let mut symbol_syntax           = vec![];
+
+    // Macros can reference each other. Only back-references are allowed so we can bind them properly
+    // Initially all symbols generate errors
+    for (symbol_id, _) in macros.iter() {
+        // Symbols are intially bound to some syntax that generates an error
+        let error = BindingFn::from_binding_fn(|bindings| -> (SymbolBindings, Result<CellRef, BindError>) { (bindings, Err(BindError::ForwardReferencesNotAllowed)) })
+            .map(|_| SyntaxCompiler::with_compiler(|_| Err(BindError::ForwardReferencesNotAllowed), NIL.clone()));
+
+        evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(Box::new(error), NIL.clone()).into());
+    }
+
+    for (symbol_id, symbol_patterns) in macros.iter() {
+        // bound_patterns will store the patterns that will be bound by this syntax
+        let mut bound_patterns          = vec![];
+
+        for (pattern_def, macro_def) in symbol_patterns.iter() {
+            let pattern_def             = Arc::clone(pattern_def);
+            let macro_def               = Arc::clone(macro_def);
+
+            // Create an inner frame with the values for this macro
+            let mut macro_bindings      = evaluation_bindings.push_interior_frame();
+
+            // Bind the arguments for the pattern
+            let mut pattern_cells = vec![];
+            for AtomId(arg_atom_id) in pattern_def.bindings() {
+                // Create a new cell for this atom
+                let arg_cell            = macro_bindings.alloc_cell();
+                let arg_cell: CellRef   = SafasCell::FrameReference(arg_cell, 0, ReferenceType::Value).into();
+
+                // Add to the bindings and the list of cells for this pattern
+                macro_bindings.symbols.insert(arg_atom_id, arg_cell.clone());
+                pattern_cells.push(arg_cell);
+            }
+            
+            // Bind the macro definition (which is a series of statements)
+            let macro_def               = macro_def.to_vec();
+            let macro_def               = match macro_def { Some(def) => def, None => return (macro_bindings.pop().0.pop().0, Err(BindError::SyntaxExpectingList)) };
+
+            // Prebind each statement
+            for macro_statement in macro_def.iter() {
+                let (new_bindings, _)   = pre_bind_statement(Arc::clone(macro_statement), macro_bindings);
+                macro_bindings          = new_bindings;
+            }
+
+            // Finish binding them
+            let mut bind_result         = vec![];
+            for macro_statement in macro_def.into_iter() {
+                // Bind this statement
+                let bound_statement     = bind_statement(macro_statement, macro_bindings);
+                let (new_bindings, bound_statement) = match bound_statement { 
+                    Ok((result, macro_bindings))    => ((macro_bindings, result)), 
+                    Err((err, macro_bindings))      => { return (macro_bindings.pop().0.pop().0, Err(err)); }
+                };
+
+                // Store in the result
+                macro_bindings = new_bindings;
+                bind_result.push(bound_statement);
+            }
+
+            // Store in the results
+            bound_patterns.push((pattern_def, pattern_cells, SafasCell::list_with_cells(bind_result).into()));
+
+            // Revert the inner frame
+            let (new_bindings, _)       = macro_bindings.pop();
+            evaluation_bindings         = new_bindings;
+        }
+
+        // Create a syntax symbol
+        let symbol = SyntaxSymbol::new(bound_patterns);
+        let symbol = Arc::new(symbol);
+
+        // Define this as our symbol name
+        evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(Box::new(SyntaxSymbol::syntax(symbol.clone())), NIL.clone()).into());
+        symbol_syntax.push((AtomId(*symbol_id), symbol))
+    }
+
+    // Pop the evaluation frame
+    let (mut bindings, imports) = evaluation_bindings.pop();
+
+    // Generate the imported symbol list for the macros
+    let mut cell_imports        = HashMap::new();
+    for (symbol_value, import_into_cell_id) in imports.into_iter() {
+        match &*symbol_value {
+            SafasCell::FrameReference(_our_cell_id, 0, _type) => {
+                // Cell from this frame
+                cell_imports.insert(import_into_cell_id, symbol_value);
+            },
+
+            SafasCell::FrameReference(their_cell_id, frame_count, their_type) => {
+                // Import from a parent frame
+                let our_cell_id = bindings.alloc_cell();
+                bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count, *their_type).into(), our_cell_id);
+                cell_imports.insert(import_into_cell_id, SafasCell::FrameReference(our_cell_id, 0, *their_type).into());
+            },
+
+            _ => panic!("Don't know how to import this type of symbol")
+        }
+    }
+
+    // Build a syntax closure from the arguments (these are currently bound to the current environment so they
+    // can't be passed outside of the current function)
+    (bindings, Ok(SyntaxClosure::new(symbol_syntax, Arc::new(cell_imports), None)))
+}
+
+///
 /// The (def_syntax) keyword, expressed as a binding monad
 /// 
 /// Syntax is defined using:
@@ -70,113 +181,13 @@ pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             // Fetch the values computed by the previous step
             let (name, macros, statements)  = &args;
 
-            // Bind the macros in an inner frame
-            let mut evaluation_bindings     = bindings.push_new_frame();
-            let mut symbol_syntax           = vec![];
+            // Bind the syntax closure
+            let (mut bindings, syntax_closure)  = syntax_closure_from_macro_definitions(bindings, macros);
+            let syntax_closure                  = match syntax_closure { Ok(syntax_closure) => syntax_closure, Err(err) => return (bindings, Err(err)) };
 
-            // Macros can reference each other. Only back-references are allowed so we can bind them properly
-            // Initially all symbols generate errors
-            for (symbol_id, _) in macros.iter() {
-                // Symbols are intially bound to some syntax that generates an error
-                let error = BindingFn::from_binding_fn(|bindings| -> (SymbolBindings, Result<CellRef, BindError>) { (bindings, Err(BindError::ForwardReferencesNotAllowed)) })
-                    .map(|_| SyntaxCompiler::with_compiler(|_| Err(BindError::ForwardReferencesNotAllowed), NIL.clone()));
-
-                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(Box::new(error), NIL.clone()).into());
-            }
-
-            for (symbol_id, symbol_patterns) in macros.iter() {
-                // bound_patterns will store the patterns that will be bound by this syntax
-                let mut bound_patterns          = vec![];
-
-                for (pattern_def, macro_def) in symbol_patterns.iter() {
-                    let pattern_def             = Arc::clone(pattern_def);
-                    let macro_def               = Arc::clone(macro_def);
-
-                    // Create an inner frame with the values for this macro
-                    let mut macro_bindings      = evaluation_bindings.push_interior_frame();
-
-                    // Bind the arguments for the pattern
-                    let mut pattern_cells = vec![];
-                    for AtomId(arg_atom_id) in pattern_def.bindings() {
-                        // Create a new cell for this atom
-                        let arg_cell            = macro_bindings.alloc_cell();
-                        let arg_cell: CellRef   = SafasCell::FrameReference(arg_cell, 0, ReferenceType::Value).into();
-
-                        // Add to the bindings and the list of cells for this pattern
-                        macro_bindings.symbols.insert(arg_atom_id, arg_cell.clone());
-                        pattern_cells.push(arg_cell);
-                    }
-                    
-                    // Bind the macro definition (which is a series of statements)
-                    let macro_def               = macro_def.to_vec();
-                    let macro_def               = match macro_def { Some(def) => def, None => return (macro_bindings.pop().0.pop().0, Err(BindError::SyntaxExpectingList)) };
-
-                    // Prebind each statement
-                    for macro_statement in macro_def.iter() {
-                        let (new_bindings, _)   = pre_bind_statement(Arc::clone(macro_statement), macro_bindings);
-                        macro_bindings          = new_bindings;
-                    }
-
-                    // Finish binding them
-                    let mut bind_result         = vec![];
-                    for macro_statement in macro_def.into_iter() {
-                        // Bind this statement
-                        let bound_statement     = bind_statement(macro_statement, macro_bindings);
-                        let (new_bindings, bound_statement) = match bound_statement { 
-                            Ok((result, macro_bindings))    => ((macro_bindings, result)), 
-                            Err((err, macro_bindings))      => { return (macro_bindings.pop().0.pop().0, Err(err)); }
-                        };
-
-                        // Store in the result
-                        macro_bindings = new_bindings;
-                        bind_result.push(bound_statement);
-                    }
-
-                    // Store in the results
-                    bound_patterns.push((pattern_def, pattern_cells, SafasCell::list_with_cells(bind_result).into()));
-
-                    // Revert the inner frame
-                    let (new_bindings, _)       = macro_bindings.pop();
-                    evaluation_bindings         = new_bindings;
-                }
-
-                // Create a syntax symbol
-                let symbol = SyntaxSymbol::new(bound_patterns);
-                let symbol = Arc::new(symbol);
-
-                // Define this as our symbol name
-                evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(Box::new(SyntaxSymbol::syntax(symbol.clone())), NIL.clone()).into());
-                symbol_syntax.push((AtomId(*symbol_id), symbol))
-            }
-
-            // Pop the evaluation frame
-            let (mut bindings, imports) = evaluation_bindings.pop();
-
-            // Generate the imported symbol list for the macros
-            let mut cell_imports        = HashMap::new();
-            for (symbol_value, import_into_cell_id) in imports.into_iter() {
-                match &*symbol_value {
-                    SafasCell::FrameReference(_our_cell_id, 0, _type) => {
-                        // Cell from this frame
-                        cell_imports.insert(import_into_cell_id, symbol_value);
-                    },
-
-                    SafasCell::FrameReference(their_cell_id, frame_count, their_type) => {
-                        // Import from a parent frame
-                        let our_cell_id = bindings.alloc_cell();
-                        bindings.import(SafasCell::FrameReference(*their_cell_id, *frame_count, *their_type).into(), our_cell_id);
-                        cell_imports.insert(import_into_cell_id, SafasCell::FrameReference(our_cell_id, 0, *their_type).into());
-                    },
-
-                    _ => panic!("Don't know how to import this type of symbol")
-                }
-            }
-
-            // Build a syntax closure from the arguments (these are currently bound to the current environment so they
-            // can't be passed outside of the current function)
-            let syntax_closure  = SyntaxClosure::new(symbol_syntax, Arc::new(cell_imports), None);
-            let mut btree       = btree_new();
-            btree               = btree_insert(btree, (SafasCell::atom("syntax"), syntax_closure.syntax_btree())).unwrap();
+            // Generate a btree with the 'syntax' entry in it
+            let mut btree                       = btree_new();
+            btree                               = btree_insert(btree, (SafasCell::atom("syntax"), syntax_closure.syntax_btree())).unwrap();
 
             // Bind to the name
             let AtomId(name_id) = name;

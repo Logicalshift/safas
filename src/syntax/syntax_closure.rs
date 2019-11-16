@@ -21,7 +21,7 @@ lazy_static! {
 /// between closures by rebinding the symbols if necessary.
 ///
 pub struct SyntaxClosure {
-    /// Optionally, a cell containing some existing syntax that this closure will extend
+    /// Optionally, a cell containing some existing syntax that this closure will extend (None if this defines all-new syntax)
     /// 
     /// This should contain a syntax cell with a BTree stored in the parameters. To extend the syntax,
     /// the closure will look up the 'syntax' key in the BTree. The value should be another BTree: any
