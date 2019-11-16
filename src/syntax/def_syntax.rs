@@ -18,6 +18,22 @@ pub (super) fn syntax_closure_from_macro_definitions(bindings: SymbolBindings, m
     let mut evaluation_bindings     = bindings.push_new_frame();
     let mut symbol_syntax           = vec![];
 
+    // Get the syntax B-Tree if possible (to bind the fallback syntax if necessary)
+    let existing_btree              = existing_syntax.as_ref()
+        .and_then(|existing_syntax| {
+            match &**existing_syntax {
+                SafasCell::Syntax(_, parameters)    => Some(parameters),
+                _                                   => None
+            }
+        }).and_then(|btree| {
+            let syntax = btree_search(btree.clone(), SafasCell::atom("syntax")).ok()?;
+            if syntax.is_nil() {
+                None
+            } else {
+                Some(syntax)
+            }
+        });
+
     // Macros can reference each other. Only back-references are allowed so we can bind them properly
     // Initially all symbols generate errors
     for (symbol_id, _) in macros.iter() {
@@ -84,9 +100,20 @@ pub (super) fn syntax_closure_from_macro_definitions(bindings: SymbolBindings, m
             evaluation_bindings         = new_bindings;
         }
 
+        // Look up the fallback syntax if possible
+        let fallback    = existing_btree.as_ref()
+            .and_then(|existing_btree| {
+                let syntax = btree_search(existing_btree.clone(), SafasCell::Atom(*symbol_id).into()).ok()?;
+                if syntax.is_nil() {
+                    None
+                } else {
+                    Some(syntax)
+                }
+            });
+
         // Create a syntax symbol
-        let symbol = SyntaxSymbol::new(bound_patterns);
-        let symbol = Arc::new(symbol);
+        let symbol      = SyntaxSymbol::new(bound_patterns, fallback);
+        let symbol      = Arc::new(symbol);
 
         // Define this as our symbol name
         evaluation_bindings.symbols.insert(*symbol_id, SafasCell::Syntax(Box::new(SyntaxSymbol::syntax(symbol.clone())), NIL.clone()).into());

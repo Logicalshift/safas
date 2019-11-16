@@ -72,8 +72,10 @@ fn reference_type_for_partially_bound_statements(statements: &CellRef) -> Refere
 impl SyntaxSymbol {
     ///
     /// Creates a new syntax symbol that will match one of the specified patterns
+    /// 
+    /// If no patterns are matched, the fallback syntax may be used instead
     ///
-    pub fn new(patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>) -> SyntaxSymbol {
+    pub fn new(patterns: Vec<(Arc<PatternMatch>, Vec<CellRef>, CellRef)>, fallback_syntax: Option<CellRef>) -> SyntaxSymbol {
         // This syntax should have a monad reference type if any of its statements have a monad reference type 
         let mut reference_type = ReferenceType::Value;
 
@@ -85,7 +87,7 @@ impl SyntaxSymbol {
             }
         }
 
-        SyntaxSymbol { patterns: patterns, imported_bindings: Arc::new(HashMap::new()), reference_type: reference_type, fallback_syntax: None }
+        SyntaxSymbol { patterns: patterns, imported_bindings: Arc::new(HashMap::new()), reference_type: reference_type, fallback_syntax: fallback_syntax }
     }
 
     ///
