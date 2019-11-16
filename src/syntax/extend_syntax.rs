@@ -1,10 +1,12 @@
-use super::syntax_symbol::*;
-use super::syntax_closure::*;
+use super::def_syntax::*;
 use super::pattern_match::*;
 
 use crate::bind::*;
 use crate::meta::*;
-use crate::exec::*;
+
+use itertools::*;
+use std::sync::*;
+use std::convert::{TryFrom};
 
 ///
 /// `(extend_syntax existing_syntax new_syntax_name (<pattern> <macro> ...) [prelude_statements])`
@@ -67,8 +69,96 @@ pub fn extend_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             (bindings, Ok((existing_syntax, new_name, patterns.clone(), statements.clone())))
         })
 
+    }).map_result(|(existing_syntax, new_name, patterns, statements)| {
+
+        // Parse the arguments to the expression
+
+        // Process the patterns (each is of the form <pattern> <macro>)
+        let mut current_pattern = patterns;
+        let mut macros          = vec![];
+        while !current_pattern.is_nil() {
+            // Each pattern is two cells, the pattern definition and the macro definition
+            // Format is `(<symbol> . <pattern>) <macro>`
+            let pattern_def: ListWithTail<(ListWithTail<(AtomId, ), CellRef>, CellRef), CellRef>    = ListWithTail::try_from(current_pattern)?;
+            let ListWithTail((ListWithTail((symbol_name, ), pattern_def), macro_def), next_pattern) = pattern_def;
+
+            // Compile the pattern
+            let pattern_def = PatternMatch::from_pattern_as_cells(pattern_def)?;
+
+            // Add to the macros
+            macros.push((symbol_name, pattern_def, macro_def));
+
+            // Move to the next pattern
+            current_pattern = next_pattern;
+        }
+
+        // Group by symbol, so we a vec of each symbol we want to match and the corresponding macro definition
+        let macros = macros.into_iter().group_by(|(AtomId(symbol_name), _pattern_def, _macro_def)| *symbol_name);
+        let macros = macros.into_iter()
+            .map(|(symbol, values)| {
+                let values = values.into_iter().map(|(_symbol, pattern_def, macro_def)| (Arc::new(pattern_def), macro_def));
+                (symbol, values.collect::<Vec<_>>())
+            })
+            .collect::<Vec<_>>();
+
+        // Result of the first stage is the list of patterns
+        Ok((existing_syntax, new_name, Arc::new(macros), statements))
+
+    }).and_then(|args| {
+
+        // Bind each of the macros and generate the syntax closure
+
+        BindingFn::from_binding_fn(move |bindings| {
+
+            // Fetch the values computed by the previous step
+            let (existing_syntax, name, macros, statements)  = &args;
+
+            // Bind the syntax closure
+            let (mut bindings, syntax_closure)  = syntax_closure_from_macro_definitions(bindings, macros, Some(existing_syntax.clone()));
+            let syntax_closure                  = match syntax_closure { Ok(syntax_closure) => syntax_closure, Err(err) => return (bindings, Err(err)) };
+
+            // Generate a btree with the 'syntax' entry in it
+            let mut btree                       = btree_new();
+            btree                               = btree_insert(btree, (SafasCell::atom("syntax"), syntax_closure.syntax_btree())).unwrap();
+
+            // Bind to the name
+            let AtomId(name_id) = name;
+
+            let syntax          = SafasCell::Syntax(Box::new(syntax_closure.syntax()), btree);
+            bindings.symbols.insert(*name_id, syntax.into());
+            bindings.export(*name_id);
+
+            (bindings, Ok(NIL.clone()))
+
+        })
+    }).map_result(|_| {
+        Ok(SyntaxCompiler::default())
     })
-    .map_result(|_| {
-        Ok(SyntaxCompiler::with_compiler(|_| Ok(CompiledActions::empty()), NIL.clone()))
-    })
+}
+
+#[cfg(test)]
+mod test {
+    use crate::interactive::*;
+
+    #[test]
+    fn evaluate_extension_macro() {
+        let val = eval(
+            "(def_syntax some_syntax ((lda #<x>) (x)))
+            (extend_syntax some_syntax more_syntax ((ldx #<x>) (x)))
+            (more_syntax (ldx #42))"
+            ).unwrap().to_string();
+
+        assert!(val == "42");
+    }
+
+    #[test]
+    fn evaluate_original_macro() {
+        let val = eval(
+            "(def_syntax some_syntax ((lda #<x>) (x)))
+            (extend_syntax some_syntax more_syntax ((ldx #<x>) (x)))
+            (more_syntax (lda #42))"
+            ).unwrap().to_string();
+
+        assert!(val == "42");
+    }
 }

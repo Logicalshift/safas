@@ -13,7 +13,7 @@ use std::convert::*;
 ///
 /// Given a partially parsed set of macro definitions, binds them and generates a full syntax closure
 ///
-pub (super) fn syntax_closure_from_macro_definitions(bindings: SymbolBindings, macros: &Vec<(u64, Vec<(Arc<PatternMatch>, CellRef)>)>) -> (SymbolBindings, Result<SyntaxClosure, BindError>) {
+pub (super) fn syntax_closure_from_macro_definitions(bindings: SymbolBindings, macros: &Vec<(u64, Vec<(Arc<PatternMatch>, CellRef)>)>, existing_syntax: Option<CellRef>) -> (SymbolBindings, Result<SyntaxClosure, BindError>) {
     // Bind the macros in an inner frame
     let mut evaluation_bindings     = bindings.push_new_frame();
     let mut symbol_syntax           = vec![];
@@ -118,7 +118,7 @@ pub (super) fn syntax_closure_from_macro_definitions(bindings: SymbolBindings, m
 
     // Build a syntax closure from the arguments (these are currently bound to the current environment so they
     // can't be passed outside of the current function)
-    (bindings, Ok(SyntaxClosure::new(symbol_syntax, Arc::new(cell_imports), None)))
+    (bindings, Ok(SyntaxClosure::new(symbol_syntax, Arc::new(cell_imports), existing_syntax)))
 }
 
 ///
@@ -139,7 +139,7 @@ pub (super) fn syntax_closure_from_macro_definitions(bindings: SymbolBindings, m
 pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
     get_expression_arguments().map_result(|ListWithTail((name, patterns), statements): ListWithTail<(AtomId, CellRef), CellRef>| {
 
-        // First step: parse the arguments to the expression
+        // Parse the arguments to the expression
 
         // Process the patterns (each is of the form <pattern> <macro>)
         let mut current_pattern = patterns;
@@ -174,7 +174,7 @@ pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
 
     }).and_then(|args| {
 
-        // Second step: bind each of the macros and generate the syntax item
+        // Bind each of the macros and generate the syntax item
 
         BindingFn::from_binding_fn(move |bindings| {
 
@@ -182,7 +182,7 @@ pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
             let (name, macros, statements)  = &args;
 
             // Bind the syntax closure
-            let (mut bindings, syntax_closure)  = syntax_closure_from_macro_definitions(bindings, macros);
+            let (mut bindings, syntax_closure)  = syntax_closure_from_macro_definitions(bindings, macros, None);
             let syntax_closure                  = match syntax_closure { Ok(syntax_closure) => syntax_closure, Err(err) => return (bindings, Err(err)) };
 
             // Generate a btree with the 'syntax' entry in it

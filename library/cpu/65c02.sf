@@ -47,7 +47,7 @@
         (phy)                       ( (a 0 8) (d $5au8) )
 
         ;; Bit has a new addressing mode
-        (bit <absolute>, X)         ( (a 0 8) (zero_page absolute $34u8 #3cu8) )
+        (bit <absolute>, X)         ( (a 0 8) (zero_page absolute $34u8 $3cu8) )
 
         ;; Jmp has a new addressing mode
         (jmp (<indirect>, X))       ( (a 0 8) (d $7cu8 (bits 16 indirect)) )

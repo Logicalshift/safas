@@ -318,7 +318,6 @@ mod test {
         ).unwrap();
     }
 
-    /*
     #[test]
     fn load_65c02() {
         eval(
@@ -326,5 +325,4 @@ mod test {
             (import \"cpu/65c02\")"
         ).unwrap();
     }
-    */
 }
