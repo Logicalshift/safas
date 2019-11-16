@@ -1,5 +1,6 @@
 use super::def::*;
 use super::def_syntax::*;
+use super::extend_syntax::*;
 use super::fun::*;
 use super::quote::*;
 use super::export::*;
@@ -29,6 +30,7 @@ pub fn standard_syntax() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> {
     // Definition/declaration syntax
     let syntax  = flat_map_binding_actions(move || define_symbol_value("def",           SafasCell::Syntax(Box::new(def_keyword()), NIL.clone())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("def_syntax",    SafasCell::Syntax(Box::new(def_syntax_keyword()), NIL.clone())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("extend_syntax", SafasCell::Syntax(Box::new(extend_syntax_keyword()), NIL.clone())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("fun",           SafasCell::Syntax(Box::new(fun_keyword()), NIL.clone())), syntax);
     let syntax  = flat_map_binding_actions(move || define_symbol_value("quote",         SafasCell::Syntax(Box::new(quote_keyword()), NIL.clone())), syntax);
 

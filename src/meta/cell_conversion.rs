@@ -255,8 +255,8 @@ where   A1:             TryFrom<CellRef>,
 }
 
 impl<A1, A2, TTail> TryFrom<CellRef> for ListWithTail<(A1, A2), TTail>
-where   A1:         TryFrom<CellRef>,
-        A2:         TryFrom<CellRef>,
+where   A1:             TryFrom<CellRef>,
+        A2:             TryFrom<CellRef>,
         TTail:          TryFrom<CellRef>,
         RuntimeError:   From<A1::Error>,
         RuntimeError:   From<A2::Error>,
@@ -269,5 +269,26 @@ where   A1:         TryFrom<CellRef>,
 
         // Convert them and generate the tuple
         Ok(ListWithTail((A1::try_from(first)?, A2::try_from(second)?), TTail::try_from(cdr)?))
+    }
+}
+
+impl<A1, A2, A3, TTail> TryFrom<CellRef> for ListWithTail<(A1, A2, A3), TTail>
+where   A1:             TryFrom<CellRef>,
+        A2:             TryFrom<CellRef>,
+        A3:             TryFrom<CellRef>,
+        TTail:          TryFrom<CellRef>,
+        RuntimeError:   From<A1::Error>,
+        RuntimeError:   From<A2::Error>,
+        RuntimeError:   From<A3::Error>,
+        RuntimeError:   From<TTail::Error> {
+    type Error=RuntimeError;
+    fn try_from(cell: CellRef) -> Result<Self, Self::Error> {
+        // Read the list values
+        let (first, cdr)    = cell.list_value().ok_or(RuntimeError::BindingError(BindError::SyntaxExpectingList))?;
+        let (second, cdr)   = cdr.list_value().ok_or(RuntimeError::BindingError(BindError::MissingArgument))?;
+        let (third, cdr)    = cdr.list_value().ok_or(RuntimeError::BindingError(BindError::MissingArgument))?;
+
+        // Convert them and generate the tuple
+        Ok(ListWithTail((A1::try_from(first)?, A2::try_from(second)?, A3::try_from(third)?), TTail::try_from(cdr)?))
     }
 }

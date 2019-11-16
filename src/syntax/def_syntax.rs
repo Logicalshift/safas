@@ -26,12 +26,9 @@ use std::convert::*;
 /// `(<name> syntax)`
 ///
 pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
-    get_expression_arguments().map_result(|args: ListWithTail<(AtomId, CellRef), CellRef>| {
+    get_expression_arguments().map_result(|ListWithTail((name, patterns), statements): ListWithTail<(AtomId, CellRef), CellRef>| {
 
         // First step: parse the arguments to the expression
-
-        // Fetch the arguments
-        let ListWithTail((name, patterns), statements) = args;
 
         // Process the patterns (each is of the form <pattern> <macro>)
         let mut current_pattern = patterns;
