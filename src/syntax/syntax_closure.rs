@@ -22,6 +22,12 @@ lazy_static! {
 ///
 pub struct SyntaxClosure {
     /// Optionally, a cell containing some existing syntax that this closure will extend
+    /// 
+    /// This should contain a syntax cell with a BTree stored in the parameters. To extend the syntax,
+    /// the closure will look up the 'syntax' key in the BTree. The value should be another BTree: any
+    /// key/value pairs where the key is an atom will be imported into the new syntax.
+    /// 
+    /// (Syntaxes defined by def_syntax have this format)
     extend_syntax: Option<CellRef>,
 
     /// The syntax symbols to import into this closure (as the cells they should be bound to)
