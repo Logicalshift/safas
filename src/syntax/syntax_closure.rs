@@ -66,8 +66,12 @@ impl SyntaxClosure {
             all_symbols.push((symbol_id, symbol));
         }
 
-        // Generate the syntax b-tree
-        let mut syntax_btree = btree_new();
+        // Generate the syntax b-tree (starting at the syntax we're extending, if there is one)
+        let mut syntax_btree = extend_syntax.as_ref()
+            .and_then(|extend_syntax| match &**extend_syntax { SafasCell::Syntax(_, params) => Some(params.clone()), _ => None })
+            .and_then(|params| match btree_search(params, SafasCell::atom("syntax")) { Ok(extended_syntax) => Some(extended_syntax), Err(_err) => None })
+            .and_then(|extended_syntax| if extended_syntax.is_btree() { Some(extended_syntax) } else { None })
+            .unwrap_or_else(|| btree_new());
         for (symbol_id, value) in bound_symbols.iter() {
             syntax_btree = btree_insert(syntax_btree, (SafasCell::Atom(*symbol_id).into(), value.clone())).expect("Valid BTree");
         }

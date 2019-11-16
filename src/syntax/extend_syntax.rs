@@ -139,6 +139,7 @@ pub fn extend_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
 #[cfg(test)]
 mod test {
     use crate::interactive::*;
+    use crate::meta::*;
 
     #[test]
     fn evaluate_extension_macro() {
@@ -160,5 +161,19 @@ mod test {
             ).unwrap().to_string();
 
         assert!(val == "42");
+    }
+
+    #[test]
+    fn fetch_syntax() {
+        let val = eval(
+            "(def_syntax some_syntax ((lda #<x>) (x)))
+            (extend_syntax more_syntax some_syntax ((ldx #<x>) (x)))
+            (more_syntax syntax)"
+            ).unwrap();
+
+        let mut iter = btree_iterate(val);
+        assert!(iter.next().unwrap().0 == SafasCell::atom("lda"));
+        assert!(iter.next().unwrap().0 == SafasCell::atom("ldx"));
+        assert!(iter.next() == None);
     }
 }
