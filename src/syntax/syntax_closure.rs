@@ -21,6 +21,9 @@ lazy_static! {
 /// between closures by rebinding the symbols if necessary.
 ///
 pub struct SyntaxClosure {
+    /// Optionally, a cell containing some existing syntax that this closure will extend
+    extend_syntax: Option<CellRef>,
+
     /// The syntax symbols to import into this closure (as the cells they should be bound to)
     syntax_cells: Vec<(u64, CellRef)>,
 
@@ -38,7 +41,7 @@ impl SyntaxClosure {
     ///
     /// Creates a syntax closure from a list of syntax symbols and imports
     ///
-    pub fn new<SymbolList: IntoIterator<Item=(AtomId, Arc<SyntaxSymbol>)>>(syntax_symbols: SymbolList, imported_bindings: Arc<HashMap<usize, CellRef>>) -> SyntaxClosure {
+    pub fn new<SymbolList: IntoIterator<Item=(AtomId, Arc<SyntaxSymbol>)>>(syntax_symbols: SymbolList, imported_bindings: Arc<HashMap<usize, CellRef>>, extend_syntax: Option<CellRef>) -> SyntaxClosure {
         // Add the imported bindings into each syntax symbol to generate the syntax symbols list
         let mut bound_symbols: Vec<(u64, CellRef)>   = vec![];
         let mut all_symbols     = vec![];
@@ -65,6 +68,7 @@ impl SyntaxClosure {
 
         // Generate the closure
         SyntaxClosure {
+            extend_syntax:      extend_syntax,
             syntax_cells:       bound_symbols, 
             syntax_symbols:     all_symbols, 
             syntax_btree:       syntax_btree,
@@ -202,7 +206,7 @@ impl BindingMonad for SyntaxClosure {
         (bindings, Ok(bound))
     }
 
-    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, parameter: CellRef, frame_depth: u32) -> (SymbolBindings, Option<(Box<dyn BindingMonad<Binding=Self::Binding>>, CellRef)>) {
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, _parameter: CellRef, frame_depth: u32) -> (SymbolBindings, Option<(Box<dyn BindingMonad<Binding=Self::Binding>>, CellRef)>) {
         // Rebind the imported bindings to the new frame
         let (bindings, rebound_imported_bindings)   = rebind_imported_bindings(Arc::clone(&self.imported_bindings), bindings, frame_depth);
 
@@ -221,8 +225,17 @@ impl BindingMonad for SyntaxClosure {
                 })
                 .collect::<Vec<_>>();
 
+            // Rebind the syntax we're extending
+            let (bindings, extend_syntax) = match self.extend_syntax {
+                Some(ref extend_syntax) => {
+                    let (bindings, new_extend_syntax) = rebind_cell(extend_syntax, bindings, frame_depth);
+                    (bindings, Some(new_extend_syntax.unwrap_or_else(|| extend_syntax.clone())))
+                },
+                None                => (bindings, None)
+            };
+
             // Create a new syntax closure with these symbols
-            let new_syntax_closure  = SyntaxClosure::new(new_syntax, rebound_imported_bindings);
+            let new_syntax_closure  = SyntaxClosure::new(new_syntax, rebound_imported_bindings, extend_syntax);
             let mut btree           = btree_new();
             btree                   = btree_insert(btree, (SafasCell::atom("syntax"), new_syntax_closure.syntax_btree())).unwrap();
 
@@ -230,6 +243,41 @@ impl BindingMonad for SyntaxClosure {
         } else {
             (bindings, None)
         }
+    }
+}
+
+///
+/// Rebinds a single cell to a new frame depth
+///
+pub (super) fn rebind_cell(binding: &CellRef, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<CellRef>) {
+    match &**binding {
+        // Frame references need to be imported into the current frame
+        SafasCell::FrameReference(outer_cell_id, bound_level, cell_type) => {
+            // Import this frame reference
+            let mut bindings    = bindings;
+            let local_cell_id   = bindings.alloc_cell();
+            let outer_cell      = SafasCell::FrameReference(*outer_cell_id, *bound_level + frame_depth, *cell_type).into();
+            bindings.import(outer_cell, local_cell_id);
+
+            // Update the binding
+            (bindings, Some(SafasCell::FrameReference(local_cell_id, 0, *cell_type).into()))
+        }
+
+        // Syntax might need to be rebound to the current frame
+        SafasCell::Syntax(old_syntax, val) => {
+            // Try to rebind the syntax
+            let (new_bindings, new_syntax) = old_syntax.rebind_from_outer_frame(bindings, val.clone(), frame_depth);
+
+            // Update the binding if the syntax update
+            if let Some((new_syntax, new_val)) = new_syntax {
+                (new_bindings, Some(SafasCell::Syntax(new_syntax, new_val).into()))
+            } else {
+                (new_bindings, None)
+            }
+        }
+
+        // Other types are not affected by rebinding
+        _ => { (bindings, None) }
     }
 }
 
@@ -243,36 +291,14 @@ pub (super) fn rebind_imported_bindings(imported_bindings: Arc<HashMap<usize, Ce
     let mut rebound                     = false;
 
     for (_cell, binding) in rebound_imported_bindings.iter_mut() {
-        match &**binding {
-            // Frame references need to be imported into the current frame
-            SafasCell::FrameReference(outer_cell_id, bound_level, cell_type) => {
-                // Import this frame reference
-                let local_cell_id   = bindings.alloc_cell();
-                let outer_cell      = SafasCell::FrameReference(*outer_cell_id, *bound_level + frame_depth, *cell_type).into();
-                bindings.import(outer_cell, local_cell_id);
+        // Try to rebind the cell
+        let (new_bindings, new_binding) = rebind_cell(binding, bindings, frame_depth);
+        bindings                        = new_bindings;
 
-                // Update the binding
-                *binding            = SafasCell::FrameReference(local_cell_id, 0, *cell_type).into();
-                rebound             = true;
-            }
-
-            // Syntax might need to be rebound to the current frame
-            SafasCell::Syntax(old_syntax, val) => {
-                // Try to rebind the syntax
-                let (new_bindings, new_syntax) = old_syntax.rebind_from_outer_frame(bindings, val.clone(), frame_depth);
-
-                // Update the binding if the syntax update
-                if let Some((new_syntax, new_val)) = new_syntax {
-                    *binding        = SafasCell::Syntax(new_syntax, new_val).into();
-                    rebound         = true;
-                }
-
-                // Update the bindings from the result
-                bindings = new_bindings;
-            }
-
-            // Other types are not affected by rebinding
-            _ => { }
+        if let Some(new_binding) = new_binding {
+            // Copy to the binding and mark as rebound
+            *binding    = new_binding;
+            rebound     = true;
         }
     }
 

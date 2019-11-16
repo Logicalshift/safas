@@ -174,7 +174,7 @@ pub fn def_syntax_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
 
             // Build a syntax closure from the arguments (these are currently bound to the current environment so they
             // can't be passed outside of the current function)
-            let syntax_closure  = SyntaxClosure::new(symbol_syntax, Arc::new(cell_imports));
+            let syntax_closure  = SyntaxClosure::new(symbol_syntax, Arc::new(cell_imports), None);
             let mut btree       = btree_new();
             btree               = btree_insert(btree, (SafasCell::atom("syntax"), syntax_closure.syntax_btree())).unwrap();
 
