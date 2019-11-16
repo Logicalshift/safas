@@ -164,6 +164,20 @@ impl BindingMonad for SyntaxClosure {
         let mut interior_bindings   = bindings.push_interior_frame();
 
         // Add the syntax symbols
+        if let Some(extend_syntax) = self.extend_syntax.as_ref() {
+            // The syntax to extend should be a syntax item with a 'syntax' key defined in its parameters
+            if let SafasCell::Syntax(_, extend_parameters) = &**extend_syntax {
+                if let Ok(syntax) = btree_search(extend_parameters.clone(), SafasCell::atom("syntax")) {
+                    // Define any atoms from the original syntax in our interior bindings
+                    for (key, value) in btree_iterate(syntax) {
+                        if let SafasCell::Atom(atom_id) = &*key {
+                            interior_bindings.symbols.insert(*atom_id, value);
+                        }
+                    }
+                }
+            }
+        }
+
         for (atom_id, symbol) in self.syntax_cells.iter() {
             interior_bindings.symbols.insert(*atom_id, symbol.clone());
         }
