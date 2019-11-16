@@ -14,9 +14,9 @@ where   TBindingMonad: BindingMonad,
         TBindingMonad::Binding: 'static {
     type Binding = TBindingMonad::Binding;
 
-    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) {
-        let (binding, rebound)  = self.0.rebind_from_outer_frame(bindings, frame_depth);
-        let rebound             = rebound.map(|binding| -> Box<dyn BindingMonad<Binding=Self::Binding>> { Box::new(WithReferenceType(binding, self.1)) });
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, parameter: CellRef, frame_depth: u32) -> (SymbolBindings, Option<(Box<dyn BindingMonad<Binding=Self::Binding>>, CellRef)>) {
+        let (binding, rebound)  = self.0.rebind_from_outer_frame(bindings, parameter, frame_depth);
+        let rebound             = rebound.map(|(binding, parameter)| -> (Box<dyn BindingMonad<Binding=Self::Binding>>, _) { (Box::new(WithReferenceType(binding, self.1)), parameter) });
         (binding, rebound)
     }
 

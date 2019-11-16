@@ -202,7 +202,7 @@ impl BindingMonad for SyntaxClosure {
         (bindings, Ok(bound))
     }
 
-    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) {
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, parameter: CellRef, frame_depth: u32) -> (SymbolBindings, Option<(Box<dyn BindingMonad<Binding=Self::Binding>>, CellRef)>) {
         // Rebind the imported bindings to the new frame
         let (bindings, rebound_imported_bindings)   = rebind_imported_bindings(Arc::clone(&self.imported_bindings), bindings, frame_depth);
 
@@ -222,9 +222,11 @@ impl BindingMonad for SyntaxClosure {
                 .collect::<Vec<_>>();
 
             // Create a new syntax closure with these symbols
-            let new_syntax_closure = SyntaxClosure::new(new_syntax, rebound_imported_bindings);
+            let new_syntax_closure  = SyntaxClosure::new(new_syntax, rebound_imported_bindings);
+            let mut btree           = new_btree();
+            btree                   = btree_insert(btree, (SafasCell::atom("syntax"), new_syntax_closure.syntax_btree())).unwrap();
 
-            (bindings, Some(Box::new(new_syntax_closure)))
+            (bindings, Some((Box::new(new_syntax_closure), btree)))
         } else {
             (bindings, None)
         }
@@ -257,11 +259,11 @@ pub (super) fn rebind_imported_bindings(imported_bindings: Arc<HashMap<usize, Ce
             // Syntax might need to be rebound to the current frame
             SafasCell::Syntax(old_syntax, val) => {
                 // Try to rebind the syntax
-                let (new_bindings, new_syntax) = old_syntax.rebind_from_outer_frame(bindings, frame_depth);
+                let (new_bindings, new_syntax) = old_syntax.rebind_from_outer_frame(bindings, val.clone(), frame_depth);
 
                 // Update the binding if the syntax update
-                if let Some(new_syntax) = new_syntax {
-                    *binding        = SafasCell::Syntax(new_syntax, val.clone()).into();
+                if let Some((new_syntax, new_val)) = new_syntax {
+                    *binding        = SafasCell::Syntax(new_syntax, new_val).into();
                     rebound         = true;
                 }
 

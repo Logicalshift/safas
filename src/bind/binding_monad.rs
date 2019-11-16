@@ -23,7 +23,7 @@ pub trait BindingMonad : Send+Sync {
     /// 
     /// Can return None if this monad is not changed by the rebinding.
     ///
-    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, _frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) { (bindings, None) }
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, _parameter: CellRef, _frame_depth: u32) -> (SymbolBindings, Option<(Box<dyn BindingMonad<Binding=Self::Binding>>, CellRef)>) { (bindings, None) }
 
     ///
     /// Performs pre-binding steps
@@ -134,8 +134,8 @@ impl<Binding: Default+Send+Sync+Clone> BindingMonad for ReturnValue<Binding> {
 impl<Binding: Default> BindingMonad for Box<dyn BindingMonad<Binding=Binding>> {
     type Binding=Binding;
 
-    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) {
-        (**self).rebind_from_outer_frame(bindings, frame_depth)
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, parameter: CellRef, frame_depth: u32) -> (SymbolBindings, Option<(Box<dyn BindingMonad<Binding=Self::Binding>>, CellRef)>) {
+        (**self).rebind_from_outer_frame(bindings, parameter, frame_depth)
     }
 
     fn description(&self) -> String { (**self).description() }
@@ -186,10 +186,10 @@ where   InputMonad:     'static+BindingMonad,
         next.pre_bind(bindings)
     }
     
-    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, frame_depth: u32) -> (SymbolBindings, Option<Box<dyn BindingMonad<Binding=Self::Binding>>>) { 
-        let (bindings, rebound_input)   = self.input.rebind_from_outer_frame(bindings, frame_depth);
-        let rebound_input               = rebound_input.map(|rebound_input| FlatMapValue { input: rebound_input, next: self.next.clone(), output: PhantomData });
-        let rebound_input               = rebound_input.map(|rebound_input| -> Box<dyn BindingMonad<Binding=Self::Binding>> { Box::new(rebound_input) });
+    fn rebind_from_outer_frame(&self, bindings: SymbolBindings, parameter: CellRef, frame_depth: u32) -> (SymbolBindings, Option<(Box<dyn BindingMonad<Binding=Self::Binding>>, CellRef)>) {
+        let (bindings, rebound_input)   = self.input.rebind_from_outer_frame(bindings, parameter, frame_depth);
+        let rebound_input               = rebound_input.map(|(rebound_input, parameter)| (FlatMapValue { input: rebound_input, next: self.next.clone(), output: PhantomData }, parameter));
+        let rebound_input               = rebound_input.map(|(rebound_input, parameter)| -> (Box<dyn BindingMonad<Binding=Self::Binding>>, _) { (Box::new(rebound_input), parameter) });
 
         (bindings, rebound_input) 
     }

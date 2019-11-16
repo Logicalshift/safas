@@ -95,12 +95,12 @@ pub fn bind_statement(source: CellRef, bindings: SymbolBindings) -> BindResult<C
 
                         if symbol_level != 0 {
                             // Try to rebind the syntax from an outer frame
-                            let (mut new_bindings, rebound_monad) = binding_monad.rebind_from_outer_frame(bindings, symbol_level);
+                            let (mut new_bindings, rebound_monad) = binding_monad.rebind_from_outer_frame(bindings, parameter.clone(), symbol_level);
 
                             // If the compiler rebinds itself...
-                            if let Some(rebound_monad) = rebound_monad {
+                            if let Some((rebound_monad, parameter)) = rebound_monad {
                                 // Add to the symbols in the current bindings so we don't need to rebind the syntax multiple times
-                                let new_syntax = Syntax(rebound_monad, parameter.clone()).into();
+                                let new_syntax = Syntax(rebound_monad, parameter).into();
                                 new_bindings.symbols.insert(*atom_id, new_syntax);
                                 new_bindings.export(*atom_id);
 
@@ -180,12 +180,12 @@ fn bind_list_statement(car: CellRef, cdr: CellRef, bindings: SymbolBindings) -> 
 
                         if symbol_level != 0 {
                             // Try to rebind the syntax from an outer frame
-                            let (mut new_bindings, rebound_monad) = syntax_compiler.rebind_from_outer_frame(bindings, symbol_level);
+                            let (mut new_bindings, rebound_monad) = syntax_compiler.rebind_from_outer_frame(bindings, parameter.clone(), symbol_level);
 
                             // If the compiler rebinds itself...
-                            if let Some(rebound_monad) = rebound_monad {
+                            if let Some((rebound_monad, parameter)) = rebound_monad {
                                 // Add the bound syntax to the symbols in the current bindings so we don't need to rebind the syntax multiple times
-                                let new_syntax = Syntax(rebound_monad, parameter.clone()).into();
+                                let new_syntax = Syntax(rebound_monad, parameter).into();
                                 new_bindings.symbols.insert(*atom_id, new_syntax);
                                 new_bindings.export(*atom_id);
 
