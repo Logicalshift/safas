@@ -11,7 +11,7 @@ const LIBRARY: Dir = include_dir!("./library");
 ///
 pub fn builtin_library() -> CellRef {
     // The built-in library is a b-tree generated from the .sf files in the library directory
-    let mut builtin_library = new_btree();
+    let mut builtin_library = btree_new();
 
     // Search the directories
     let mut search_stack    = vec![("".to_string(), &LIBRARY)];

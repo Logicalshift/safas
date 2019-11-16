@@ -58,7 +58,7 @@ impl SyntaxClosure {
         }
 
         // Generate the syntax b-tree
-        let mut syntax_btree = new_btree();
+        let mut syntax_btree = btree_new();
         for (symbol_id, value) in bound_symbols.iter() {
             syntax_btree = btree_insert(syntax_btree, (SafasCell::Atom(*symbol_id).into(), value.clone())).expect("Valid BTree");
         }
@@ -223,7 +223,7 @@ impl BindingMonad for SyntaxClosure {
 
             // Create a new syntax closure with these symbols
             let new_syntax_closure  = SyntaxClosure::new(new_syntax, rebound_imported_bindings);
-            let mut btree           = new_btree();
+            let mut btree           = btree_new();
             btree                   = btree_insert(btree, (SafasCell::atom("syntax"), new_syntax_closure.syntax_btree())).unwrap();
 
             (bindings, Some((Box::new(new_syntax_closure), btree)))

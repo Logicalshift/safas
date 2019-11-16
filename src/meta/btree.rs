@@ -13,7 +13,7 @@ const BTREE_MEDIAN: usize = 2;
 ///
 /// Creates a new empty B-Tree cell
 ///
-pub fn new_btree() -> CellRef {
+pub fn btree_new() -> CellRef {
     SafasCell::BTree(vec![], vec![]).into()
 }
 
@@ -270,7 +270,7 @@ mod test {
 
     #[test]
     fn insert_and_search_100_nodes() {
-        let mut btree = new_btree();
+        let mut btree = btree_new();
 
         for num in 0..100 {
             let key         = SafasCell::Number(SafasNumber::Plain(num));
@@ -288,7 +288,7 @@ mod test {
 
     #[test]
     fn insert_and_search_100_nodes_random_keys() {
-        let mut btree   = new_btree();
+        let mut btree   = btree_new();
         let mut rng     = StdRng::seed_from_u64(42);
 
         for num in 0..100 {
@@ -307,7 +307,7 @@ mod test {
 
     #[test]
     fn insert_replace_and_search_100_nodes() {
-        let mut btree = new_btree();
+        let mut btree = btree_new();
 
         for num in 0..100 {
             let key         = SafasCell::Number(SafasNumber::Plain(num));
