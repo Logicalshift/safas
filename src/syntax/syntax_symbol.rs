@@ -12,6 +12,7 @@ use std::convert::*;
 lazy_static! {
     static ref STATEMENTS: u64  = get_id_for_atom_with_name("STATEMENTS");
     static ref FLATMAP: u64     = get_id_for_atom_with_name("FLATMAP");
+    static ref FALLBACK: u64    = get_id_for_atom_with_name("FALLBACK");
 }
 
 ///
@@ -139,6 +140,15 @@ impl SyntaxSymbol {
                     SyntaxBindingResult::FlatMap(monad, closure) => {
                         let flat_map_actions = compile_flat_map(monad, closure)?;
                         actions.extend(flat_map_actions);
+                    },
+
+                    SyntaxBindingResult::Fallback(fallback) => {
+
+                        match &*fallback {
+                            SafasCell::BoundSyntax(fallback)    => return fallback.generate_actions(),
+                            _                                   => return Err(BindError::NotImplemented)
+                        }
+
                     }
                 }
 
@@ -211,8 +221,28 @@ impl BindingMonad for Arc<SyntaxSymbol> {
             }
         }
 
-        // No matching pattern
-        (bindings, Err(BindError::SyntaxMatchFailed))
+        // Try the fallback syntax if one is present
+        if let Some(fallback) = self.fallback_syntax.as_ref() {
+
+            match &**fallback {
+                SafasCell::Syntax(binding, _) => {
+                    // Bind against the fallback syntax
+                    let (bindings, result)  = binding.bind(bindings);
+
+                    // Map to the fallback binding result (a cell containing a bound syntax we can compile later on)
+                    let result              = result.map(|result| SyntaxBindingResult::Fallback(SafasCell::BoundSyntax(result).into()));
+
+                    (bindings, result)
+                },
+
+                // We have a fallback pattern but it's not a syntax item
+                _ => (bindings, Err(BindError::SyntaxMatchFailed))
+            }
+
+        } else {
+            // No matching pattern
+            (bindings, Err(BindError::SyntaxMatchFailed))
+        }
     }
 
     fn reference_type(&self, _bound_value: CellRef) -> ReferenceType {
@@ -329,7 +359,10 @@ pub enum SyntaxBindingResult {
     Statements(CellRef),
 
     /// FlatMap binding (parameters are the monad and the expression that generates the closure)
-    FlatMap(CellRef, CellRef)
+    FlatMap(CellRef, CellRef),
+
+    /// None of the patterns matched, but we managed to bind to a fallback item. The CellRef here always contains a BoundSyntax value.
+    Fallback(CellRef)
 }
 
 impl Into<CellRef> for SyntaxBindingResult {
@@ -338,7 +371,8 @@ impl Into<CellRef> for SyntaxBindingResult {
 
         match self {
             Statements(statements)              => SafasCell::list_with_cells(vec![SafasCell::Atom(*STATEMENTS).into(), statements]),
-            FlatMap(monad, closure_expression)  => SafasCell::list_with_cells(vec![SafasCell::Atom(*FLATMAP).into(), monad, closure_expression])
+            FlatMap(monad, closure_expression)  => SafasCell::list_with_cells(vec![SafasCell::Atom(*FLATMAP).into(), monad, closure_expression]),
+            Fallback(fallback)                  => SafasCell::list_with_cells(vec![SafasCell::Atom(*FALLBACK).into(), fallback])
         }
     }
 }
@@ -363,6 +397,12 @@ impl TryFrom<CellRef> for SyntaxBindingResult {
                     let ListTuple((monad, closure)) = flat_map;
 
                     Ok(SyntaxBindingResult::FlatMap(monad, closure))
+
+                } else if *cell_type_id == *FALLBACK {
+
+                    let ListTuple((fallback, )) = ListTuple::<(CellRef, )>::try_from(params.clone())?;
+
+                    Ok(SyntaxBindingResult::Fallback(fallback))
 
                 } else {
                     // Unknown symbol type
@@ -538,6 +578,10 @@ fn bind_syntax_monad(bindings: SymbolBindings, substitutions: Vec<(usize, CellRe
                     }
                 };
                 actions.extend(flat_map_actions);
+            }
+
+            SyntaxBindingResult::Fallback(_fallback) => {
+                unimplemented!()
             }
         }
 
