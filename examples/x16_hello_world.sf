@@ -1,6 +1,6 @@
-(import "cpu/6502")
+(import "cpu/65c02")
 
-(assemble_6502
+(assemble_65c02
     ;; PRG header: 2 bytes indicating the start address
         (d (bits 16 start))
 
