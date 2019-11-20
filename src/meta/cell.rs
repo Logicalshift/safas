@@ -2,6 +2,7 @@ use super::number::*;
 use super::atom::*;
 use super::monad_type::*;
 
+use crate::io::*;
 use crate::bind::*;
 use crate::exec::*;
 use crate::bitcode::*;
@@ -296,7 +297,7 @@ impl SafasCell {
             Atom(atom_id)                                               => name_for_atom_with_id(*atom_id),
             Boolean(value)                                              => if *value { "=t" } else { "=f" }.to_string(),
             Number(number)                                              => number.to_string(),
-            BitCode(bitcode)                                            => format!("{}", bitcode.iter().map(|bitcode| bitcode.to_string()).collect::<Vec<_>>().join("")),
+            BitCode(bitcode)                                            => format!("{}", hexdump(&bitcode_to_bytes(bitcode.iter().cloned()))),
             String(string_value)                                        => format!("\"{}\"", string_value),         // TODO: character quoting
             Char(chr_value)                                             => format!("'{}'", chr_value),              // TODO: character quoting,
             FrameReference(cell, frame, ReferenceType::Value)           => format!("cell#({},{})", cell, frame),
