@@ -41,6 +41,9 @@ pub enum RuntimeError {
     /// Value cannot be treated as a number
     NotANumber(CellRef),
 
+    /// Value cannot be parsed as bitcode
+    NotBitCode(CellRef),
+
     /// FlatMap function returned the wrong monad type
     MismatchedMonad(CellRef),
 

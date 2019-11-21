@@ -129,6 +129,7 @@ impl From<RuntimeError> for BindError {
             NotABTree(_)                        |
             MismatchedMonad(_)                  |
             NotALabel(_)                        |
+            NotBitCode(_)                       |
             CannotAllocateLabelsDuringAssembly  |
             BeforeStartOfFile                   |
             TooManyPasses(_)                    |

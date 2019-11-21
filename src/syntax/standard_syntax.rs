@@ -4,6 +4,7 @@ use super::extend_syntax::*;
 use super::fun::*;
 use super::quote::*;
 use super::export::*;
+use super::assemble_syntax::*;
 use super::conditional::*;
 
 use crate::io::*;
@@ -41,6 +42,7 @@ pub fn standard_syntax() -> impl BindingMonad<Binding=SmallVec<[Action; 8]>> {
 
     // Bitcode syntax
     let syntax  = flat_map_binding_actions(move || define_symbol_value("label",         SafasCell::Syntax(Box::new(label_keyword()), NIL.clone())), syntax);
+    let syntax  = flat_map_binding_actions(move || define_symbol_value("assemble",      SafasCell::Syntax(Box::new(assemble_keyword()), NIL.clone())), syntax);
 
     syntax
 }
