@@ -22,7 +22,7 @@ lazy_static! {
     /// Function that creates a set_label_value flat_map function given the label
     static ref CREATE_SET_LABEL_VALUE: CellRef = create_set_label_value();
 
-    /// The read_bit_pos flat_map function
+    /// The read_bit_pos flat_map function (this is passed to the function made by CREATE_SET_LABEL_VALUE to actually set the label value)
     static ref READ_BIT_POS: CellRef = read_bit_pos();
 
     /// The ID of the atom containing the standard bit-position to label value function
@@ -253,6 +253,12 @@ fn label_binding(label_cell: FrameReference) -> impl BindingMonad<Binding=Syntax
 ///
 /// The `label` keyword creates a bitcode monad that specifies a label
 /// 
+/// `(label foo)` - declares a label that binds to the value of the `label_value` function at 
+/// the point the label is declared (or the current bit position if no label_value function
+/// is availble).
+/// 
+/// `(label foo <expr>)` - declares a label that binds to the value of `<expr>`.
+/// 
 /// Label values are available everywhere in the same context (and may be passed outside 
 /// of that context as separate values if necessary): note that 'forward declaration' of
 /// labels are specifically allowed via the pre-binding mechanism.
@@ -260,13 +266,39 @@ fn label_binding(label_cell: FrameReference) -> impl BindingMonad<Binding=Syntax
 pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
     // Binding function. Labels are pre-bound so they're available throughout the current context
     let bind = get_expression_arguments()
-        .and_then(|args: ListTuple<(AtomId, )>| {
-            // Parse out the arguments
-            let ListTuple((AtomId(atom_id), )) = args;
+        .and_then(|ListWithTail((AtomId(atom_id), ), optional_value): ListWithTail<(AtomId, ), CellRef>| {
 
-            BindingFn(move |mut bindings| {
-                // Fetch the label value function
-                let label_value_fn = if let Some(label_value) = bindings.look_up_and_import(*LABEL_VALUE_FUNCTION) {
+            // The optional argument can either not be supplied or specify the label value expression
+            let label_value_expr = if optional_value.is_nil() {
+                // Argument not supplied
+                Ok(None)
+            } else {
+                // 
+                let value = ListTuple::<(CellRef, )>::try_from(optional_value);
+                value.map(|ListTuple((value, ))| Some(value))
+            };
+
+            BindingFn(move |bindings| {
+                // If a value expression is specified, fetch its value
+                let label_value_expr = match label_value_expr {
+                    Ok(ref value)   => value.clone(),
+                    Err(ref err)    => return (bindings, Err(err.clone().into()))
+                };
+
+                // Compile the value expression if there is one
+                let label_value_and_bindings = match label_value_expr {
+                    None                    => Ok((NIL.clone(), bindings)),
+                    Some(label_value_expr)  => bind_statement(label_value_expr, bindings)
+                };
+
+                let (bindings, label_value_expr) = match label_value_and_bindings {
+                    Ok((value, bindings))   => (bindings, value),
+                    Err((err, bindings))    => return (bindings, Err(err))
+                };
+
+                // Fetch the label value function (we use this if no expression is specified)
+                let mut bindings    = bindings;
+                let label_value_fn  = if let Some(label_value) = bindings.look_up_and_import(*LABEL_VALUE_FUNCTION) {
                     label_value
                 } else {
                     NIL.clone()
@@ -278,7 +310,7 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
 
                 // TODO: check that we've got the reference we allocated in the pre-binding (if it's been rebound the label is invalid)
 
-                let result = SafasCell::list_with_cells(vec![reference.into(), label_value_fn]);
+                let result = SafasCell::list_with_cells(vec![reference.into(), label_value_fn, label_value_expr]);
                 (bindings, Ok(result))
             },
 
@@ -296,13 +328,15 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
                 let result = SafasCell::list_with_cells(iter::once(SafasCell::Atom(atom_id).into()));
                 (bindings, result)
             })
+
         }).map(|value| {
+
             let value = value.clone();
 
             // Compiling function: labels bind themselves to a monad that allocates/retrieves the label value at the start of the code block and just bind to the label value later on 
             let compiler = |value: CellRef| -> Result<_, BindError> {
                 // Results of the bindings is the cell reference
-                let ListTuple((label_action, calculate_value)): ListTuple<(CellRef, CellRef)> = value.clone().try_into()?;
+                let ListTuple((label_action, default_label_value_fn, label_value_expr)): ListTuple<(CellRef, CellRef, CellRef)> = value.clone().try_into()?;
 
                 // The label should be bound to a syntax item, with the frame cell as the parameter
                 let cell_reference = match &*label_action { SafasCell::Syntax(_, cell_reference) => Ok(cell_reference.clone()), _ => Err(BindError::MissingArgument) }?;
@@ -324,8 +358,8 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
                 ]);
 
                 // Evaluate the value calculation
-                let mut value_reference_type = calculate_value.reference_type();
-                if calculate_value.is_nil() {
+                let mut value_reference_type = default_label_value_fn.reference_type();
+                if default_label_value_fn.is_nil() {
                     // Read the current bit position
                     value_reference_type = ReferenceType::ReturnsMonad;
                     actions.actions.extend(vec![
@@ -348,7 +382,7 @@ pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
                     }
 
                     // Get the value of the label_value function
-                    actions.extend(compile_statement(calculate_value)?);
+                    actions.extend(compile_statement(default_label_value_fn)?);
                 }
 
                 // Map the value reference type
