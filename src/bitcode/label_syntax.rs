@@ -262,6 +262,10 @@ fn label_binding(label_cell: FrameReference) -> impl BindingMonad<Binding=Syntax
 /// Label values are available everywhere in the same context (and may be passed outside 
 /// of that context as separate values if necessary): note that 'forward declaration' of
 /// labels are specifically allowed via the pre-binding mechanism.
+/// 
+/// The `label_value` function can be defined as a constant: eg `(def label_value ip)` or
+/// a function which takes the current bit position: for example 
+/// `(def label_value (fun (bit_pos) (/ bit_pos 8)))`
 ///
 pub fn label_keyword() -> impl BindingMonad<Binding=SyntaxCompiler> {
     // Binding function. Labels are pre-bound so they're available throughout the current context
