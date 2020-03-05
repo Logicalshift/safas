@@ -137,11 +137,11 @@ impl SymbolBindings {
             parent.num_cells = self.num_cells.max(parent.num_cells);
 
             // For interior frames, imports come straight from the same parent
-            parent.import_symbols.extend(self.import_symbols.drain());
+            parent.import_symbols.extend(self.import_symbols.drain(..));
         }
 
         // Move any export symbols into the parent
-        for (export_id, depth) in self.export_symbols.drain() {
+        for (export_id, depth) in self.export_symbols.drain(..) {
             if let Some(value) = self.symbols.get(&export_id) {
                 parent.symbols.insert(export_id, value.clone());
 
